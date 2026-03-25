@@ -1,0 +1,38 @@
+# OS metadata
+.DS_Store
+
+# Virtual Environments
+.venv/
+venv/
+**/venv/
+**/env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Next.js / Node
+node_modules/
+.next/
+out/
+build/
+.npm
+**/.next/
+**/.node_modules/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+**/.env
+
+# Databases
+*.db
+*.sqlite3
+
+# Artifacts/Misc
+/tmp/
+.gemini/

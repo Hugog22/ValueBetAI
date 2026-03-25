@@ -1,0 +1,78 @@
+{
+  "trained_at": "2026-03-05T12:04:25.385076",
+  "seasons": [
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "total_rows": 4440,
+  "decay_rate": 1.5,
+  "rolling_window": 5,
+  "features_core": [
+    "home_xg_for_avg5",
+    "home_xg_ag_avg5",
+    "home_goals_avg5",
+    "home_pts_avg5",
+    "away_xg_for_avg5",
+    "away_xg_ag_avg5",
+    "away_goals_avg5",
+    "away_pts_avg5",
+    "home_opp_pts_avg5",
+    "home_opp_xgag_avg5",
+    "away_opp_pts_avg5",
+    "away_opp_xgag_avg5",
+    "home_xg_adj",
+    "away_xg_adj",
+    "xg_diff",
+    "form_diff",
+    "opp_diff",
+    "xg_adj_diff",
+    "rest_days_home",
+    "rest_days_away",
+    "home_elo",
+    "away_elo",
+    "elo_diff"
+  ],
+  "model_1x2": {
+    "cv_mean_accuracy": 0.5266,
+    "cv_mean_logloss": 0.9847,
+    "best_params": {
+      "max_depth": 7,
+      "learning_rate": 0.0038575272289896336,
+      "subsample": 0.5420804013384862,
+      "colsample_bytree": 0.7462654800060734,
+      "min_child_weight": 1,
+      "gamma": 0.2279568362097431,
+      "reg_alpha": 0.005331118327930701,
+      "reg_lambda": 0.011928760688276708
+    },
+    "training_rows": 4418,
+    "calibrated": true
+  },
+  "model_ou25": {
+    "cv_mean_accuracy": 0.55,
+    "cv_mean_logloss": 0.6866,
+    "best_params": {
+      "max_depth": 4,
+      "learning_rate": 0.014112278198942587,
+      "subsample": 0.9829731867621193,
+      "colsample_bytree": 0.5552100473422795,
+      "min_child_weight": 1,
+      "gamma": 0.09236326342277856,
+      "reg_alpha": 0.002128712412189518,
+      "reg_lambda": 0.21126609892367917
+    },
+    "training_rows": 4418,
+    "calibrated": true
+  },
+  "model_corners": null
+}

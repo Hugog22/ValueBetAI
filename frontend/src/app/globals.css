@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #FCF9F1; /* Creamy Off-white */
+  --color-foreground: #1A1C1E; /* Deep Slate/Navy */
+  --color-card-bg: #FFFFFF;
+  --color-accent-emerald: #064E3B; /* Forest Emerald */
+  --color-accent-gold: #B45309;
+  --color-muted-text: #64748B;
+}
+
+@layer utilities {
+  .text-editorial {
+    font-family: var(--font-playfair), serif;
+    letter-spacing: -0.02em;
+  }
+
+  .text-clean {
+    font-family: var(--font-geist-sans), sans-serif;
+  }
+
+  .bento-card {
+    @apply bg-white rounded-[2rem] border border-[#E5E7EB] transition-all duration-500 overflow-hidden;
+  }
+
+  .bento-card:hover {
+    @apply shadow-[0_20px_50px_rgba(0,0,0,0.04)] border-[#D1D5DB];
+  }
+
+  .btn-premium {
+    @apply inline-flex items-center justify-center px-8 py-4 bg-[#064E3B] text-white rounded-full font-bold tracking-wide transition-all active:scale-95;
+  }
+
+  .btn-premium:hover {
+    @apply bg-[#065F46] shadow-lg shadow-[#064E3B]/10;
+  }
+
+  .pill-search {
+    @apply bg-[#F1F3F5] border border-transparent focus:border-[#064E3B]/20 focus:bg-white px-6 py-3 rounded-full text-sm outline-none transition-all;
+  }
+
+  .glass-light {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-geist-sans), sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6, .text-editorial {
+  font-family: var(--font-playfair), serif;
+}
+
+/* Custom transitions for Bento grid */
+.category-transition {
+  transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.category-transition:hover {
+  transform: translateY(-8px);
+}
