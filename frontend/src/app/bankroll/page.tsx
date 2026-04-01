@@ -26,6 +26,7 @@ interface BetRecord {
     status: string;
     pnl: number;
     created_at: string;
+    match_date: string;
     risk_level: string;
     risk_badge: string;
     risk_bg_class: string;
@@ -160,12 +161,17 @@ export default function BankrollPage() {
                                                 <tr key={bet.id} className="hover:bg-[#F8F9FA] transition-colors group">
                                                     <td className="px-8 py-6">
                                                         <div className="text-sm font-bold text-[#1A1C1E] capitalize">
-                                                            {new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(bet.created_at))}
+                                                            {new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(bet.match_date || bet.created_at))}
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-6">
-                                                        <div className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest mb-1">{bet.market}</div>
-                                                        <div className="font-editorial text-lg font-bold text-[#1A1C1E] group-hover:text-[#064E3B] transition-colors">{getSelectionLabel(bet)}</div>
+                                                        <div className="font-editorial text-lg font-bold text-[#1A1C1E] group-hover:text-[#064E3B] transition-colors line-clamp-1 mb-1">
+                                                            {bet.home_team} <span className="text-[#64748B] font-sans font-medium text-sm">v</span> {bet.away_team}
+                                                        </div>
+                                                        <div className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest">
+                                                            <span className="opacity-60">{bet.market}: </span> 
+                                                            <span className="text-[#1A1C1E]">{getSelectionLabel(bet)}</span>
+                                                        </div>
                                                     </td>
                                                     <td className="px-8 py-6">
                                                         <span className={`${bet.risk_bg_class || 'bg-gray-100 text-gray-600'} px-3 py-1 rounded-lg text-[9px] font-black tracking-widest uppercase`}>

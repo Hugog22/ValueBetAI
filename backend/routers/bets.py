@@ -37,6 +37,7 @@ class BetResponse(BaseModel):
     status: str
     clv: float | None
     created_at: str
+    match_date: str
     risk_level: str | None
     risk_badge: str | None
     risk_bg_class: str | None
@@ -132,6 +133,7 @@ def get_bankroll_stats(
             pnl=round(((bet.stake * bet.odds_taken) - bet.stake) if bet.status == "Won" else (-bet.stake if bet.status == "Lost" else 0.0), 2),
             clv=bet.clv,
             created_at=bet.placed_at.isoformat() + "Z" if bet.placed_at else "",
+            match_date=match.date.isoformat() + "Z" if match.date else "",
             risk_level="MEDIO",
             risk_badge="🟡 MEDIO",
             risk_bg_class="bg-yellow-400 text-black font-bold"
