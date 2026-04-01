@@ -47,8 +47,8 @@ app.include_router(auth_router)
 def _evaluate_match(match: Match, db: Session | None = None) -> dict:
     return _evaluate_match_core(match, predictor, db)
 
-def _calculate_risk(prob: float) -> dict:
-    return _calculate_risk_core(prob)
+def _calculate_risk(prob: float, bookmaker_odds: float = 0.0) -> dict:
+    return _calculate_risk_core(prob, bookmaker_odds)
 
 # ---------------------------------------------------------------------------
 # Mock odds pool  (realistic Bet365-style)

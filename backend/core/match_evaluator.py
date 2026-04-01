@@ -75,12 +75,16 @@ def _build_match_features(match: Match) -> dict:
         "_home_xg_adj": round(hxf / (h_opp_xgag + eps), 2), "_away_xg_adj": round(axf / (a_opp_xgag + eps), 2),
     }
 
-def _calculate_risk(prob: float) -> dict:
-    if prob > 0.55:
+def _calculate_risk(ai_prob: float, bookmaker_odds: float) -> dict:
+    house_prob = (1.0 / bookmaker_odds) if bookmaker_odds > 0 else 0.0
+    # True risk considers the lowest probability (most pessimistic view)
+    safe_prob = min(ai_prob, house_prob)
+    
+    if safe_prob > 0.55:
         return {"level": "BAJO", "badge": "🟢 BAJO", "bgClass": "bg-green-600 text-white font-bold"}
-    elif prob >= 0.35:
+    elif safe_prob >= 0.35:
         return {"level": "MEDIO", "badge": "🟡 MEDIO", "bgClass": "bg-yellow-400 text-black font-bold"}
-    elif prob >= 0.15:
+    elif safe_prob >= 0.15:
         return {"level": "ALTO", "badge": "🟠 ALTO", "bgClass": "bg-orange-500 text-white font-bold"}
     else:
         return {"level": "LOTERÍA", "badge": "🔴 LOTERÍA", "bgClass": "bg-red-600 text-white font-bold"}
@@ -125,7 +129,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
         })
 
     for c in candidates:
-        c["risk"] = _calculate_risk(c["probability"])
+        c["risk"] = _calculate_risk(c["probability"], c["bookmaker_odds"])
         c["stake"] = _fractional_kelly(c["probability"], c["bookmaker_odds"])
     
     candidates.sort(key=lambda x: x["ev"], reverse=True)
