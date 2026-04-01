@@ -161,7 +161,7 @@ export default function BankrollPage() {
                                                     </td>
                                                     <td className="px-8 py-6">
                                                         <div className="text-sm font-bold text-[#1A1C1E] mb-1">{bet.stake} <span className="text-[10px] font-medium opacity-50">u.</span></div>
-                                                        <div className="inline-block px-2 py-0.5 bg-[#F1F3F5] text-[#1A1C1E] text-[10px] font-black rounded-lg">@ {bet.odds_taken.toFixed(2)}</div>
+                                                        <div className="inline-block px-2 py-0.5 bg-[#F1F3F5] text-[#1A1C1E] text-[10px] font-black rounded-lg">{bet.odds_taken.toFixed(2)}</div>
                                                     </td>
                                                     <td className="px-8 py-6">
                                                         <span className={`px-4 py-1.5 text-[10px] font-black tracking-widest rounded-full uppercase ${

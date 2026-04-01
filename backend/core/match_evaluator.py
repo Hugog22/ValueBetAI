@@ -153,7 +153,8 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
         "status": match.status, "oddsSource": source, "bestPick": {
             "label": best["label"], "market": best["market"], "outcome": best["outcome"],
             "bookmakerOdds": best["bookmaker_odds"], "fairOdds": best["fair_odds"], "ev": best["ev"],
-            "probability": round(best["probability"] * 100, 1), "isValueBet": best["is_value"],
+            "probability": best["probability"], "isValueBet": best["is_value"],
+            "bookmaker_implied_prob": best["bookmaker_implied_prob"],
             "risk": best["risk"], "stake": best["stake"]
         },
         "allCandidates": candidates,

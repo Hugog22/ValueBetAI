@@ -197,7 +197,7 @@ export default function Home() {
                             <div className="text-xs font-bold text-[#FFD700] mb-1">{leg.market}</div>
                             <div className="text-lg font-editorial font-bold">{leg.label}</div>
                           </div>
-                          <div className="text-xl font-black text-white/90">@{leg.bookmakerOdds?.toFixed(2)}</div>
+                          <div className="text-xl font-black text-white/90">{leg.bookmakerOdds?.toFixed(2)}</div>
                         </div>
                       </div>
                     ))}
@@ -205,7 +205,7 @@ export default function Home() {
                 </div>
                 <div className="text-center lg:text-right flex flex-col items-center lg:items-end justify-center">
                   <div className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-2">Cuota Total Combinada</div>
-                  <div className="text-7xl font-editorial font-bold text-[#FFD700] mb-4">@{parlay.totalOdds.toFixed(2)}</div>
+                  <div className="text-7xl font-editorial font-bold text-[#FFD700] mb-4">{parlay.totalOdds.toFixed(2)}</div>
                   <div className="bg-white/20 text-xs font-bold px-6 py-2 rounded-full mb-8">
                     Probabilidad IA: <span className="text-[#FFD700]">{parlay.jointProbability.toFixed(1)}%</span>
                   </div>
@@ -233,8 +233,8 @@ export default function Home() {
                    <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-4">{boost.match}</div>
                    <div className="text-sm font-bold text-[#1A1C1E] mb-1">{boost.market}</div>
                    <div className="flex items-center gap-4 mt-6">
-                      <div className="text-sm text-[#64748B] line-through">@{boost.normalOdds.toFixed(2)}</div>
-                      <div className="text-3xl font-editorial font-bold text-[#064E3B]">@{boost.boostedOdds.toFixed(2)}</div>
+                      <div className="text-sm text-[#64748B] line-through">{boost.normalOdds.toFixed(2)}</div>
+                      <div className="text-3xl font-editorial font-bold text-[#064E3B]">{boost.boostedOdds.toFixed(2)}</div>
                       <div className="ml-auto bg-[#064E3B] text-white p-2 rounded-lg">
                         <span className="text-[8px] font-bold block leading-none">{boost.bookmaker}</span>
                       </div>
