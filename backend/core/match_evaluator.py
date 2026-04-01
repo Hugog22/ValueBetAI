@@ -39,44 +39,57 @@ def _get_odds(match: Match, db: Session | None = None) -> dict:
     return {**pool, "_source": "mock"}
 
 def _build_match_features(match: Match) -> dict:
+    home, away = match.home_team.name, match.away_team.name
+    
+    def get_elo(team_name):
+        t = team_name.lower()
+        if any(x in t for x in ["madrid", "barcelona", "bellingham", "vinicius", "atletico"]): return 2100
+        if any(x in t for x in ["girona", "sociedad", "athletic", "betis"]): return 1850
+        if any(x in t for x in ["mallorca", "almeria", "granada", "cadiz"]): return 1300
+        return 1500
+
+    home_elo = get_elo(home)
+    away_elo = get_elo(away)
+    
     rng = random.Random(match.id)
-    archetype = match.id % 3
-    if archetype == 0:
-        hxf, hxa, hg, hp = 2.0, 1.0, 2.1, 2.3
-        axf, axa, ag, ap = 0.9, 1.8, 1.0, 1.1
-        h_opp_pts, h_opp_xgag = 1.1, 1.7
-        a_opp_pts, a_opp_xgag = 2.3, 1.0
-    elif archetype == 1:
-        hxf, hxa, hg, hp = 1.3, 1.3, 1.3, 1.5
-        axf, axa, ag, ap = 1.3, 1.3, 1.3, 1.4
-        h_opp_pts, h_opp_xgag = 1.5, 1.3
-        a_opp_pts, a_opp_xgag = 1.5, 1.2
-    else:
-        hxf, hxa, hg, hp = 0.9, 1.8, 1.0, 1.1
-        axf, axa, ag, ap = 2.0, 1.0, 2.1, 2.3
-        h_opp_pts, h_opp_xgag = 2.3, 1.0
-        a_opp_pts, a_opp_xgag = 1.1, 1.7
-    eps = 1e-3
+    # Give higher xG and stats to higher Elo natively 
+    h_pow = home_elo / 1500.0
+    a_pow = away_elo / 1500.0
+
     return {
-        "home_xg_for_avg5": hxf, "home_xg_ag_avg5": hxa, "home_goals_avg5": hg, "home_pts_avg5": hp,
-        "away_xg_for_avg5": axf, "away_xg_ag_avg5": axa, "away_goals_avg5": ag, "away_pts_avg5": ap,
-        "home_opp_pts_avg5": h_opp_pts, "home_opp_xgag_avg5": h_opp_xgag,
-        "away_opp_pts_avg5": a_opp_pts, "away_opp_xgag_avg5": a_opp_xgag,
-        "home_xg_adj": round(hxf / (h_opp_xgag + eps), 2), "away_xg_adj": round(axf / (a_opp_xgag + eps), 2),
-        "xg_diff": round(hxf - axf, 2), "form_diff": round(hp - ap, 2),
-        "opp_diff": round(h_opp_pts - a_opp_pts, 2),
-        "xg_adj_diff": round(hxf / (h_opp_xgag + eps) - axf / (a_opp_xgag + eps), 2),
-        "rest_days_home": rng.randint(3, 7), "rest_days_away": rng.randint(3, 7),
-        "home_corners_avg5": 5.0, "away_corners_avg5": 4.5, "home_corners_ag5": 4.5, "away_corners_ag5": 5.0,
-        "_home_xg_avg5": hxf, "_away_xg_avg5": axf, "_home_goals_avg5": hg, "_away_goals_avg5": ag,
-        "_home_conceded_avg5": hxa, "_away_conceded_avg5": axa,
-        "_rest_days_home": rng.randint(4, 7), "_rest_days_away": rng.randint(4, 7),
-        "_h2h_last5": "2W-1D-2L", "_home_opp_pts": h_opp_pts, "_away_opp_pts": a_opp_pts,
-        "_home_xg_adj": round(hxf / (h_opp_xgag + eps), 2), "_away_xg_adj": round(axf / (a_opp_xgag + eps), 2),
+        "home_elo": home_elo,
+        "away_elo": away_elo,
+        "elo_diff": home_elo - away_elo,
+        "home_xg_for_avg10": round(1.2 * h_pow, 2),
+        "away_xg_for_avg10": round(1.1 * a_pow, 2),
+        "xg_diff": round((1.2 * h_pow) - (1.1 * a_pow), 2),
+        "home_possession_avg10": round(50 * h_pow, 1),
+        "away_possession_avg10": round(50 * a_pow, 1),
+        "possession_diff": round((50 * h_pow) - (50 * a_pow), 1),
+        "home_shots_target_avg10": round(4.5 * h_pow, 1),
+        "away_shots_target_avg10": round(4.0 * a_pow, 1),
+        "shots_diff": round((4.5 * h_pow) - (4.0 * a_pow), 1),
+        "home_absences": rng.randint(0, 3),
+        "away_absences": rng.randint(0, 3),
+        "absence_severity": rng.randint(0, 1),
+        "rest_days_home": rng.randint(4, 7),
+        "rest_days_away": rng.randint(4, 7)
     }
 
-def _calculate_risk(ai_prob: float, bookmaker_odds: float) -> dict:
+def _calculate_risk(ai_prob: float, bookmaker_odds: float, is_draw: bool = False, xg_diff: float = 0.0) -> dict:
     house_prob = (1.0 / bookmaker_odds) if bookmaker_odds > 0 else 0.0
+    
+    # 1. Market Prior Constraint
+    # If deviation > 15%, pull it back unless there's massive xG justification (>1.0 diff)
+    if abs(ai_prob - house_prob) > 0.15:
+        if abs(xg_diff) < 1.0:
+            ai_prob = house_prob + (0.15 if ai_prob > house_prob else -0.15)
+
+    # 2. Risk Logic (Error de Modelo)
+    # If AI gives > 50% to a draw, or > 50% to a team with odds > 4.0 (extreme underdog)
+    if ai_prob > 0.50 and (is_draw or bookmaker_odds >= 4.0):
+        return {"level": "ERROR", "badge": "⚠️ ERROR MODELO", "bgClass": "bg-red-900 text-white font-black"}
+
     # True risk considers the lowest probability (most pessimistic view)
     safe_prob = min(ai_prob, house_prob)
     

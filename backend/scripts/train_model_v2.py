@@ -180,10 +180,15 @@ def build_advanced_rolling_features(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 class CustomEnsemble:
     def __init__(self, xgb_params, rf_params):
-        self.xgb = xgb.XGBClassifier(**xgb_params)
-        self.rf = RandomForestClassifier(**rf_params)
+        base_xgb = xgb.XGBClassifier(**xgb_params)
+        base_rf = RandomForestClassifier(**rf_params)
+        
+        # Enforce professional probabilities using Isotonic Calibration
+        self.xgb = CalibratedClassifierCV(estimator=base_xgb, method='isotonic', cv=3)
+        self.rf = CalibratedClassifierCV(estimator=base_rf, method='isotonic', cv=3)
         
     def fit(self, X, y, sample_weight=None):
+        # sample_weight goes directly to fit; modern Scikit-Learn passes it to the estimator
         self.xgb.fit(X, y, sample_weight=sample_weight)
         self.rf.fit(X, y, sample_weight=sample_weight)
         return self
@@ -205,14 +210,17 @@ def train_ensemble_and_validate(X: pd.DataFrame, y: pd.Series, w: np.ndarray, n_
         "objective": "multi:softprob" if n_classes > 2 else "binary:logistic",
         "eval_metric": "logloss",
         "use_label_encoder": False,
-        "max_depth": 8,
+        "max_depth": 6,          # Reduced for extreme regularization
         "learning_rate": 0.05,
-        "n_estimators": 800,
+        "n_estimators": 500,
+        "reg_alpha": 1.5,        # L1 (Lasso) penalty to drop irrelevant vars
+        "reg_lambda": 2.0,       # L2 (Ridge) penalty to prevent wild coefficient growth
         "random_state": 42
     }
     rf_params = {
         "n_estimators": 500,
-        "max_depth": 10,
+        "max_depth": 8,          # Reduced deep trees
+        "min_samples_leaf": 3,   # Regularization 
         "random_state": 42
     }
     
@@ -251,11 +259,11 @@ def train_ensemble_and_validate(X: pd.DataFrame, y: pd.Series, w: np.ndarray, n_
     # Final Fit
     ensemble.fit(X, y, sample_weight=w)
     
-    # Save objects
-    xgb_path = os.path.join(MODELS_DIR, f"ensemble_{name.lower().replace('/', '')}_xgb.json")
+    # Save objects as joblib .pkl because they are now CalibratedClassifierCV wrappers
+    xgb_path = os.path.join(MODELS_DIR, f"ensemble_{name.lower().replace('/', '')}_xgb.pkl")
     rf_path = os.path.join(MODELS_DIR, f"ensemble_{name.lower().replace('/', '')}_rf.pkl")
     
-    ensemble.xgb.save_model(xgb_path)
+    joblib.dump(ensemble.xgb, xgb_path)
     joblib.dump(ensemble.rf, rf_path)
     logger.info(f"Models saved for {name}.")
     

@@ -25,22 +25,19 @@ logger = logging.getLogger(__name__)
 MODELS_DIR = os.path.dirname(__file__)
 META_PATH  = os.path.join(MODELS_DIR, "training_meta.json")
 
-PATH_1X2     = os.path.join(MODELS_DIR, "xgb_1x2.json")
-PATH_OU25    = os.path.join(MODELS_DIR, "xgb_ou25.json")
-PATH_CORNERS = os.path.join(MODELS_DIR, "xgb_corners.json")
+PATH_1X2_XGB  = os.path.join(MODELS_DIR, "ensemble_1x2_xgb.pkl")
+PATH_1X2_RF   = os.path.join(MODELS_DIR, "ensemble_1x2_rf.pkl")
+PATH_OU25_XGB = os.path.join(MODELS_DIR, "ensemble_ou2.5_xgb.pkl")
+PATH_OU25_RF  = os.path.join(MODELS_DIR, "ensemble_ou2.5_rf.pkl")
+PATH_CORNERS  = os.path.join(MODELS_DIR, "xgb_corners.json")
 
 FEATURES_CORE = [
-    # Own form
-    "home_xg_for_avg5", "home_xg_ag_avg5", "home_goals_avg5", "home_pts_avg5",
-    "away_xg_for_avg5", "away_xg_ag_avg5", "away_goals_avg5", "away_pts_avg5",
-    # Opponent quality (Fase 1 — adjusted for rival strength)
-    "home_opp_pts_avg5", "home_opp_xgag_avg5",
-    "away_opp_pts_avg5", "away_opp_xgag_avg5",
-    "home_xg_adj", "away_xg_adj",
-    # Differentials
-    "xg_diff", "form_diff", "opp_diff", "xg_adj_diff",
-    # Fatigue
-    "rest_days_home", "rest_days_away",
+    "home_elo", "away_elo", "elo_diff",
+    "home_xg_for_avg10", "away_xg_for_avg10", "xg_diff",
+    "home_possession_avg10", "away_possession_avg10", "possession_diff",
+    "home_shots_target_avg10", "away_shots_target_avg10", "shots_diff",
+    "home_absences", "away_absences", "absence_severity",
+    "rest_days_home", "rest_days_away"
 ]
 
 FEATURES_CORNERS = FEATURES_CORE + [
@@ -94,39 +91,31 @@ class ValueBetPredictor:
     """Loads and runs three market models (1X2, O/U 2.5, O/U Corners)."""
 
     def __init__(self):
-        self._model_1x2     = _make_model()
-        self._model_ou25    = _make_model()
-        self._model_corners = _make_model()
-        # Calibrated classifier wrappers (None = use raw XGBoost)
-        self._cal_1x2:  object | None = None
-        self._cal_ou25: object | None = None
+        self._model_1x2_xgb  = _make_model()
+        self._model_ou25_xgb = _make_model()
+        self._model_1x2_rf   = None
+        self._model_ou25_rf  = None
+        self._model_corners  = _make_model()
+        
         self._corners_threshold: float = 9.0
         self._has_corners = False
         self._ready       = False
 
     def load_model(self):
-        """Load XGBoost models and isotonic calibrators (if available) from disk."""
-        for path, name in [(PATH_1X2, "1X2"), (PATH_OU25, "O/U 2.5")]:
+        """Load ensemble models from disk."""
+        for path, name in [(PATH_1X2_XGB, "1X2_XGB"), (PATH_OU25_XGB, "O/U2.5_XGB"), (PATH_1X2_RF, "1X2_RF"), (PATH_OU25_RF, "O/U2.5_RF")]:
             if not os.path.exists(path):
-                raise FileNotFoundError(
-                    f"Model '{name}' not found at {path}.\n"
-                    "Run:\n"
-                    "  ./venv/bin/python -m scripts.fetch_historical_data\n"
-                    "  ./venv/bin/python -m scripts.train_model"
-                )
+                logger.error(f"Missing ensemble part: {path}")
 
-        self._model_1x2.load_model(PATH_1X2)
-        self._model_ou25.load_model(PATH_OU25)
-
-        # Load calibrators if they exist (generated after train_model.py)
-        cal_1x2_path  = PATH_1X2.replace(".json", "_cal.pkl")
-        cal_ou25_path = PATH_OU25.replace(".json", "_cal.pkl")
-        if os.path.exists(cal_1x2_path):
-            self._cal_1x2 = joblib.load(cal_1x2_path)
-            logger.info(f"Loaded calibrator: {cal_1x2_path}")
-        if os.path.exists(cal_ou25_path):
-            self._cal_ou25 = joblib.load(cal_ou25_path)
-            logger.info(f"Loaded calibrator: {cal_ou25_path}")
+        if os.path.exists(PATH_1X2_XGB):
+            self._model_1x2_xgb = joblib.load(PATH_1X2_XGB)
+        if os.path.exists(PATH_OU25_XGB):
+            self._model_ou25_xgb = joblib.load(PATH_OU25_XGB)
+            
+        if os.path.exists(PATH_1X2_RF):
+            self._model_1x2_rf = joblib.load(PATH_1X2_RF)
+        if os.path.exists(PATH_OU25_RF):
+            self._model_ou25_rf = joblib.load(PATH_OU25_RF)
 
         if os.path.exists(PATH_CORNERS):
             self._model_corners.load_model(PATH_CORNERS)
@@ -143,8 +132,8 @@ class ValueBetPredictor:
             logger.info(
                 f"Models loaded — {len(meta.get('seasons', []))} seasons "
                 f"({meta.get('total_rows','?')} rows) | "
-                f"1X2 acc={m1.get('cv_mean_accuracy','?')} (cal={'✓' if self._cal_1x2 else '✗'}) | "
-                f"O/U2.5 acc={m2.get('cv_mean_accuracy','?')} (cal={'✓' if self._cal_ou25 else '✗'}) | "
+                f"1X2 acc={m1.get('cv_mean_accuracy','?')} | "
+                f"O/U2.5 acc={m2.get('cv_mean_accuracy','?')} | "
                 f"Corners={'✓' if self._has_corners else '✗'}"
             )
         else:
@@ -152,17 +141,15 @@ class ValueBetPredictor:
 
         self._ready = True
 
-    def _predict_proba(self, model: xgb.XGBClassifier, calibrator, X: pd.DataFrame) -> np.ndarray:
+    def _predict_ensemble(self, xgb_model, rf_model, X: pd.DataFrame) -> np.ndarray:
         """
-        Return calibrated probabilities if a calibrator is available,
-        otherwise fall back to raw XGBoost predict_proba.
+        Return the 70/30 blended probability for the ensemble.
         """
-        if calibrator is not None:
-            try:
-                return np.array(calibrator.predict_proba(X))
-            except Exception as e:
-                logger.warning(f"Calibrator predict failed ({e}), falling back to raw XGBoost.")
-        return np.array(model.predict_proba(X))
+        prob_xgb = np.array(xgb_model.predict_proba(X))
+        if rf_model is not None:
+            prob_rf = np.array(rf_model.predict_proba(X))
+            return 0.7 * prob_xgb + 0.3 * prob_rf
+        return prob_xgb
 
     def predict_match(self, features: dict) -> dict:
         """
@@ -190,25 +177,14 @@ class ValueBetPredictor:
 
         fv = {**DEFAULTS, **features}
 
-        # ---- Determine features actually expected by the loaded model ----
-        # This makes the predictor forward-/backward-compatible with any version
-        # of the model file (12-feature, 20-feature, etc.)
-        model_features_1x2  = self._model_1x2.get_booster().feature_names or FEATURES_CORE
-        model_features_ou25 = self._model_ou25.get_booster().feature_names or FEATURES_CORE
-
-        # Fill missing features with defaults
-        for k in set(model_features_1x2 + model_features_ou25):
-            if k not in fv:
-                fv[k] = DEFAULTS.get(k, 0.0)
-
-        # ---- 1X2 (calibrated if available) ----
-        X_1x2 = pd.DataFrame([{k: fv[k] for k in model_features_1x2}]).astype(float)
-        probs_1x2 = self._predict_proba(self._model_1x2, self._cal_1x2, X_1x2)[0]
+        # ---- 1X2 (Ensemble) ----
+        X_1x2 = pd.DataFrame([{k: fv[k] for k in FEATURES_CORE}]).astype(float)
+        probs_1x2 = self._predict_ensemble(self._model_1x2_xgb, self._model_1x2_rf, X_1x2)[0]
         eps = 1e-6
 
-        # ---- O/U 2.5 (calibrated if available) ----
-        X_ou25 = pd.DataFrame([{k: fv[k] for k in model_features_ou25}]).astype(float)
-        probs_ou25 = self._predict_proba(self._model_ou25, self._cal_ou25, X_ou25)[0]
+        # ---- O/U 2.5 (Ensemble) ----
+        X_ou25 = pd.DataFrame([{k: fv[k] for k in FEATURES_CORE}]).astype(float)
+        probs_ou25 = self._predict_ensemble(self._model_ou25_xgb, self._model_ou25_rf, X_ou25)[0]
         prob_over25 = float(probs_ou25[1])
 
         # ---- Corners ----
