@@ -1,0 +1,80 @@
+name: Monthly Retrain - Gold Pipeline
+
+on:
+  schedule:
+    # 23:59 on the 1st of every month
+    - cron: '59 23 1 * *'
+  workflow_dispatch: 
+
+permissions:
+  contents: write
+
+jobs:
+  retrain-model:
+    runs-name: Retrain and Calibrate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install xgboost optuna requests pandas numpy scikit-learn
+
+      - name: Run Final Gold Training (Elo & Brier Score Validation)
+        env:
+          THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+          API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
+        run: |
+          cd backend
+          # The script train_model_v2.py will automatically fail (exit 1) if Brier Score >= 0.20
+          python scripts/train_model_v2.py
+          
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "::error::Model training failed! Brier Score exceeded 0.20 or another error occurred."
+
+      - name: Commit and Push Changes
+        if: success()
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Get the current month in Spanish
+          MONTH_YEAR=$(date +'%B %Y')
+          # English to Spanish Month mapping
+          MONTH_YEAR=${MONTH_YEAR/January/Enero}
+          MONTH_YEAR=${MONTH_YEAR/February/Febrero}
+          MONTH_YEAR=${MONTH_YEAR/March/Marzo}
+          MONTH_YEAR=${MONTH_YEAR/April/Abril}
+          MONTH_YEAR=${MONTH_YEAR/May/Mayo}
+          MONTH_YEAR=${MONTH_YEAR/June/Junio}
+          MONTH_YEAR=${MONTH_YEAR/July/Julio}
+          MONTH_YEAR=${MONTH_YEAR/August/Agosto}
+          MONTH_YEAR=${MONTH_YEAR/September/Septiembre}
+          MONTH_YEAR=${MONTH_YEAR/October/Octubre}
+          MONTH_YEAR=${MONTH_YEAR/November/Noviembre}
+          MONTH_YEAR=${MONTH_YEAR/December/Diciembre}
+          
+          # 1. First commit for Elo/Data recalibrations if any stats were created
+          git add backend/data/
+          if ! git diff --staged --quiet; then
+            git commit -m "Recalibración de Elo - $MONTH_YEAR"
+          fi
+          
+          # 2. Second commit for Model JSON/pkl files
+          git add backend/models/
+          if ! git diff --staged --quiet; then
+            git commit -m "Ajustes finos en el modelo de predicción"
+          fi
+          
+          git push

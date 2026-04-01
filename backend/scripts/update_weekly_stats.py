@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.config import settings
+from db.session import SessionLocal
+from db.models import Match, Bet, Team
+from sqlalchemy import func
 
 DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "laliga_historical.csv")
 API_KEY = settings.API_SPORTS_KEY
@@ -130,5 +133,64 @@ def update_historical_data():
 
     logger.info("✅ Weekly updates finished. Fatigue, Absences, and Team Forms synced.")
 
+def settle_pending_bets(db_session, fx_id: int, home_team: str, away_team: str, home_goals: int, away_goals: int):
+    # Try to find the match in the DB by checking team names or api_football_id
+    # To be safe, find matching teams
+    home = db_session.query(Team).filter(Team.name == home_team).first()
+    away = db_session.query(Team).filter(Team.name == away_team).first()
+    if not home or not away:
+        return
+
+    match = db_session.query(Match).filter(
+        Match.home_team_id == home.id,
+        Match.away_team_id == away.id,
+        Match.home_goals == None
+    ).first()
+
+    if match:
+        match.home_goals = home_goals
+        match.away_goals = away_goals
+        match.status = "Finished"
+        match.api_football_id = fx_id
+        
+        # Now find pending bets
+        pending_bets = db_session.query(Bet).filter(Bet.match_id == match.id, Bet.status == "Pending").all()
+        for bet in pending_bets:
+            won = False
+            total_goals = home_goals + away_goals
+            
+            # Settlement Logic
+            if bet.market == "1x2" or bet.market == "1X2" or bet.market == "h2h":
+                if bet.selection.lower() == "home" and home_goals > away_goals:
+                    won = True
+                elif bet.selection.lower() == "away" and away_goals > home_goals:
+                    won = True
+                elif bet.selection.lower() == "draw" and home_goals == away_goals:
+                    won = True
+            elif "2.5" in bet.market or bet.market == "ou25":
+                if ("over" in bet.selection.lower() or "más" in bet.selection.lower()) and total_goals > 2.5:
+                    won = True
+                elif ("under" in bet.selection.lower() or "menos" in bet.selection.lower()) and total_goals < 2.5:
+                    won = True
+            
+            bet.status = "Won" if won else "Lost"
+            logger.info(f"Settled Bet {bet.id} for {home_team} vs {away_team}: {bet.market} -> {bet.status}")
+        
+        db_session.commit()
+
 if __name__ == "__main__":
-    update_historical_data()
+    db = SessionLocal()
+    try:
+        update_historical_data()
+        
+        # After updating the CSV, the process inside `update_historical_data` also returns the data, 
+        # but to keep it clean we parse the fixtures again here to settle OR inject inside `update_historical_data`.
+        # For efficiency, we will fetch last week fixtures here and settle them.
+        fixtures = fetch_last_week_fixtures()
+        for fx in fixtures:
+            home_goals = fx["goals"]["home"]
+            away_goals = fx["goals"]["away"]
+            if home_goals is not None and away_goals is not None:
+                settle_pending_bets(db, fx["fixture"]["id"], fx["teams"]["home"]["name"], fx["teams"]["away"]["name"], home_goals, away_goals)
+    finally:
+        db.close()

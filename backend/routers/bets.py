@@ -36,6 +36,7 @@ class BetResponse(BaseModel):
     pnl: float | None
     status: str
     clv: float | None
+    created_at: str
     risk_level: str | None
     risk_badge: str | None
     risk_bg_class: str | None
@@ -45,10 +46,10 @@ class BetResponse(BaseModel):
 
 class BankrollStats(BaseModel):
     total_staked: float
-    net_profit: float
-    roi_percent: float
+    total_pnl: float
+    roi: float
     yield_percent: float
-    hit_rate_percent: float
+    win_rate: float
     total_bets: int
     won_bets: int
     lost_bets: int
@@ -130,6 +131,7 @@ def get_bankroll_stats(
             status=bet.status,
             pnl=round(((bet.stake * bet.odds_taken) - bet.stake) if bet.status == "Won" else (-bet.stake if bet.status == "Lost" else 0.0), 2),
             clv=bet.clv,
+            created_at=bet.placed_at.isoformat() + "Z" if bet.placed_at else "",
             risk_level="MEDIO",
             risk_badge="🟡 MEDIO",
             risk_bg_class="bg-yellow-400 text-black font-bold"
@@ -161,10 +163,10 @@ def get_bankroll_stats(
     
     return BankrollStats(
         total_staked=round(total_staked, 2),
-        net_profit=round(net_profit, 2),
-        roi_percent=round(roi_percent, 2),
+        total_pnl=round(net_profit, 2),
+        roi=round(roi_percent, 2),
         yield_percent=round(yield_percent, 2),
-        hit_rate_percent=round(hit_rate, 2),
+        win_rate=round(hit_rate, 2),
         total_bets=len(all_bets_data),
         won_bets=won_bets,
         lost_bets=lost_bets,

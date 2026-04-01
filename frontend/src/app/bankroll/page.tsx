@@ -17,6 +17,8 @@ interface BankrollStats {
 interface BetRecord {
     id: number;
     match_id: number;
+    home_team: string;
+    away_team: string;
     market: string;
     selection: string;
     odds_taken: number;
@@ -42,6 +44,16 @@ export default function BankrollPage() {
             .then(data => setStats(data))
             .catch(err => console.error("Error fetching bankroll", err));
     }, [token]);
+
+    const getSelectionLabel = (bet: BetRecord) => {
+        const sel = bet.selection.toLowerCase();
+        if (sel === 'home') return bet.home_team;
+        if (sel === 'away') return bet.away_team;
+        if (sel === 'draw') return 'Empate';
+        if (sel === 'over' || sel === 'over25') return 'Más de 2.5';
+        if (sel === 'under' || sel === 'under25') return 'Menos de 2.5';
+        return bet.selection;
+    };
 
     return (
         <ProtectedRoute>
@@ -147,12 +159,13 @@ export default function BankrollPage() {
                                             ) : stats.recent_bets.map((bet) => (
                                                 <tr key={bet.id} className="hover:bg-[#F8F9FA] transition-colors group">
                                                     <td className="px-8 py-6">
-                                                        <div className="text-sm font-bold text-[#1A1C1E]">{new Date(bet.created_at).toLocaleDateString('es-ES', { month: 'short', day: '2-digit' }).toUpperCase()}</div>
-                                                        <div className="text-[10px] font-bold text-[#64748B]">{new Date(bet.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</div>
+                                                        <div className="text-sm font-bold text-[#1A1C1E] capitalize">
+                                                            {new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(bet.created_at))}
+                                                        </div>
                                                     </td>
                                                     <td className="px-8 py-6">
                                                         <div className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest mb-1">{bet.market}</div>
-                                                        <div className="font-editorial text-lg font-bold text-[#1A1C1E] group-hover:text-[#064E3B] transition-colors">{bet.selection}</div>
+                                                        <div className="font-editorial text-lg font-bold text-[#1A1C1E] group-hover:text-[#064E3B] transition-colors">{getSelectionLabel(bet)}</div>
                                                     </td>
                                                     <td className="px-8 py-6">
                                                         <span className={`${bet.risk_bg_class || 'bg-gray-100 text-gray-600'} px-3 py-1 rounded-lg text-[9px] font-black tracking-widest uppercase`}>
