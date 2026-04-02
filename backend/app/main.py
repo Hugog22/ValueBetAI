@@ -28,6 +28,7 @@ async def lifespan(app: FastAPI):
         start_scheduler()
         yield
     except Exception as e:
+        print(f"ERROR DE CONEXIÓN: {e}")
         logger.error(f"CRITICAL: Application failed to start. Render Exited with 1. Reason: {str(e)}")
         sys.exit(1)
     finally:
@@ -224,3 +225,9 @@ def get_perfect_parlay(db: Session = Depends(get_db)):
         "markets_used":      list({c["market"] for c in selected}),
         "message":           f"Combinada de {len(selected)} selecciones | Cuota total: {total_odds}",
     }
+
+if __name__ == "__main__":
+    import uvicorn
+    import os
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
