@@ -38,7 +38,7 @@ export default function BankrollPage() {
 
     useEffect(() => {
         if (!token) return;
-        fetch('http://localhost:8001/api/bankroll/stats', {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/bankroll/stats`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(res => res.json())
