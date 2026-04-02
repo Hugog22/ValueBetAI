@@ -5,6 +5,7 @@ pydantic-settings
 SQLAlchemy
 alembic
 psycopg[binary]
+psycopg2-binary
 httpx
 pandas
 scikit-learn

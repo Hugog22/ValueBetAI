@@ -18,11 +18,20 @@ from routers.auth import router as auth_router
 
 logger = logging.getLogger(__name__)
 
+import sys
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    start_scheduler()
-    yield
-    stop_scheduler()
+    try:
+        logger.info("Initializing Render Application Layer & Databases...")
+        Base.metadata.create_all(bind=engine)
+        start_scheduler()
+        yield
+    except Exception as e:
+        logger.error(f"CRITICAL: Application failed to start. Render Exited with 1. Reason: {str(e)}")
+        sys.exit(1)
+    finally:
+        stop_scheduler()
 
 app = FastAPI(
     title="Value Betting API",
