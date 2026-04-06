@@ -54,6 +54,7 @@ class BankrollStats(BaseModel):
     total_bets: int
     won_bets: int
     lost_bets: int
+    current_bankroll: float
     recent_bets: List[BetResponse]
 
 @router.post("/bets")
@@ -172,5 +173,6 @@ def get_bankroll_stats(
         total_bets=len(all_bets_data),
         won_bets=won_bets,
         lost_bets=lost_bets,
+        current_bankroll=current_user.bankroll or 1000.0,
         recent_bets=recent_bets[:20]  # Return last 20 for UI
     )

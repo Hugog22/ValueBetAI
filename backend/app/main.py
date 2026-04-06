@@ -109,9 +109,11 @@ def get_jornada(db: Session = Depends(get_db)):
 @app.get("/api/super-boosts")
 def get_super_boosts(db: Session = Depends(get_db)):
     now = datetime.utcnow()
+    seven_days = now + timedelta(days=7)
     upcoming = (
         db.query(Match)
-        .order_by(Match.date.desc())
+        .filter(Match.date >= now, Match.date <= seven_days)
+        .order_by(Match.date.asc())
         .limit(10)
         .all()
     )

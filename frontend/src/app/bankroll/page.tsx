@@ -11,6 +11,7 @@ interface BankrollStats {
     total_pnl: number;
     roi: number;
     win_rate: number;
+    current_bankroll: number;
     recent_bets: BetRecord[];
 }
 
@@ -109,7 +110,13 @@ export default function BankrollPage() {
                     ) : (
                         <>
                             {/* KPI GRID */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-20">
+                                <div className="bg-[#064E3B] p-8 rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.02)]">
+                                    <div className="text-[10px] font-bold text-white/70 uppercase tracking-[0.2em] mb-4">Capital (Bankroll)</div>
+                                    <div className="text-4xl font-editorial font-bold text-white">
+                                        {(stats.current_bankroll ?? 1000).toFixed(2)} <span className="text-sm font-sans font-medium opacity-60">€</span>
+                                    </div>
+                                </div>
                                 <div className="bg-white p-8 rounded-[2rem] border border-[#E5E7EB] shadow-[0_10px_30px_rgba(0,0,0,0.02)]">
                                     <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.2em] mb-4">Volumen Total</div>
                                     <div className="text-4xl font-editorial font-bold text-[#1A1C1E]">
