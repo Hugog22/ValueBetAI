@@ -6,6 +6,10 @@ DATABASE_URL = settings.DATABASE_URL
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+if DATABASE_URL.startswith("postgres"):
+    if "sslmode=" not in DATABASE_URL:
+        DATABASE_URL += "&sslmode=require" if "?" in DATABASE_URL else "?sslmode=require"
+
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 else:
@@ -14,7 +18,8 @@ else:
         DATABASE_URL,
         pool_size=20,
         max_overflow=10,
-        pool_pre_ping=True
+        pool_pre_ping=True,
+        connect_args={"sslmode": "require"}
     )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
