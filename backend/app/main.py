@@ -94,8 +94,15 @@ def get_match_all_markets(match_id: int, db: Session = Depends(get_db)):
         })
     return res
 
+import time
+_cache = {"jornada": {"time": 0, "data": []}, "parlay": {"time": 0, "data": {}}}
+CACHE_TTL = 300
+
 @app.get("/api/matches/jornada")
 def get_jornada(db: Session = Depends(get_db)):
+    if time.time() - _cache["jornada"]["time"] < CACHE_TTL and _cache["jornada"]["data"]:
+        return _cache["jornada"]["data"]
+
     now = datetime.utcnow()
     upcoming = (
         db.query(Match)
@@ -106,6 +113,8 @@ def get_jornada(db: Session = Depends(get_db)):
     if not upcoming:
         return []
     matches = [_evaluate_match(m, db) for m in upcoming]
+    _cache["jornada"]["time"] = time.time()
+    _cache["jornada"]["data"] = matches
     return matches
 
 
@@ -135,6 +144,8 @@ def get_super_boosts(db: Session = Depends(get_db)):
 
 @app.get("/api/perfect_parlay")
 def get_perfect_parlay(db: Session = Depends(get_db)):
+    if time.time() - _cache["parlay"]["time"] < CACHE_TTL and _cache["parlay"]["data"]:
+        return _cache["parlay"]["data"]
     """
     Cross-market 'Combinada Perfecta':
     Selects 3–4 legs from any available market (1X2, O/U 2.5, Corners)
@@ -151,7 +162,8 @@ def get_perfect_parlay(db: Session = Depends(get_db)):
     if not upcoming:
         return {"legs": [], "totalOdds": 1.0, "jointProbability": 100.0, "message": "No hay partidos disponibles"}
 
-    PROB_THRESHOLD = 0.70   # 70% minimum real calibrated probability
+    # Relax prob_threshold since the strict 70% might yield 0 legs initially
+    PROB_THRESHOLD = 0.60
     all_candidates = []
 
     for match in upcoming:
@@ -215,13 +227,16 @@ def get_perfect_parlay(db: Session = Depends(get_db)):
         float(__import__("functools").reduce(lambda a, b: a * b, [c["probability"] for c in selected])) * 100, 2
     )
 
-    return {
+    res = {
         "legs":              selected,
         "totalOdds":         total_odds,
         "jointProbability":  joint_prob,
         "markets_used":      list({c["market"] for c in selected}),
         "message":           f"Combinada de {len(selected)} selecciones | Cuota total: {total_odds}",
     }
+    _cache["parlay"]["time"] = time.time()
+    _cache["parlay"]["data"] = res
+    return res
 
 if __name__ == "__main__":
     import uvicorn
