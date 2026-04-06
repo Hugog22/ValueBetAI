@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import random
 from contextlib import asynccontextmanager
@@ -104,9 +104,11 @@ def get_jornada(db: Session = Depends(get_db)):
         return _cache["jornada"]["data"]
 
     now = datetime.utcnow()
+    seven_days = now + timedelta(days=7)
     upcoming = (
         db.query(Match)
-        .order_by(Match.date.desc())
+        .filter(Match.date >= now, Match.date <= seven_days)
+        .order_by(Match.date.asc())
         .limit(15)
         .all()
     )
@@ -153,9 +155,11 @@ def get_perfect_parlay(db: Session = Depends(get_db)):
     Maximises total Expected Value of the combined bet.
     """
     now = datetime.utcnow()
+    seven_days = now + timedelta(days=7)
     upcoming = (
         db.query(Match)
-        .order_by(Match.date.desc())
+        .filter(Match.date >= now, Match.date <= seven_days)
+        .order_by(Match.date.asc())
         .limit(15)
         .all()
     )

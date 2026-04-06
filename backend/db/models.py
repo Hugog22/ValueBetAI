@@ -10,6 +10,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    bankroll = Column(Float, default=1000.0)
 
     bets = relationship("Bet", back_populates="user")
 

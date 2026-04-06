@@ -1,0 +1,51 @@
+name: Tuesday Weekly Sync & AI Retrain
+
+on:
+  schedule:
+    # 09:00 AM UTC every Tuesday
+    - cron: '0 9 * * 2'
+  workflow_dispatch: # Allows manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  weekly-sync:
+    runs-name: Weekly Sync and Retrain
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run Weekly Sync & Retrain
+        env:
+          THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+          API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          cd backend
+          python scripts/weekly_sync.py
+
+      - name: Commit and Push Updated Models
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/models/*.pkl backend/models/*.json backend/data/*.csv || true
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Auto-train: Actualización modelos de IA y stats tras ciclo semanal"
+            git push
+          fi
