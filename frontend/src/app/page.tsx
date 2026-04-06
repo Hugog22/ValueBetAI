@@ -80,36 +80,59 @@ export default function Home() {
   const [boosts, setBoosts] = useState<SuperBoost[]>([]);
   const [filterRisk, setFilterRisk] = useState<string>('all');
   const [minEV, setMinEV] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [retrying, setRetrying] = useState(false);
   const { user, token } = useAuth();
 
-  useEffect(() => {
-    const fetchMatches = async () => {
+  // Fetches a URL with automatic retries for Render cold-start (TypeErrors / network drops)
+  const fetchWithRetry = async (url: string, opts: RequestInit = {}, maxAttempts = 4, delayMs = 8000): Promise<Response> => {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        const headers: any = {};
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        const response = await fetch(`${API}/api/matches/jornada`, { headers });
-        const data = await response.json();
-        setMatches(Array.isArray(data) ? data : (data.matches || []));
+        const res = await fetch(url, opts);
+        return res;
+      } catch (err) {
+        if (attempt === maxAttempts) throw err;
+        setRetrying(true);
+        await new Promise(r => setTimeout(r, delayMs));
+      }
+    }
+    throw new Error('Max retries exceeded');
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setRetrying(false);
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const [matchRes, parlayRes, boostRes] = await Promise.all([
+          fetchWithRetry(`${API}/api/matches/jornada`, { headers }),
+          fetchWithRetry(`${API}/api/perfect_parlay`, { headers }),
+          fetchWithRetry(`${API}/api/super-boosts`, { headers }),
+        ]);
+
+        const matchData = await matchRes.json();
+        setMatches(Array.isArray(matchData) ? matchData : (matchData.matches || []));
+
+        const parlayData = await parlayRes.json();
+        setParlay(parlayData);
+
+        const boostData = await boostRes.json();
+        setBoosts(Array.isArray(boostData) ? boostData : []);
       } catch (e) {
-        console.error(e);
+        console.error('Failed to load data after retries:', e);
         setMatches([]);
+      } finally {
+        setLoading(false);
+        setRetrying(false);
       }
     };
-    fetchMatches();
 
-    const authHeaders: any = {};
-    if (token) authHeaders['Authorization'] = `Bearer ${token}`;
-
-    fetch(`${API}/api/perfect_parlay`, { headers: authHeaders })
-      .then(r => r.json())
-      .then(setParlay)
-      .catch(() => { });
-
-    fetch(`${API}/api/super-boosts`, { headers: authHeaders })
-      .then(r => r.json())
-      .then(setBoosts)
-      .catch(() => { });
+    load();
   }, [token]);
+
 
   const handleSimulateBet = async (matchId: number, pick: PickData) => {
     if (!token) {
@@ -158,9 +181,25 @@ export default function Home() {
       <div className={riskClassesSafelist}></div>
       <Navbar />
 
+      {/* LOADING STATE — shown during initial load and cold-start retries */}
+      {loading && (
+        <div className="fixed inset-0 z-40 bg-[#FCF9F1] flex flex-col items-center justify-center gap-6">
+          <div className="w-12 h-12 border-2 border-[#E5E7EB] border-t-[#064E3B] rounded-full animate-spin"></div>
+          <div className="text-center">
+            <div className="text-[#064E3B] text-[11px] font-bold uppercase tracking-[0.3em] animate-pulse">
+              {retrying ? 'Despertando servidor...' : 'Cargando análisis...'}
+            </div>
+            {retrying && (
+              <div className="text-[#94a3b8] text-xs mt-2">El servidor tarda ~30s en arrancar la primera vez</div>
+            )}
+          </div>
+        </div>
+      )}
+
       <main className="pt-32 pb-24 max-w-7xl mx-auto px-8">
         
         {/* HERO / FEATURED SECTION */}
+
         <section className="mb-20">
           {featuredMatch && (
             <FeaturedBet 
