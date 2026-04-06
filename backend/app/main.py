@@ -99,8 +99,7 @@ def get_jornada(db: Session = Depends(get_db)):
     now = datetime.utcnow()
     upcoming = (
         db.query(Match)
-        .filter(Match.status == "Not Started", Match.date >= now)
-        .order_by(Match.date)
+        .order_by(Match.date.desc())
         .limit(15)
         .all()
     )
@@ -115,8 +114,7 @@ def get_super_boosts(db: Session = Depends(get_db)):
     now = datetime.utcnow()
     upcoming = (
         db.query(Match)
-        .filter(Match.status == "Not Started", Match.date >= now)
-        .order_by(Match.date)
+        .order_by(Match.date.desc())
         .limit(10)
         .all()
     )
@@ -146,8 +144,7 @@ def get_perfect_parlay(db: Session = Depends(get_db)):
     now = datetime.utcnow()
     upcoming = (
         db.query(Match)
-        .filter(Match.status == "Not Started", Match.date >= now)
-        .order_by(Match.date)
+        .order_by(Match.date.desc())
         .limit(15)
         .all()
     )
