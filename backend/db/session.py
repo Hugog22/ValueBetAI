@@ -10,6 +10,9 @@ if DATABASE_URL.startswith("postgres://"):
 if DATABASE_URL.startswith("postgres"):
     if "sslmode=" not in DATABASE_URL:
         DATABASE_URL += "&sslmode=require" if "?" in DATABASE_URL else "?sslmode=require"
+    # Switch to Session Pooler (port 5432) which fully supports SQLAlchemy reflection
+    if ":6543" in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
 
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
