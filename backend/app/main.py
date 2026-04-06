@@ -1,10 +1,13 @@
+import sys
+import logging
+import random
+import time
+from datetime import datetime, timedelta
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
-import logging
-import random
-from contextlib import asynccontextmanager
 
 from db.session import get_db, engine, Base
 from db.models import Match
@@ -12,24 +15,26 @@ from core.scheduler import start_scheduler, stop_scheduler
 from core.shared_predictor import predictor
 from core.match_evaluator import _evaluate_match as _evaluate_match_core, _calculate_risk as _calculate_risk_core
 
-# Local imports after shared setup to avoid early circular triggers
+# Local imports
 from routers.bets import router as bets_router
 from routers.auth import router as auth_router
 
 logger = logging.getLogger(__name__)
 
-import sys
+# Global Cache for high-compute endpoints
+_cache = {"jornada": {"time": 0, "data": []}, "parlay": {"time": 0, "data": {}}}
+CACHE_TTL = 300
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         logger.info("Initializing Render Application Layer & Databases...")
+        # Create tables only once at startup
         Base.metadata.create_all(bind=engine)
         start_scheduler()
         yield
     except Exception as e:
-        print(f"ERROR DE CONEXIÓN: {e}")
-        logger.error(f"CRITICAL: Application failed to start. Render Exited with 1. Reason: {str(e)}")
+        logger.error(f"CRITICAL: Application failed to start. Reason: {str(e)}")
         sys.exit(1)
     finally:
         stop_scheduler()
@@ -49,8 +54,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-Base.metadata.create_all(bind=engine)
-
 app.include_router(bets_router)
 app.include_router(auth_router)
 
@@ -60,29 +63,16 @@ def _evaluate_match(match: Match, db: Session | None = None) -> dict:
 def _calculate_risk(prob: float, bookmaker_odds: float = 0.0) -> dict:
     return _calculate_risk_core(prob, bookmaker_odds)
 
-# ---------------------------------------------------------------------------
-# Mock odds pool  (realistic Bet365-style)
-# Includes corners odds once we have a corners model
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
-
 @app.get("/")
 def read_root():
     return {"status": "ok", "message": "Value Betting API v4 — Multi-market edition"}
 
-
 @app.get("/api/matches/{match_id}/all-markets")
 def get_match_all_markets(match_id: int, db: Session = Depends(get_db)):
     from db.models import MarketOdds
-    
     odds = db.query(MarketOdds).filter(MarketOdds.match_id == match_id).all()
     if not odds:
         return {"error": "No odds found for this match"}
-
     res = {}
     for o in odds:
         if o.market_key not in res:
@@ -93,10 +83,6 @@ def get_match_all_markets(match_id: int, db: Session = Depends(get_db)):
             "point": o.point
         })
     return res
-
-import time
-_cache = {"jornada": {"time": 0, "data": []}, "parlay": {"time": 0, "data": {}}}
-CACHE_TTL = 300
 
 @app.get("/api/matches/jornada")
 def get_jornada(db: Session = Depends(get_db)):
@@ -114,11 +100,11 @@ def get_jornada(db: Session = Depends(get_db)):
     )
     if not upcoming:
         return []
+    
     matches = [_evaluate_match(m, db) for m in upcoming]
     _cache["jornada"]["time"] = time.time()
     _cache["jornada"]["data"] = matches
     return matches
-
 
 @app.get("/api/super-boosts")
 def get_super_boosts(db: Session = Depends(get_db)):
@@ -143,17 +129,11 @@ def get_super_boosts(db: Session = Depends(get_db)):
             })
     return boosts
 
-
 @app.get("/api/perfect_parlay")
 def get_perfect_parlay(db: Session = Depends(get_db)):
     if time.time() - _cache["parlay"]["time"] < CACHE_TTL and _cache["parlay"]["data"]:
         return _cache["parlay"]["data"]
-    """
-    Cross-market 'Combinada Perfecta':
-    Selects 3–4 legs from any available market (1X2, O/U 2.5, Corners)
-    where the model's calibrated probability exceeds 70%.
-    Maximises total Expected Value of the combined bet.
-    """
+
     now = datetime.utcnow()
     seven_days = now + timedelta(days=7)
     upcoming = (
@@ -166,12 +146,11 @@ def get_perfect_parlay(db: Session = Depends(get_db)):
     if not upcoming:
         return {"legs": [], "totalOdds": 1.0, "jointProbability": 100.0, "message": "No hay partidos disponibles"}
 
-    # Relax prob_threshold since the strict 70% might yield 0 legs initially
     PROB_THRESHOLD = 0.60
     all_candidates = []
 
     for match in upcoming:
-        evaluated = _evaluate_match(match)
+        evaluated = _evaluate_match(match, db)
         for c in evaluated["allCandidates"]:
             if c["probability"] >= PROB_THRESHOLD and c["ev"] > 0:
                 all_candidates.append({
@@ -188,30 +167,8 @@ def get_perfect_parlay(db: Session = Depends(get_db)):
                     "ev":            c["ev"],
                 })
 
-    if not all_candidates:
-        # Relax to 60% if nothing above 70%
-        for match in upcoming:
-            evaluated = _evaluate_match(match)
-            for c in evaluated["allCandidates"]:
-                if c["probability"] >= 0.60 and c["ev"] > 0:
-                    all_candidates.append({
-                        "matchId":       match.id,
-                        "homeTeam":      evaluated["homeTeam"],
-                        "awayTeam":      evaluated["awayTeam"],
-                        "date":          evaluated["date"],
-                        "market":        c["market"],
-                        "outcome":       c["outcome"],
-                        "label":         c["label"],
-                        "probability":   c["probability"],
-                        "bookmakerOdds": c["bookmaker_odds"],
-                        "fairOdds":      c["fair_odds"],
-                        "ev":            c["ev"],
-                    })
-
-    # Sort by combined score: probability * ev  (want confident AND high-value picks)
     all_candidates.sort(key=lambda c: c["probability"] * c["ev"], reverse=True)
 
-    # Take best 3–4 legs; max 1 per match to ensure diversification
     selected: list[dict] = []
     used_matches: set[int] = set()
     for c in all_candidates:
@@ -224,12 +181,9 @@ def get_perfect_parlay(db: Session = Depends(get_db)):
     if not selected:
         return {"legs": [], "totalOdds": 1.0, "jointProbability": 0.0, "message": "No hay selecciones con suficiente confianza"}
 
-    total_odds = round(
-        float(__import__("functools").reduce(lambda a, b: a * b, [c["bookmakerOdds"] for c in selected])), 2
-    )
-    joint_prob = round(
-        float(__import__("functools").reduce(lambda a, b: a * b, [c["probability"] for c in selected])) * 100, 2
-    )
+    from functools import reduce
+    total_odds = round(float(reduce(lambda a, b: a * b, [c["bookmakerOdds"] for c in selected])), 2)
+    joint_prob = round(float(reduce(lambda a, b: a * b, [c["probability"] for c in selected])) * 100, 2)
 
     res = {
         "legs":              selected,
