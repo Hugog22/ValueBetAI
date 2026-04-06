@@ -89,114 +89,138 @@ def get_jornada(db: Session = Depends(get_db)):
     if time.time() - _cache["jornada"]["time"] < CACHE_TTL and _cache["jornada"]["data"]:
         return _cache["jornada"]["data"]
 
-    now = datetime.utcnow()
-    seven_days = now + timedelta(days=7)
-    upcoming = (
-        db.query(Match)
-        .filter(Match.date >= now, Match.date <= seven_days)
-        .order_by(Match.date.asc())
-        .limit(15)
-        .all()
-    )
-    if not upcoming:
+    try:
+        now = datetime.utcnow()
+        seven_days = now + timedelta(days=7)
+        upcoming = (
+            db.query(Match)
+            .filter(Match.date >= now, Match.date <= seven_days)
+            .order_by(Match.date.asc())
+            .limit(15)
+            .all()
+        )
+        if not upcoming:
+            return []
+
+        matches = []
+        for m in upcoming:
+            try:
+                matches.append(_evaluate_match(m, db))
+            except Exception as e:
+                logger.warning(f"Skipping match {m.id} in jornada due to eval error: {e}")
+
+        _cache["jornada"]["time"] = time.time()
+        _cache["jornada"]["data"] = matches
+        return matches
+    except Exception as e:
+        logger.error(f"Error in get_jornada: {e}")
         return []
-    
-    matches = [_evaluate_match(m, db) for m in upcoming]
-    _cache["jornada"]["time"] = time.time()
-    _cache["jornada"]["data"] = matches
-    return matches
 
 @app.get("/api/super-boosts")
 def get_super_boosts(db: Session = Depends(get_db)):
-    now = datetime.utcnow()
-    seven_days = now + timedelta(days=7)
-    upcoming = (
-        db.query(Match)
-        .filter(Match.date >= now, Match.date <= seven_days)
-        .order_by(Match.date.asc())
-        .limit(10)
-        .all()
-    )
-    boosts = []
-    for m in upcoming:
-        rng = random.Random(m.id + 9999)
-        if rng.random() < 0.4:
-            boosts.append({
-                "match":        f"{m.home_team.name} vs {m.away_team.name}",
-                "date":         m.date.isoformat() + "Z" if m.date else None,
-                "market":       rng.choice(["Victoria Local", "Ambos Equipos Marcan", "Más de 2.5 Goles"]),
-                "normalOdds":   round(rng.uniform(1.6, 2.4), 2),
-                "boostedOdds":  round(rng.uniform(2.8, 4.5), 2),
-                "bookmaker":    rng.choice(["Bet365", "Betfair", "Codere", "Betway"]),
-            })
-    return boosts
+    try:
+        now = datetime.utcnow()
+        seven_days = now + timedelta(days=7)
+        upcoming = (
+            db.query(Match)
+            .filter(Match.date >= now, Match.date <= seven_days)
+            .order_by(Match.date.asc())
+            .limit(10)
+            .all()
+        )
+        boosts = []
+        for m in upcoming:
+            try:
+                rng = random.Random(m.id + 9999)
+                if rng.random() < 0.4:
+                    boosts.append({
+                        "match":        f"{m.home_team.name} vs {m.away_team.name}",
+                        "date":         m.date.isoformat() + "Z" if m.date else None,
+                        "market":       rng.choice(["Victoria Local", "Ambos Equipos Marcan", "Más de 2.5 Goles"]),
+                        "normalOdds":   round(rng.uniform(1.6, 2.4), 2),
+                        "boostedOdds":  round(rng.uniform(2.8, 4.5), 2),
+                        "bookmaker":    rng.choice(["Bet365", "Betfair", "Codere", "Betway"]),
+                    })
+            except Exception as e:
+                logger.warning(f"Skipping boost for match {m.id}: {e}")
+        return boosts
+    except Exception as e:
+        logger.error(f"Error in get_super_boosts: {e}")
+        return []
 
 @app.get("/api/perfect_parlay")
 def get_perfect_parlay(db: Session = Depends(get_db)):
     if time.time() - _cache["parlay"]["time"] < CACHE_TTL and _cache["parlay"]["data"]:
         return _cache["parlay"]["data"]
 
-    now = datetime.utcnow()
-    seven_days = now + timedelta(days=7)
-    upcoming = (
-        db.query(Match)
-        .filter(Match.date >= now, Match.date <= seven_days)
-        .order_by(Match.date.asc())
-        .limit(15)
-        .all()
-    )
-    if not upcoming:
-        return {"legs": [], "totalOdds": 1.0, "jointProbability": 100.0, "message": "No hay partidos disponibles"}
+    try:
+        now = datetime.utcnow()
+        seven_days = now + timedelta(days=7)
+        upcoming = (
+            db.query(Match)
+            .filter(Match.date >= now, Match.date <= seven_days)
+            .order_by(Match.date.asc())
+            .limit(15)
+            .all()
+        )
+        if not upcoming:
+            return {"legs": [], "totalOdds": 1.0, "jointProbability": 100.0, "message": "No hay partidos disponibles"}
 
-    PROB_THRESHOLD = 0.60
-    all_candidates = []
+        PROB_THRESHOLD = 0.60
+        all_candidates = []
 
-    for match in upcoming:
-        evaluated = _evaluate_match(match, db)
-        for c in evaluated["allCandidates"]:
-            if c["probability"] >= PROB_THRESHOLD and c["ev"] > 0:
-                all_candidates.append({
-                    "matchId":       match.id,
-                    "homeTeam":      evaluated["homeTeam"],
-                    "awayTeam":      evaluated["awayTeam"],
-                    "date":          evaluated["date"],
-                    "market":        c["market"],
-                    "outcome":       c["outcome"],
-                    "label":         c["label"],
-                    "probability":   c["probability"],
-                    "bookmakerOdds": c["bookmaker_odds"],
-                    "fairOdds":      c["fair_odds"],
-                    "ev":            c["ev"],
-                })
+        for match in upcoming:
+            try:
+                evaluated = _evaluate_match(match, db)
+                for c in evaluated["allCandidates"]:
+                    if c["probability"] >= PROB_THRESHOLD and c["ev"] > 0:
+                        all_candidates.append({
+                            "matchId":       match.id,
+                            "homeTeam":      evaluated["homeTeam"],
+                            "awayTeam":      evaluated["awayTeam"],
+                            "date":          evaluated["date"],
+                            "market":        c["market"],
+                            "outcome":       c["outcome"],
+                            "label":         c["label"],
+                            "probability":   c["probability"],
+                            "bookmakerOdds": c["bookmaker_odds"],
+                            "fairOdds":      c["fair_odds"],
+                            "ev":            c["ev"],
+                        })
+            except Exception as e:
+                logger.warning(f"Skipping match {match.id} in parlay: {e}")
 
-    all_candidates.sort(key=lambda c: c["probability"] * c["ev"], reverse=True)
+        all_candidates.sort(key=lambda c: c["probability"] * c["ev"], reverse=True)
 
-    selected: list[dict] = []
-    used_matches: set[int] = set()
-    for c in all_candidates:
-        if c["matchId"] not in used_matches:
-            selected.append(c)
-            used_matches.add(c["matchId"])
-        if len(selected) == 4:
-            break
+        selected: list[dict] = []
+        used_matches: set[int] = set()
+        for c in all_candidates:
+            if c["matchId"] not in used_matches:
+                selected.append(c)
+                used_matches.add(c["matchId"])
+            if len(selected) == 4:
+                break
 
-    if not selected:
-        return {"legs": [], "totalOdds": 1.0, "jointProbability": 0.0, "message": "No hay selecciones con suficiente confianza"}
+        if not selected:
+            return {"legs": [], "totalOdds": 1.0, "jointProbability": 0.0, "message": "No hay selecciones con suficiente confianza"}
 
-    from functools import reduce
-    total_odds = round(float(reduce(lambda a, b: a * b, [c["bookmakerOdds"] for c in selected])), 2)
-    joint_prob = round(float(reduce(lambda a, b: a * b, [c["probability"] for c in selected])) * 100, 2)
+        from functools import reduce
+        total_odds = round(float(reduce(lambda a, b: a * b, [c["bookmakerOdds"] for c in selected])), 2)
+        joint_prob = round(float(reduce(lambda a, b: a * b, [c["probability"] for c in selected])) * 100, 2)
 
-    res = {
-        "legs":              selected,
-        "totalOdds":         total_odds,
-        "jointProbability":  joint_prob,
-        "markets_used":      list({c["market"] for c in selected}),
-        "message":           f"Combinada de {len(selected)} selecciones | Cuota total: {total_odds}",
-    }
-    _cache["parlay"]["time"] = time.time()
-    _cache["parlay"]["data"] = res
-    return res
+        res = {
+            "legs":              selected,
+            "totalOdds":         total_odds,
+            "jointProbability":  joint_prob,
+            "markets_used":      list({c["market"] for c in selected}),
+            "message":           f"Combinada de {len(selected)} selecciones | Cuota total: {total_odds}",
+        }
+        _cache["parlay"]["time"] = time.time()
+        _cache["parlay"]["data"] = res
+        return res
+    except Exception as e:
+        logger.error(f"Error in get_perfect_parlay: {e}")
+        return {"legs": [], "totalOdds": 1.0, "jointProbability": 0.0, "message": "Error al calcular combinada"}
 
 if __name__ == "__main__":
     import uvicorn

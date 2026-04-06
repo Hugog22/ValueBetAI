@@ -83,6 +83,7 @@ export default function Home() {
   const [minEV, setMinEV] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [bankroll, setBankroll] = useState<number>(1000);
   const [activeBet, setActiveBet] = useState<{
     matchId: number; homeTeam: string; awayTeam: string;
@@ -92,10 +93,16 @@ export default function Home() {
   const { user, token } = useAuth();
 
   // Fetches a URL with automatic retries for Render cold-start (TypeErrors / network drops)
-  const fetchWithRetry = async (url: string, opts: RequestInit = {}, maxAttempts = 4, delayMs = 8000): Promise<Response> => {
+  const fetchWithRetry = async (url: string, opts: RequestInit = {}, maxAttempts = 6, delayMs = 10000): Promise<Response> => {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const res = await fetch(url, opts);
+        // Treat 5xx as retriable (Render cold start returns 500/503)
+        if (res.status >= 500 && attempt < maxAttempts) {
+          setRetrying(true);
+          await new Promise(r => setTimeout(r, delayMs));
+          continue;
+        }
         return res;
       } catch (err) {
         if (attempt === maxAttempts) throw err;
@@ -105,6 +112,7 @@ export default function Home() {
     }
     throw new Error('Max retries exceeded');
   };
+
 
   useEffect(() => {
     const load = async () => {
@@ -143,9 +151,9 @@ export default function Home() {
       } catch (e) {
         console.error('Failed to load data after retries:', e);
         setMatches([]);
+        setLoadError(true);
       } finally {
         setLoading(false);
-
         setRetrying(false);
       }
     };
@@ -203,6 +211,24 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* ERROR STATE — shown when all retries fail */}
+      {!loading && loadError && (
+        <div className="fixed inset-0 z-40 bg-[#FCF9F1] flex flex-col items-center justify-center gap-6">
+          <div className="text-4xl">⚠️</div>
+          <div className="text-center max-w-xs">
+            <div className="text-[#1A1C1E] font-editorial font-bold text-xl mb-2">Servidor no disponible</div>
+            <div className="text-[#94a3b8] text-sm leading-relaxed">El servidor tardó demasiado en responder. Haz clic en Reintentar para volver a intentarlo.</div>
+          </div>
+          <button
+            onClick={() => { setLoadError(false); setLoading(true); setRetrying(false); }}
+            className="bg-[#064E3B] text-white px-8 py-3 rounded-full text-sm font-bold tracking-wide hover:bg-[#065f46] transition-all"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
 
       <main className="pt-32 pb-24 max-w-7xl mx-auto px-8">
         
