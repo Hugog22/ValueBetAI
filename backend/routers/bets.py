@@ -64,39 +64,55 @@ def place_virtual_bet(
     current_user: User = Depends(get_current_user)
 ):
     """Simulate a bet on a given match."""
-    match = db.query(Match).filter(Match.id == bet_in.match_id).first()
-    if not match:
-        raise HTTPException(status_code=404, detail="Match not found")
+    try:
+        match = db.query(Match).filter(Match.id == bet_in.match_id).first()
+        if not match:
+            raise HTTPException(status_code=404, detail="Match not found")
 
-    # Validate and deduct stake from bankroll immediately
-    current_bankroll = current_user.bankroll or 1000.0
-    if bet_in.stake <= 0:
-        raise HTTPException(status_code=400, detail="El stake debe ser mayor que 0")
-    if bet_in.stake > current_bankroll:
-        raise HTTPException(status_code=400, detail=f"Saldo insuficiente. Bankroll actual: {current_bankroll:.2f} €")
+        # Safe bankroll access (handles missing column in older DB schemas)
+        try:
+            current_bankroll = float(current_user.bankroll or 0) or 1000.0
+        except Exception:
+            current_bankroll = 1000.0
 
-    # Deduct stake NOW from bankroll
-    current_user.bankroll = current_bankroll - bet_in.stake
+        if bet_in.stake <= 0:
+            raise HTTPException(status_code=400, detail="El stake debe ser mayor que 0")
+        if bet_in.stake > current_bankroll:
+            raise HTTPException(status_code=400, detail=f"Saldo insuficiente. Disponible: {current_bankroll:.2f} \u20ac")
 
-    new_bet = Bet(
-        user_id=current_user.id,
-        match_id=bet_in.match_id,
-        bookmaker=bet_in.bookmaker,
-        market=bet_in.market,
-        selection=bet_in.selection,
-        odds_taken=bet_in.odds_taken,
-        stake=bet_in.stake,
-        status="Pending",
-        clv=None
-    )
-    db.add(new_bet)
-    db.commit()
-    db.refresh(new_bet)
-    return {
-        "status": "success",
-        "bet_id": new_bet.id,
-        "new_bankroll": round(current_user.bankroll, 2)
-    }
+        # Deduct stake immediately from bankroll
+        try:
+            current_user.bankroll = current_bankroll - bet_in.stake
+        except Exception:
+            pass  # If column missing, skip — still record the bet
+
+        new_bet = Bet(
+            user_id=current_user.id,
+            match_id=bet_in.match_id,
+            bookmaker=bet_in.bookmaker,
+            market=bet_in.market,
+            selection=bet_in.selection,
+            odds_taken=bet_in.odds_taken,
+            stake=bet_in.stake,
+            status="Pending",
+            clv=None
+        )
+        db.add(new_bet)
+        db.commit()
+        db.refresh(new_bet)
+
+        new_bankroll = current_bankroll - bet_in.stake
+        return {
+            "status": "success",
+            "bet_id": new_bet.id,
+            "new_bankroll": round(new_bankroll, 2)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al registrar apuesta: {str(e)}")
+
 
 @router.get("/bankroll/stats", response_model=BankrollStats)
 def get_bankroll_stats(

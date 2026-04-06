@@ -66,10 +66,26 @@ export default function BetModal({
         })
       });
 
-      const data = await res.json();
+      // Safely parse JSON (Render may return HTML on 500)
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
 
       if (!res.ok) {
-        setError(data.detail || 'Error al registrar la apuesta');
+        // FastAPI validation errors have detail as an array of objects
+        const rawDetail = data.detail;
+        let msg = 'Error al registrar la apuesta';
+        if (typeof rawDetail === 'string') {
+          msg = rawDetail;
+        } else if (Array.isArray(rawDetail) && rawDetail.length > 0) {
+          msg = rawDetail[0]?.msg || msg;
+        } else if (rawDetail) {
+          msg = JSON.stringify(rawDetail);
+        }
+        setError(msg);
         return;
       }
 
@@ -80,6 +96,7 @@ export default function BetModal({
       setLoading(false);
     }
   };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
