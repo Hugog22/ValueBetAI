@@ -108,15 +108,16 @@ def sync_results_and_bankroll():
             
             if won:
                 bet.status = "Won"
-                profit = (bet.stake * bet.odds_taken) - bet.stake
+                # Stake already deducted at bet placement — return stake + profit
+                full_return = bet.stake * bet.odds_taken
                 if bet.user:
-                    # Update User Bankroll (If stakeholder didn't subtract stake on placement)
-                    bet.user.bankroll = (bet.user.bankroll or 1000.0) + profit
+                    bet.user.bankroll = (bet.user.bankroll or 0.0) + full_return
+                    logger.info(f"  ✅ Bet {bet.id} WON — Return {full_return:.2f}€ → New bankroll: {bet.user.bankroll:.2f}€")
             else:
                 bet.status = "Lost"
-                loss = bet.stake
+                # Stake already deducted at placement — nothing more to do
                 if bet.user:
-                    bet.user.bankroll = (bet.user.bankroll or 1000.0) - loss
+                    logger.info(f"  ❌ Bet {bet.id} LOST — Stake {bet.stake:.2f}€ already deducted")
 
         db.commit()
         logger.info("Bankroll actualizado exitosamente.")

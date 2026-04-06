@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import FeaturedBet from '@/components/FeaturedBet';
 import CategoryCard from '@/components/CategoryCard';
 import BentoCard from '@/components/BentoCard';
+import BetModal from '@/components/BetModal';
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
@@ -82,6 +83,12 @@ export default function Home() {
   const [minEV, setMinEV] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
+  const [bankroll, setBankroll] = useState<number>(1000);
+  const [activeBet, setActiveBet] = useState<{
+    matchId: number; homeTeam: string; awayTeam: string;
+    market: string; outcome: string; label: string;
+    odds: number; probability: number; ev: number;
+  } | null>(null);
   const { user, token } = useAuth();
 
   // Fetches a URL with automatic retries for Render cold-start (TypeErrors / network drops)
@@ -107,11 +114,18 @@ export default function Home() {
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
       try {
-        const [matchRes, parlayRes, boostRes] = await Promise.all([
+        const requests: Promise<Response>[] = [
           fetchWithRetry(`${API}/api/matches/jornada`, { headers }),
           fetchWithRetry(`${API}/api/perfect_parlay`, { headers }),
           fetchWithRetry(`${API}/api/super-boosts`, { headers }),
-        ]);
+        ];
+        // Also fetch bankroll if logged in
+        if (token) {
+          requests.push(fetchWithRetry(`${API}/api/bankroll/stats`, { headers }));
+        }
+
+        const results = await Promise.all(requests);
+        const [matchRes, parlayRes, boostRes, bankrollRes] = results;
 
         const matchData = await matchRes.json();
         setMatches(Array.isArray(matchData) ? matchData : (matchData.matches || []));
@@ -121,11 +135,17 @@ export default function Home() {
 
         const boostData = await boostRes.json();
         setBoosts(Array.isArray(boostData) ? boostData : []);
+
+        if (bankrollRes) {
+          const brData = await bankrollRes.json();
+          setBankroll(brData.current_bankroll ?? 1000);
+        }
       } catch (e) {
         console.error('Failed to load data after retries:', e);
         setMatches([]);
       } finally {
         setLoading(false);
+
         setRetrying(false);
       }
     };
@@ -134,34 +154,22 @@ export default function Home() {
   }, [token]);
 
 
-  const handleSimulateBet = async (matchId: number, pick: PickData) => {
+  const handleSimulateBet = (matchId: number, pick: PickData, homeTeam: string, awayTeam: string) => {
     if (!token) {
-      alert("Acceso denegado. Por favor inicia sesión.");
+      alert('Accede a tu cuenta para registrar apuestas.');
       return;
     }
-
-    const payload = {
-      match_id: matchId,
-      bookmaker: "Bet365",
+    setActiveBet({
+      matchId,
+      homeTeam,
+      awayTeam,
       market: pick.market,
-      selection: pick.outcome,
-      odds_taken: pick.bookmaker_odds ?? pick.bookmakerOdds ?? 1.0,
-      stake: pick.stake || 1
-    };
-    try {
-      const res = await fetch(`${API}/api/bets`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) alert("Posición asegurada correctamente.");
-      else alert("Error al registrar posición.");
-    } catch (e) {
-      alert("Error de red.");
-    }
+      outcome: pick.outcome,
+      label: pick.label,
+      odds: pick.bookmaker_odds ?? pick.bookmakerOdds ?? 1.0,
+      probability: pick.probability ?? 0,
+      ev: pick.ev ?? 0,
+    });
   };
 
   const filteredMatches = matches.filter(m => {
@@ -212,7 +220,7 @@ export default function Home() {
               risk={featuredMatch.bestPick?.risk}
               date={new Date(featuredMatch.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
               justification={featuredMatch.justification || ""}
-              onAction={() => handleSimulateBet(featuredMatch.id, featuredMatch.bestPick!)}
+              onAction={() => handleSimulateBet(featuredMatch.id, featuredMatch.bestPick!, featuredMatch.homeTeam, featuredMatch.awayTeam)}
             />
           )}
         </section>
@@ -366,7 +374,7 @@ export default function Home() {
                       <div className="flex items-center justify-between gap-4">
                         <div className="text-lg font-editorial font-bold text-[#1A1C1E]">{pick.label}</div>
                         <button 
-                          onClick={() => handleSimulateBet(match.id, pick)}
+                          onClick={() => handleSimulateBet(match.id, pick, match.homeTeam, match.awayTeam)}
                           className="bg-[#F1F3F5] hover:bg-[#064E3B] hover:text-white text-[#1A1C1E] font-black px-4 py-2 rounded-xl transition-all active:scale-95 min-w-[60px]"
                         >
                           {(pick.bookmaker_odds || pick.bookmakerOdds || 1.0).toFixed(2)}
@@ -380,6 +388,21 @@ export default function Home() {
           </div>
         </section>
       </main>
+
+      {/* BET MODAL */}
+      {activeBet && token && (
+        <BetModal
+          {...activeBet}
+          token={token}
+          currentBankroll={bankroll}
+          onClose={() => setActiveBet(null)}
+          onSuccess={(newBankroll) => {
+            setBankroll(newBankroll);
+            setActiveBet(null);
+            alert(`✅ Apuesta registrada. Bankroll actualizado: ${newBankroll.toFixed(2)} €`);
+          }}
+        />
+      )}
     </div>
   );
 }

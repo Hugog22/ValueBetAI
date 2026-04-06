@@ -68,6 +68,16 @@ def place_virtual_bet(
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
 
+    # Validate and deduct stake from bankroll immediately
+    current_bankroll = current_user.bankroll or 1000.0
+    if bet_in.stake <= 0:
+        raise HTTPException(status_code=400, detail="El stake debe ser mayor que 0")
+    if bet_in.stake > current_bankroll:
+        raise HTTPException(status_code=400, detail=f"Saldo insuficiente. Bankroll actual: {current_bankroll:.2f} €")
+
+    # Deduct stake NOW from bankroll
+    current_user.bankroll = current_bankroll - bet_in.stake
+
     new_bet = Bet(
         user_id=current_user.id,
         match_id=bet_in.match_id,
@@ -77,12 +87,16 @@ def place_virtual_bet(
         odds_taken=bet_in.odds_taken,
         stake=bet_in.stake,
         status="Pending",
-        clv=None  # Can be updated later when match starts
+        clv=None
     )
     db.add(new_bet)
     db.commit()
     db.refresh(new_bet)
-    return {"status": "success", "bet_id": new_bet.id}
+    return {
+        "status": "success",
+        "bet_id": new_bet.id,
+        "new_bankroll": round(current_user.bankroll, 2)
+    }
 
 @router.get("/bankroll/stats", response_model=BankrollStats)
 def get_bankroll_stats(
