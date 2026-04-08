@@ -14,6 +14,7 @@ python-dotenv
 
 understatapi
 apscheduler
+pytz
 bcrypt==3.2.0
 passlib
 python-jose[cryptography]

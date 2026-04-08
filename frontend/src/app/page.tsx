@@ -1,434 +1,76 @@
-'use client';
+/**
+ * page.tsx  — Server Component with ISR
+ * ----------------------------------------
+ * Fetches data once on the server with Next.js ISR (revalidate: 60 seconds).
+ * Vercel caches the resulting HTML at the edge and serves it instantly to
+ * every user. The cache is refreshed in the background every 60 s by Vercel's
+ * edge network — no user ever sees a loading spinner for the initial content.
+ *
+ * Interactive elements (filters, bet modal, bankroll) live in MatchesDashboard,
+ * a separate client component that receives data as props.
+ */
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import Link from 'next/link';
 import Navbar from '@/components/Navbar';
-import FeaturedBet from '@/components/FeaturedBet';
-import CategoryCard from '@/components/CategoryCard';
-import BentoCard from '@/components/BentoCard';
-import BetModal from '@/components/BetModal';
+import MatchesDashboard from '@/components/MatchesDashboard';
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+// Server-side environment variable (not exposed to the browser)
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
 
-interface OddsHistoryEntry {
-  timestamp: string;
-  home: number;
-  draw: number;
-  away: number;
-  bookmaker: string;
-}
+// Revalidate every 60 seconds — Vercel will serve stale HTML and refresh in
+// the background. Increase this value if your scheduler interval is longer.
+export const revalidate = 60;
 
-interface Risk {
-  level: string;
-  badge: string;
-  bgClass: string;
-}
+// ── Server-side data fetching ─────────────────────────────────────────────────
 
-interface SuperBoost {
-  match: string;
-  date: string;
-  market: string;
-  normalOdds: number;
-  boostedOdds: number;
-  bookmaker: string;
-}
-
-interface PickData {
-  market: string;
-  outcome: string;
-  bookmaker_odds?: number;
-  bookmakerOdds?: number;
-  stake?: number;
-  label: string;
-  isValueBet?: boolean;
-  ev?: number;
-  probability?: number;
-  risk?: Risk;
-  bookmaker_implied_prob?: number;
-}
-
-interface Match {
-  id: number;
-  date: string;
-  homeTeam: string;
-  awayTeam: string;
-  bestPick?: PickData;
-  topPicks?: PickData[];
-  secondaryMarkets?: PickData[];
-  isSteam?: boolean;
-  oddsHistory?: OddsHistoryEntry[];
-  bet365Odds?: Record<string, number | null>;
-  probabilities?: Record<string, number>;
-  h2h?: string;
-  justification?: string;
-}
-
-interface ParlayLeg extends PickData {
-  homeTeam: string;
-  awayTeam: string;
-}
-
-interface ParlayData {
-  legs: ParlayLeg[];
-  totalOdds: number;
-  jointProbability: number;
-}
-
-export default function Home() {
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [parlay, setParlay] = useState<ParlayData | null>(null);
-  const [boosts, setBoosts] = useState<SuperBoost[]>([]);
-  const [filterRisk, setFilterRisk] = useState<string>('all');
-  const [minEV, setMinEV] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
-  const [retrying, setRetrying] = useState(false);
-  const [loadError, setLoadError] = useState(false);
-  const [bankroll, setBankroll] = useState<number>(1000);
-  const [activeBet, setActiveBet] = useState<{
-    matchId: number; homeTeam: string; awayTeam: string;
-    market: string; outcome: string; label: string;
-    odds: number; probability: number; ev: number;
-  } | null>(null);
-  const { user, token } = useAuth();
-
-  // Fetches a URL with automatic retries for Render cold-start (TypeErrors / network drops)
-  const fetchWithRetry = async (url: string, opts: RequestInit = {}, maxAttempts = 6, delayMs = 10000): Promise<Response> => {
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        const res = await fetch(url, opts);
-        // Treat 5xx as retriable (Render cold start returns 500/503)
-        if (res.status >= 500 && attempt < maxAttempts) {
-          setRetrying(true);
-          await new Promise(r => setTimeout(r, delayMs));
-          continue;
-        }
-        return res;
-      } catch (err) {
-        if (attempt === maxAttempts) throw err;
-        setRetrying(true);
-        await new Promise(r => setTimeout(r, delayMs));
-      }
-    }
-    throw new Error('Max retries exceeded');
-  };
-
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setRetrying(false);
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      try {
-        const requests: Promise<Response>[] = [
-          fetchWithRetry(`${API}/api/matches/jornada`, { headers }),
-          fetchWithRetry(`${API}/api/perfect_parlay`, { headers }),
-          fetchWithRetry(`${API}/api/super-boosts`, { headers }),
-        ];
-        // Also fetch bankroll if logged in
-        if (token) {
-          requests.push(fetchWithRetry(`${API}/api/bankroll/stats`, { headers }));
-        }
-
-        const results = await Promise.all(requests);
-        const [matchRes, parlayRes, boostRes, bankrollRes] = results;
-
-        const matchData = await matchRes.json();
-        setMatches(Array.isArray(matchData) ? matchData : (matchData.matches || []));
-
-        const parlayData = await parlayRes.json();
-        setParlay(parlayData);
-
-        const boostData = await boostRes.json();
-        setBoosts(Array.isArray(boostData) ? boostData : []);
-
-        if (bankrollRes) {
-          const brData = await bankrollRes.json();
-          setBankroll(brData.current_bankroll ?? 1000);
-        }
-      } catch (e) {
-        console.error('Failed to load data after retries:', e);
-        setMatches([]);
-        setLoadError(true);
-      } finally {
-        setLoading(false);
-        setRetrying(false);
-      }
-    };
-
-    load();
-  }, [token]);
-
-
-  const handleSimulateBet = (matchId: number, pick: PickData, homeTeam: string, awayTeam: string) => {
-    if (!token) {
-      alert('Accede a tu cuenta para registrar apuestas.');
-      return;
-    }
-    setActiveBet({
-      matchId,
-      homeTeam,
-      awayTeam,
-      market: pick.market,
-      outcome: pick.outcome,
-      label: pick.label,
-      odds: pick.bookmaker_odds ?? pick.bookmakerOdds ?? 1.0,
-      probability: pick.probability ?? 0,
-      ev: pick.ev ?? 0,
+async function fetchJSON<T>(url: string, fallback: T): Promise<T> {
+  try {
+    const res = await fetch(url, {
+      next: { revalidate },          // ISR cache tag
+      headers: { 'Cache-Control': 'no-store' }, // bypass CDN for the origin fetch
     });
-  };
+    if (!res.ok) return fallback;
+    const data = await res.json();
+    return data as T;
+  } catch {
+    return fallback;
+  }
+}
 
-  const filteredMatches = matches.filter(m => {
-    const riskLevel = m.bestPick?.risk?.level || 'N/D';
-    const matchesRisk = filterRisk === 'all' || riskLevel === filterRisk;
-    const matchesEV = (m.bestPick?.ev || 0) >= minEV;
-    return matchesRisk && matchesEV;
-  });
+// ── Page component (Server) ───────────────────────────────────────────────────
 
-  const featuredMatch = matches.find(m => m.bestPick?.isValueBet) || matches[0];
+export default async function Home() {
+  // All three fetches run in parallel on the server
+  const [matches, parlay, boosts] = await Promise.all([
+    fetchJSON<object[]>(`${API}/api/matches/jornada`, []),
+    fetchJSON<object | null>(`${API}/api/perfect_parlay`, null),
+    fetchJSON<object[]>(`${API}/api/super-boosts`, []),
+  ]);
 
-  // Safelist for Tailwind classes used dynamically from backend
-  const riskClassesSafelist = "bg-green-600 bg-yellow-400 bg-orange-500 bg-red-600 text-white text-black font-bold hidden";
+  // Normalise jornada response (the API may return {status, data, message} while warming up)
+  const initialMatches = Array.isArray(matches)
+    ? matches
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    : ((matches as any)?.data ?? []);
 
   return (
     <div className="min-h-screen bg-[#FCF9F1] text-[#1A1C1E] font-sans selection:bg-[#064E3B]/10 selection:text-[#064E3B] overflow-x-hidden">
-      <div className={riskClassesSafelist}></div>
       <Navbar />
 
-      {/* LOADING STATE — shown during initial load and cold-start retries */}
-      {loading && (
-        <div className="fixed inset-0 z-40 bg-[#FCF9F1] flex flex-col items-center justify-center gap-6">
-          <div className="w-12 h-12 border-2 border-[#E5E7EB] border-t-[#064E3B] rounded-full animate-spin"></div>
-          <div className="text-center">
-            <div className="text-[#064E3B] text-[11px] font-bold uppercase tracking-[0.3em] animate-pulse">
-              {retrying ? 'Despertando servidor...' : 'Cargando análisis...'}
-            </div>
-            {retrying && (
-              <div className="text-[#94a3b8] text-xs mt-2">El servidor tarda ~30s en arrancar la primera vez</div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ERROR STATE — shown when all retries fail */}
-      {!loading && loadError && (
-        <div className="fixed inset-0 z-40 bg-[#FCF9F1] flex flex-col items-center justify-center gap-6">
-          <div className="text-4xl">⚠️</div>
-          <div className="text-center max-w-xs">
-            <div className="text-[#1A1C1E] font-editorial font-bold text-xl mb-2">Servidor no disponible</div>
-            <div className="text-[#94a3b8] text-sm leading-relaxed">El servidor tardó demasiado en responder. Haz clic en Reintentar para volver a intentarlo.</div>
-          </div>
-          <button
-            onClick={() => { setLoadError(false); setLoading(true); setRetrying(false); }}
-            className="bg-[#064E3B] text-white px-8 py-3 rounded-full text-sm font-bold tracking-wide hover:bg-[#065f46] transition-all"
-          >
-            Reintentar
-          </button>
-        </div>
-      )}
-
-
       <main className="pt-32 pb-24 max-w-7xl mx-auto px-8">
-        
-        {/* HERO / FEATURED SECTION */}
-
-        <section className="mb-20">
-          {featuredMatch && (
-            <FeaturedBet 
-              homeTeam={featuredMatch.homeTeam}
-              awayTeam={featuredMatch.awayTeam}
-              pick={featuredMatch.bestPick?.label || 'Sin selección'}
-              odds={featuredMatch.bestPick?.bookmaker_odds || featuredMatch.bestPick?.bookmakerOdds || 1.0}
-              aiProb={(featuredMatch.bestPick?.probability || 0) * 100}
-              bookieProb={(featuredMatch.bestPick?.bookmaker_implied_prob || 0) * 100}
-              risk={featuredMatch.bestPick?.risk}
-              date={new Date(featuredMatch.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-              justification={featuredMatch.justification || ""}
-              onAction={() => handleSimulateBet(featuredMatch.id, featuredMatch.bestPick!, featuredMatch.homeTeam, featuredMatch.awayTeam)}
-            />
-          )}
-        </section>
-
-        {/* COMBINADIA (AI PARLAY) */}
-        {parlay && parlay.legs.length > 0 && (
-          <section className="mb-20">
-            <div className="flex items-center gap-3 mb-8">
-              <span className="h-px w-8 bg-[#064E3B]"></span>
-              <h2 className="text-3xl font-editorial font-bold text-[#1A1C1E]">Combinad<span className="text-[#064E3B]">IA</span></h2>
-            </div>
-            <BentoCard className="bg-gradient-to-br from-[#064E3B] to-[#043327] text-white border-none shadow-2xl relative overflow-hidden">
-              <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
-                <div className="lg:col-span-2">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {parlay.legs.map((leg, i) => (
-                      <div key={i} className="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/10">
-                        <div className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-2">{leg.homeTeam} v {leg.awayTeam}</div>
-                        <div className="flex justify-between items-end">
-                          <div>
-                            <div className="text-xs font-bold text-[#FFD700] mb-1">{leg.market}</div>
-                            <div className="text-lg font-editorial font-bold">{leg.label}</div>
-                          </div>
-                          <div className="text-xl font-black text-white/90">{leg.bookmakerOdds?.toFixed(2)}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="text-center lg:text-right flex flex-col items-center lg:items-end justify-center">
-                  <div className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-2">Cuota Total Combinada</div>
-                  <div className="text-7xl font-editorial font-bold text-[#FFD700] mb-4">{parlay.totalOdds.toFixed(2)}</div>
-                  <div className="bg-white/20 text-xs font-bold px-6 py-2 rounded-full mb-8">
-                    Probabilidad IA: <span className="text-[#FFD700]">{parlay.jointProbability.toFixed(1)}%</span>
-                  </div>
-                  <button className="bg-[#FFD700] text-[#1A1C1E] font-black px-10 py-4 rounded-full hover:scale-105 transition-transform active:scale-95 shadow-xl shadow-black/20">
-                    Sellar CombinadIA
-                  </button>
-                </div>
-              </div>
-              {/* Decorative AI Circle */}
-              <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-white/5 rounded-full blur-3xl text-white"></div>
-            </BentoCard>
-          </section>
-        )}
-
-        {/* SUPERAUMENTOS (SUPER BOOSTS) */}
-        {boosts.length > 0 && (
-          <section className="mb-20">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-3xl font-editorial font-bold text-[#1A1C1E]">Superaumentos</h2>
-              <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Exclusivo Premium</span>
-            </div>
-            <div className="flex gap-6 overflow-x-auto pb-6 -mx-4 px-4 scrollbar-hide">
-              {boosts.map((boost, i) => (
-                <div key={i} className="min-w-[300px] bg-white p-8 rounded-[2rem] border border-[#E5E7EB] shadow-sm hover:shadow-xl transition-all border-t-4 border-t-[#FFD700]">
-                   <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-4">{boost.match}</div>
-                   <div className="text-sm font-bold text-[#1A1C1E] mb-1">{boost.market}</div>
-                   <div className="flex items-center gap-4 mt-6">
-                      <div className="text-sm text-[#64748B] line-through">{boost.normalOdds.toFixed(2)}</div>
-                      <div className="text-3xl font-editorial font-bold text-[#064E3B]">{boost.boostedOdds.toFixed(2)}</div>
-                      <div className="ml-auto bg-[#064E3B] text-white p-2 rounded-lg">
-                        <span className="text-[8px] font-bold block leading-none">{boost.bookmaker}</span>
-                      </div>
-                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* CATEGORIES SECTION (Refeições Style) */}
-        <section className="mb-20">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-editorial font-bold text-[#1A1C1E]">Explorar Mercados</h2>
-            <Link href="#" className="text-sm font-bold text-[#1A1C1E] underline decoration-2 underline-offset-4 decoration-[#FFD700] hover:text-[#064E3B] transition-colors">
-              Ver todo
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-8">
-            <CategoryCard title="La Liga" subtitle="España" active image="https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=400&h=400&auto=format&fit=crop" />
-            <CategoryCard title="Premier League" subtitle="Inglaterra" image="https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=400&h=400&auto=format&fit=crop" />
-            <CategoryCard title="Champions" subtitle="Europa" image="https://images.unsplash.com/photo-1518063319789-7217e6706b04?q=80&w=400&h=400&auto=format&fit=crop" />
-            <CategoryCard title="NBA" subtitle="EUA" image="https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=400&h=400&auto=format&fit=crop" />
-          </div>
-        </section>
-
-        {/* RADAR DE MERCADO / BENTO GRID */}
-        <section>
-          <div className="flex flex-col md:flex-row items-center justify-between mb-12 border-b border-[#E5E7EB] pb-6">
-            <h2 className="text-3xl font-editorial font-bold text-[#1A1C1E]">Radar de Valor</h2>
-            
-            <div className="flex items-center gap-6 mt-6 md:mt-0">
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] uppercase font-bold text-[#64748B] tracking-widest">Riesgo</span>
-                  <select
-                    value={filterRisk}
-                    onChange={(e) => setFilterRisk(e.target.value)}
-                    className="bg-white border border-[#E5E7EB] text-[#1A1C1E] font-bold rounded-full px-4 py-2 outline-none focus:border-[#064E3B] text-xs"
-                  >
-                    <option value="all">TODOS</option>
-                    <option value="BAJO">BAJO</option>
-                    <option value="MEDIO">MEDIO</option>
-                    <option value="ALTO">ALTO</option>
-                    <option value="LOTERÍA">LOTERÍA</option>
-                  </select>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] uppercase font-bold text-[#64748B] tracking-widest">Min EV</span>
-                <input
-                  type="number"
-                  value={minEV}
-                  onChange={(e) => setMinEV(Number(e.target.value))}
-                  className="bg-white border border-[#E5E7EB] text-[#064E3B] font-black rounded-full px-4 py-2 outline-none focus:border-[#064E3B] text-xs w-16 text-center"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredMatches.map(match => (
-              <BentoCard key={match.id} className="flex flex-col">
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">
-                      {new Date(match.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <h3 className="text-xl font-editorial font-bold text-[#1A1C1E]">{match.homeTeam} v {match.awayTeam}</h3>
-                  </div>
-                  {match.bestPick?.risk && (
-                    <div className={`${match.bestPick.risk.bgClass} px-3 py-1 rounded-lg text-[8px] font-bold uppercase tracking-widest`}>
-                      {match.bestPick.risk.level}
-                    </div>
-                  )}
-                  {match.isSteam && (
-                    <div className="bg-[#064E3B]/10 p-1.5 rounded-full" title="Line Movement">
-                      <svg className="w-3 h-3 text-[#064E3B]" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.450 1.348L13.143 6H3a1 1 0 100 2h10.143l-2.198 2.099a1 1 0 101.314 1.503l4-3.816a1 1 0 000-1.503l-4-3.816s.001 0 0 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-auto space-y-4">
-                  {(match.topPicks || (match.bestPick ? [match.bestPick] : [])).slice(0, 1).map((pick, pi) => (
-                    <div key={pi} className="group">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">{pick.market}</span>
-                        <span className="text-xs font-bold text-[#064E3B]">AI {(pick.probability! * 100).toFixed(0)}% vs Casa {(pick.bookmaker_implied_prob! * 100).toFixed(0)}%</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="text-lg font-editorial font-bold text-[#1A1C1E]">{pick.label}</div>
-                        <button 
-                          onClick={() => handleSimulateBet(match.id, pick, match.homeTeam, match.awayTeam)}
-                          className="bg-[#F1F3F5] hover:bg-[#064E3B] hover:text-white text-[#1A1C1E] font-black px-4 py-2 rounded-xl transition-all active:scale-95 min-w-[60px]"
-                        >
-                          {(pick.bookmaker_odds || pick.bookmakerOdds || 1.0).toFixed(2)}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </BentoCard>
-            ))}
-          </div>
-        </section>
-      </main>
-
-      {/* BET MODAL */}
-      {activeBet && token && (
-        <BetModal
-          {...activeBet}
-          token={token}
-          currentBankroll={bankroll}
-          onClose={() => setActiveBet(null)}
-          onSuccess={(newBankroll) => {
-            setBankroll(newBankroll);
-            setActiveBet(null);
-            alert(`✅ Apuesta registrada. Bankroll actualizado: ${newBankroll.toFixed(2)} €`);
-          }}
+        {/*
+          MatchesDashboard receives server-fetched data as initial props,
+          so the page renders with full content on the first paint.
+          All client-side interactivity (filters, modal, bankroll) lives inside.
+        */}
+        <MatchesDashboard
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          initialMatches={initialMatches as any}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          initialParlay={parlay as any}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          initialBoosts={boosts as any}
         />
-      )}
+      </main>
     </div>
   );
 }

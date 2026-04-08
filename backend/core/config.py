@@ -11,7 +11,20 @@ class Settings(BaseSettings):
     API_SPORTS_KEY: str
     SECRET_KEY: str = "supersecret_change_me_in_production"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200 # 30 days for convenience
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 days for convenience
+
+    # ── Smart Scheduler ───────────────────────────────────────────────────────
+    # Sport key sent to The Odds API on every call.
+    # Keeping it pinned to La Liga means 1 request = 1 competition.
+    ODDS_SPORT: str = "soccer_spain_la_liga"
+
+    # Cron expression for valley days (Mon–Thu): 10:00, 16:00, 22:00 Madrid time.
+    # APScheduler CronTrigger uses UTC internally; Europe/Madrid offset is +1/+2 h.
+    # We keep the timezone param in the scheduler call, so write local times here.
+    CRON_WEEKDAY: str = "0 10,16,22 * * 1-4"  # Mon(1)–Thu(4)
+
+    # Cron expression for peak days (Fri–Sun): every hour 12:00–22:00 Madrid time.
+    CRON_WEEKEND: str = "0 12-22 * * 5,6,0"   # Fri(5), Sat(6), Sun(0)
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(Path(__file__).parent.parent, ".env")
