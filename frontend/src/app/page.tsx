@@ -39,11 +39,10 @@ async function fetchJSON<T>(url: string, fallback: T): Promise<T> {
 // ── Page component (Server) ───────────────────────────────────────────────────
 
 export default async function Home() {
-  // All three fetches run in parallel on the server
-  const [matches, parlay, boosts] = await Promise.all([
+  // Both fetches run in parallel on the server
+  const [matches, parlay] = await Promise.all([
     fetchJSON<object[]>(`${API}/api/matches/jornada`, []),
     fetchJSON<object | null>(`${API}/api/perfect_parlay`, null),
-    fetchJSON<object[]>(`${API}/api/super-boosts`, []),
   ]);
 
   // Normalise jornada response (the API may return {status, data, message} while warming up)
@@ -67,8 +66,6 @@ export default async function Home() {
           initialMatches={initialMatches as any}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           initialParlay={parlay as any}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          initialBoosts={boosts as any}
         />
       </main>
     </div>

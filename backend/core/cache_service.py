@@ -20,7 +20,6 @@ Usage:
 
 import logging
 import time
-import random
 from datetime import datetime, timedelta
 from functools import reduce
 
@@ -152,22 +151,12 @@ def refresh_cache() -> None:
                     "message": "No hay selecciones con suficiente confianza",
                 }
 
-            # ---- 5. Build super-boosts ----
+            # ---- 5. Super-boosts ----
+            # Super Boosts are proprietary internal promotions from each bookmaker.
+            # There is no free API or public endpoint that exposes them reliably.
+            # Serving fake/random boosts would be misleading, so this feature
+            # is intentionally disabled. Set boosts to empty list.
             boosts: list[dict] = []
-            for m in upcoming:
-                try:
-                    rng = random.Random(m.id + 9999)
-                    if rng.random() < 0.4:
-                        boosts.append({
-                            "match":       f"{m.home_team.name} vs {m.away_team.name}",
-                            "date":        m.date.isoformat() + "Z" if m.date else None,
-                            "market":      rng.choice(["Victoria Local", "Ambos Equipos Marcan", "Más de 2.5 Goles"]),
-                            "normalOdds":  round(rng.uniform(1.6, 2.4), 2),
-                            "boostedOdds": round(rng.uniform(2.8, 4.5), 2),
-                            "bookmaker":   rng.choice(["Bet365", "Betfair", "Codere", "Betway"]),
-                        })
-                except Exception as e:
-                    logger.warning(f"⚠️  [cache_service] Skipping boost for match {m.id}: {e}")
 
         finally:
             db.close()

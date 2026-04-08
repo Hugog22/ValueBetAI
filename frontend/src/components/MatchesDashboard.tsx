@@ -2,11 +2,16 @@
  * MatchesDashboard.tsx
  * --------------------
  * Client Component — owns all interactive state (filters, bet modal, bankroll).
- * Receives `initialMatches`, `initialParlay`, `initialBoosts` from the Server
- * Component as pre-fetched props (ISR data), so the page renders instantly.
+ * Receives `initialMatches` and `initialParlay` from the Server Component as
+ * pre-fetched props (ISR data), so the page renders instantly.
  *
  * Bankroll is still fetched client-side after mount (requires the JWT token
  * from local storage via AuthContext which is unavailable on the server).
+ *
+ * NOTE: The "Superaumentos" (Super Boosts) section has been intentionally
+ * removed. Super Boosts are proprietary promotions published manually by each
+ * bookmaker — there is no free, reliable API to obtain them. Displaying
+ * randomly generated boosts would be misleading to users.
  */
 
 'use client';
@@ -27,15 +32,6 @@ interface Risk {
   level: string;
   badge: string;
   bgClass: string;
-}
-
-interface SuperBoost {
-  match: string;
-  date: string;
-  market: string;
-  normalOdds: number;
-  boostedOdds: number;
-  bookmaker: string;
 }
 
 interface PickData {
@@ -77,18 +73,16 @@ interface ParlayData {
 interface Props {
   initialMatches: Match[];
   initialParlay: ParlayData | null;
-  initialBoosts: SuperBoost[];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function MatchesDashboard({ initialMatches, initialParlay, initialBoosts }: Props) {
-  const { user, token } = useAuth();
+export default function MatchesDashboard({ initialMatches, initialParlay }: Props) {
+  const { token } = useAuth();
 
   // Data state — seeded from ISR props
-  const [matches]  = useState<Match[]>(initialMatches);
-  const [parlay]   = useState<ParlayData | null>(initialParlay);
-  const [boosts]   = useState<SuperBoost[]>(initialBoosts);
+  const [matches] = useState<Match[]>(initialMatches);
+  const [parlay]  = useState<ParlayData | null>(initialParlay);
 
   // UI state
   const [filterRisk, setFilterRisk] = useState<string>('all');
@@ -100,7 +94,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
     odds: number; probability: number; ev: number;
   } | null>(null);
 
-  // Fetch bankroll client-side (needs JWT)
+  // Fetch bankroll client-side (requires JWT — not available on the server)
   useEffect(() => {
     if (!token) return;
     fetch(`${API}/api/bankroll/stats`, {
@@ -128,7 +122,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
   };
 
   const filteredMatches = matches.filter(m => {
-    const riskLevel = m.bestPick?.risk?.level || 'N/D';
+    const riskLevel  = m.bestPick?.risk?.level || 'N/D';
     const matchesRisk = filterRisk === 'all' || riskLevel === filterRisk;
     const matchesEV   = (m.bestPick?.ev || 0) >= minEV;
     return matchesRisk && matchesEV;
@@ -207,31 +201,6 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
             </div>
             <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
           </BentoCard>
-        </section>
-      )}
-
-      {/* ── SUPERAUMENTOS ───────────────────────────────────────────────── */}
-      {boosts.length > 0 && (
-        <section className="mb-20">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-editorial font-bold text-[#1A1C1E]">Superaumentos</h2>
-            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Exclusivo Premium</span>
-          </div>
-          <div className="flex gap-6 overflow-x-auto pb-6 -mx-4 px-4 scrollbar-hide">
-            {boosts.map((boost, i) => (
-              <div key={i} className="min-w-[300px] bg-white p-8 rounded-[2rem] border border-[#E5E7EB] shadow-sm hover:shadow-xl transition-all border-t-4 border-t-[#FFD700]">
-                <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-4">{boost.match}</div>
-                <div className="text-sm font-bold text-[#1A1C1E] mb-1">{boost.market}</div>
-                <div className="flex items-center gap-4 mt-6">
-                  <div className="text-sm text-[#64748B] line-through">{boost.normalOdds.toFixed(2)}</div>
-                  <div className="text-3xl font-editorial font-bold text-[#064E3B]">{boost.boostedOdds.toFixed(2)}</div>
-                  <div className="ml-auto bg-[#064E3B] text-white p-2 rounded-lg">
-                    <span className="text-[8px] font-bold block leading-none">{boost.bookmaker}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
         </section>
       )}
 
