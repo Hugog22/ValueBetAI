@@ -1,32 +1,25 @@
 /**
  * page.tsx  — Server Component with ISR
  * ----------------------------------------
- * Fetches data once on the server with Next.js ISR (revalidate: 60 seconds).
- * Vercel caches the resulting HTML at the edge and serves it instantly to
- * every user. The cache is refreshed in the background every 60 s by Vercel's
- * edge network — no user ever sees a loading spinner for the initial content.
+ * Fetches initial data on the server with Next.js ISR (revalidate: 60 s).
+ * Fetches: LaLiga jornada + all CombinAIas across all sports.
  *
- * Interactive elements (filters, bet modal, bankroll) live in MatchesDashboard,
- * a separate client component that receives data as props.
+ * Interactive elements (sport selector, filters, bet modal) live in
+ * MatchesDashboard, a separate client component that receives data as props.
  */
 
 import Navbar from '@/components/Navbar';
 import MatchesDashboard from '@/components/MatchesDashboard';
 
-// Server-side environment variable (not exposed to the browser)
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
 
-// Revalidate every 60 seconds — Vercel will serve stale HTML and refresh in
-// the background. Increase this value if your scheduler interval is longer.
 export const revalidate = 60;
-
-// ── Server-side data fetching ─────────────────────────────────────────────────
 
 async function fetchJSON<T>(url: string, fallback: T): Promise<T> {
   try {
     const res = await fetch(url, {
-      next: { revalidate },          // ISR cache tag
-      headers: { 'Cache-Control': 'no-store' }, // bypass CDN for the origin fetch
+      next: { revalidate },
+      headers: { 'Cache-Control': 'no-store' },
     });
     if (!res.ok) return fallback;
     const data = await res.json();
@@ -36,36 +29,31 @@ async function fetchJSON<T>(url: string, fallback: T): Promise<T> {
   }
 }
 
-// ── Page component (Server) ───────────────────────────────────────────────────
-
 export default async function Home() {
-  // Both fetches run in parallel on the server
-  const [matches, parlay] = await Promise.all([
+  // Fetch LaLiga matches + all CombinAIas in parallel
+  const [matches, allParlays] = await Promise.all([
     fetchJSON<object[]>(`${API}/api/matches/jornada`, []),
-    fetchJSON<object | null>(`${API}/api/perfect_parlay`, null),
+    fetchJSON<object[]>(`${API}/api/sports/all_parlays`, []),
   ]);
 
-  // Normalise jornada response (the API may return {status, data, message} while warming up)
   const initialMatches = Array.isArray(matches)
     ? matches
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     : ((matches as any)?.data ?? []);
 
+  // Use the first parlay (LaLiga) as the initialParlay for backward compat
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const initialParlay = (allParlays as any[])[0] ?? null;
+
   return (
     <div className="min-h-screen bg-[#FCF9F1] text-[#1A1C1E] font-sans selection:bg-[#064E3B]/10 selection:text-[#064E3B] overflow-x-hidden">
       <Navbar />
-
       <main className="pt-32 pb-24 max-w-7xl mx-auto px-8">
-        {/*
-          MatchesDashboard receives server-fetched data as initial props,
-          so the page renders with full content on the first paint.
-          All client-side interactivity (filters, modal, bankroll) lives inside.
-        */}
         <MatchesDashboard
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           initialMatches={initialMatches as any}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          initialParlay={parlay as any}
+          initialParlay={initialParlay as any}
         />
       </main>
     </div>

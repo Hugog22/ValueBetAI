@@ -116,24 +116,32 @@ def read_root():
 
 @app.get("/api/matches/jornada")
 def get_jornada():
-    """
-    Returns the pre-computed list of upcoming La Liga matches with predictions.
-    Data is refreshed by the Smart Scheduler (not on request).
-    """
+    """Returns La Liga matches (default — backward compat)."""
     cache = get_cache()
     jornada = cache.get("jornada", [])
     if not jornada and not is_cache_warm():
-        # First-ever request before the scheduler had a chance to run
+        return {"status": "warming_up", "data": [], "message": "Cache warming up, retry in a few seconds."}
+    return jornada
+
+
+VALID_SPORTS = {"laliga", "premier", "champions", "nba"}
+
+@app.get("/api/matches/{sport}/jornada")
+def get_sport_jornada(sport: str):
+    """Returns upcoming matches with AI predictions for the given sport."""
+    if sport not in VALID_SPORTS:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail=f"Sport '{sport}' not supported. Valid: {sorted(VALID_SPORTS)}")
+    cache = get_cache()
+    jornada = cache.get("sports", {}).get(sport, {}).get("jornada", [])
+    if not jornada and not is_cache_warm():
         return {"status": "warming_up", "data": [], "message": "Cache warming up, retry in a few seconds."}
     return jornada
 
 
 @app.get("/api/perfect_parlay")
 def get_perfect_parlay():
-    """
-    Returns the pre-computed perfect parlay selection.
-    Data is refreshed by the Smart Scheduler (not on request).
-    """
+    """Returns La Liga parlay (backward compat)."""
     cache = get_cache()
     parlay = cache.get("parlay", {})
     if not parlay and not is_cache_warm():
@@ -141,12 +149,32 @@ def get_perfect_parlay():
     return parlay
 
 
+@app.get("/api/{sport}/parlay")
+def get_sport_parlay(sport: str):
+    """Returns the CombinAIA for the given sport."""
+    if sport not in VALID_SPORTS:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail=f"Sport '{sport}' not supported.")
+    cache = get_cache()
+    parlay = cache.get("sports", {}).get(sport, {}).get("parlay", {})
+    if not parlay and not is_cache_warm():
+        return {"legs": [], "totalOdds": 1.0, "jointProbability": 0.0, "message": "Cache warming up…"}
+    return parlay
+
+
+@app.get("/api/sports/all_parlays")
+def get_all_parlays():
+    """
+    Returns all active CombinAIas across every sport in a single call.
+    Each entry includes sport key, flag emoji, label, and parlay legs.
+    Frontend uses this to render the multi-parlay section.
+    """
+    cache = get_cache()
+    return cache.get("all_parlays", [])
+
+
 @app.get("/api/super-boosts")
 def get_super_boosts():
-    """
-    Returns the pre-computed super-boost opportunities.
-    Data is refreshed by the Smart Scheduler (not on request).
-    """
     cache = get_cache()
     return cache.get("boosts", [])
 

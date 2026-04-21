@@ -1,18 +1,21 @@
 """
 train_model.py — Advanced Multi-Model Training Pipeline
 ========================================================
-Trains THREE independent XGBoost models on real La Liga data (2014–2025):
+Trains THREE independent XGBoost models on real football data (2014–2025):
+  Leagues: La Liga + EPL (Premier League) + Champions League  ← multi-league
 
-  Model A: 1X2 Result       → models/xgb_1x2.json      (softprob, 3 classes)
-  Model B: Over/Under 2.5   → models/xgb_ou25.json     (binary:logistic)
-  Model C: Over/Under Corners → models/xgb_corners.json (binary:logistic, when data available)
+  Model A: 1X2 Result       → models/ensemble_1x2_xgb.pkl      (3 classes)
+  Model B: Over/Under 2.5   → models/ensemble_ou2.5_xgb.pkl    (binary)
+  Model C: Over/Under Corners → models/xgb_corners.json (when data available)
 
-Key advances vs previous version:
-  ✅ Exponential time-decay sample weights (recent form is king)
+Key advances:
+  ✅ Multi-league training (more data, better generalisation)
+  ✅ league_encoded feature (model learns league-specific patterns)
+  ✅ Exponential time-decay sample weights
   ✅ TimeSeriesSplit cross-validation (no future leakage)
-  ✅ Optuna hyperparameter search (50 trials per model)
-  ✅ 14 engineered features (rolling + rest days + comfort with None)
-  ✅ Corners model trained only when enough enriched data exists
+  ✅ Optuna hyperparameter search (200 trials per model)
+  ✅ 17+ engineered features (rolling + ELO + rest days + league)
+  ✅ Probability calibration (isotonic regression hold-out)
 
 Run from backend/:
     ./venv/bin/python -m scripts.train_model
@@ -41,7 +44,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-DATA_PATH    = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "laliga_historical.csv")
+DATA_PATH_MULTI  = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "football_historical.csv")
+DATA_PATH_LALIGA = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "laliga_historical.csv")
+# Prefer multi-league file when available
+DATA_PATH    = DATA_PATH_MULTI if os.path.exists(DATA_PATH_MULTI) else DATA_PATH_LALIGA
 MODELS_DIR   = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
 META_PATH    = os.path.join(MODELS_DIR, "training_meta.json")
 
@@ -268,8 +274,10 @@ FEATURES_CORE = [
     "xg_diff", "form_diff", "opp_diff", "xg_adj_diff",
     # Fatigue
     "rest_days_home", "rest_days_away",
-    # ELO — absolute team strength (NEW — Fase 2: Anti-Longshot)
+    # ELO — absolute team strength
     "home_elo", "away_elo", "elo_diff",
+    # League encoding — model learns league-specific patterns
+    "league_encoded",
 ]
 
 FEATURES_CORNERS = FEATURES_CORE + ["home_corners_avg5", "away_corners_avg5", "home_corners_ag5", "away_corners_ag5"]
@@ -459,6 +467,15 @@ def train():
     df = pd.read_csv(DATA_PATH)
     logger.info(f"Raw rows: {len(df)}")
 
+    # ---- League encoding (new feature for multi-league datasets) ----
+    league_map = {"laliga": 0, "premier": 1, "champions": 2}
+    if "league" in df.columns:
+        df["league_encoded"] = df["league"].map(league_map).fillna(0).astype(int)
+        breakdown = df["league"].value_counts().to_dict()
+        logger.info(f"League distribution: {breakdown}")
+    else:
+        df["league_encoded"] = 0  # single-league backward compat
+
     logger.info("Building rolling features (rest days, xG, goals, form)…")
     df = add_rolling_features(df)
 
@@ -569,6 +586,7 @@ def train():
     meta = {
         "trained_at":   TODAY.isoformat(),
         "seasons":      sorted(df["season"].unique().tolist()),
+        "leagues":      sorted(df["league"].unique().tolist()) if "league" in df.columns else ["laliga"],
         "total_rows":   len(df),
         "decay_rate":   DECAY_RATE,
         "rolling_window": WINDOW,

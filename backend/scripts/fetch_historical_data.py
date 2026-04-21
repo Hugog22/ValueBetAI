@@ -1,15 +1,22 @@
 """
 fetch_historical_data.py
 ------------------------
-Downloads historical La Liga match data from Understat for seasons 2014–2025.
-Also computes:
-  - rest_days_home / rest_days_away  (days since each team's previous match)
-  - corners_home / corners_away      (NULL if not available from source)
+Downloads historical match data from Understat for multiple leagues:
+  - La Liga (Spain)   — 2014–2025
+  - EPL (England)     — 2014–2025
+  - Champions League  — 2014–2025
 
-Output: data/laliga_historical.csv
+Outputs:
+  data/football_historical.csv  — combined multi-league dataset (for training)
+  data/laliga_historical.csv    — LaLiga-only backward-compat file
 
-Run from backend/:
-    ./venv/bin/python -m scripts.fetch_historical_data
+Features per match:
+  season, match_id, date, league,
+  home_team, away_team, home_goals, away_goals,
+  home_xg, away_xg, rest_days_home, rest_days_away, corners_home, corners_away
+
+Usage:
+  ./venv/bin/python -m scripts.fetch_historical_data [--league La_Liga EPL Champions_League]
 """
 
 import csv
@@ -17,6 +24,7 @@ import os
 import sys
 import time
 import logging
+import argparse
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,24 +34,38 @@ from understatapi import UnderstatClient
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-OUTPUT_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "laliga_historical.csv")
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+OUTPUT_MULTI  = os.path.join(DATA_DIR, "football_historical.csv")
+OUTPUT_LALIGA = os.path.join(DATA_DIR, "laliga_historical.csv")
+
 SEASONS = [str(y) for y in range(2014, 2026)]  # 2014/15 → 2025/26
 
+# Understat league keys and their friendly names
+UNDERSTAT_LEAGUES = {
+    "La_Liga":          "laliga",
+    "EPL":              "premier",
+    "Champions_League": "champions",
+}
+
 FIELDNAMES = [
-    "season", "match_id", "date",
+    "season", "match_id", "date", "league",
     "home_team", "away_team",
     "home_goals", "away_goals",
     "home_xg", "away_xg",
     "rest_days_home", "rest_days_away",
-    "corners_home", "corners_away",   # NULL until enriched by fetch_corners_data.py
+    "corners_home", "corners_away",
 ]
 
 
-def fetch_season(season: str) -> list[dict]:
-    """Download all completed La Liga matches for a given season."""
-    logger.info(f"Fetching season {season}…")
-    with UnderstatClient() as understat:
-        matches = understat.league(league="La_Liga").get_match_data(season=season)
+def fetch_league_season(understat_key: str, league_code: str, season: str) -> list[dict]:
+    """Download all completed matches for a given Understat league+season."""
+    logger.info(f"  [{understat_key}] Season {season}…")
+    try:
+        with UnderstatClient() as understat:
+            matches = understat.league(league=understat_key).get_match_data(season=season)
+    except Exception as e:
+        logger.warning(f"  [{understat_key}] Season {season} failed: {e}")
+        return []
 
     rows = []
     for m in matches:
@@ -51,33 +73,33 @@ def fetch_season(season: str) -> list[dict]:
             continue
         try:
             rows.append({
-                "season": season,
-                "match_id": m["id"],
-                "date": m["datetime"],
-                "home_team": m["h"]["title"],
-                "away_team": m["a"]["title"],
-                "home_goals": int(m["goals"]["h"]),
-                "away_goals": int(m["goals"]["a"]),
-                "home_xg": float(m["xG"]["h"]),
-                "away_xg": float(m["xG"]["a"]),
+                "season":        season,
+                "match_id":      m["id"],
+                "date":          m["datetime"],
+                "league":        league_code,
+                "home_team":     m["h"]["title"],
+                "away_team":     m["a"]["title"],
+                "home_goals":    int(m["goals"]["h"]),
+                "away_goals":    int(m["goals"]["a"]),
+                "home_xg":       float(m["xG"]["h"]),
+                "away_xg":       float(m["xG"]["a"]),
                 "rest_days_home": None,
                 "rest_days_away": None,
-                "corners_home": None,
-                "corners_away": None,
+                "corners_home":  None,
+                "corners_away":  None,
             })
         except (KeyError, TypeError, ValueError) as e:
             logger.warning(f"  Skip match {m.get('id', '?')}: {e}")
 
-    logger.info(f"  → {len(rows)} completed matches")
+    logger.info(f"    → {len(rows)} completed matches")
     return rows
 
 
 def add_rest_days(rows: list[dict]) -> list[dict]:
     """
-    Compute rest days for each team before each match.
-    Uses only data within the same season grouping so pre-season breaks map to None.
+    Compute rest days per team per match (chronological, in-league order).
+    Rest days track independently per league to avoid cross-competition artifacts.
     """
-    # Sort globally by date
     parsed = []
     for r in rows:
         try:
@@ -86,29 +108,26 @@ def add_rest_days(rows: list[dict]) -> list[dict]:
             r["_date"] = datetime.utcnow()
         parsed.append(r)
 
-    parsed.sort(key=lambda r: r["_date"])
+    # Sort by league, then date so rest days are computed within-league
+    parsed.sort(key=lambda r: (r["league"], r["_date"]))
 
-    last_played: dict[str, datetime] = {}  # team → last match datetime
+    last_played: dict[str, datetime] = {}
 
     for r in parsed:
-        home = r["home_team"]
-        away = r["away_team"]
+        home = r["league"] + "|" + r["home_team"]
+        away = r["league"] + "|" + r["away_team"]
         match_dt = r["_date"]
 
-        # Compute rest days (cap at 60 — start of season / long breaks)
-        for team, key in [(home, "rest_days_home"), (away, "rest_days_away")]:
-            if team in last_played:
-                delta_seconds = abs((match_dt - last_played[team]).total_seconds())
-                delta_days = delta_seconds / 86400.0
-                r[key] = min(round(delta_days, 1), 60.0)
+        for team_key, col in [(home, "rest_days_home"), (away, "rest_days_away")]:
+            if team_key in last_played:
+                delta_days = abs((match_dt - last_played[team_key]).total_seconds()) / 86400.0
+                r[col] = min(round(delta_days, 1), 60.0)
             else:
-                r[key] = 14.0  # Default assumption for first match of operations
+                r[col] = 14.0  # default for first match of season
 
-        # Update last_played for both teams
         last_played[home] = match_dt
         last_played[away] = match_dt
 
-    # Remove temp key
     for r in parsed:
         r.pop("_date", None)
 
@@ -116,27 +135,61 @@ def add_rest_days(rows: list[dict]) -> list[dict]:
 
 
 def main():
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+    parser = argparse.ArgumentParser(description="Fetch multi-league historical football data")
+    parser.add_argument(
+        "--leagues", nargs="+",
+        choices=list(UNDERSTAT_LEAGUES.keys()),
+        default=list(UNDERSTAT_LEAGUES.keys()),
+        help="Understat league keys to download (default: all)"
+    )
+    args = parser.parse_args()
+
+    os.makedirs(DATA_DIR, exist_ok=True)
 
     all_rows: list[dict] = []
-    for season in SEASONS:
-        rows = fetch_season(season)
-        all_rows.extend(rows)
-        time.sleep(0.8)   # polite delay
 
-    logger.info(f"Total completed matches: {len(all_rows)}")
+    for understat_key in args.leagues:
+        league_code = UNDERSTAT_LEAGUES[understat_key]
+        logger.info(f"\n{'='*50}")
+        logger.info(f"League: {understat_key} → '{league_code}'")
+        logger.info(f"{'='*50}")
+
+        for season in SEASONS:
+            rows = fetch_league_season(understat_key, league_code, season)
+            all_rows.extend(rows)
+            time.sleep(0.8)  # polite delay
+
+    logger.info(f"\nTotal completed matches across all leagues: {len(all_rows)}")
 
     logger.info("Computing rest days…")
     all_rows = add_rest_days(all_rows)
 
-    with open(OUTPUT_PATH, "w", newline="", encoding="utf-8") as f:
+    # ── Write combined file (for multi-league training) ──────────────────────
+    with open(OUTPUT_MULTI, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
         writer.writeheader()
         writer.writerows(all_rows)
+    logger.info(f"✅  Saved {len(all_rows)} rows → {OUTPUT_MULTI}")
 
-    logger.info(f"✅  Saved {len(all_rows)} rows → {OUTPUT_PATH}")
-    logger.info("Next (optional): ./venv/bin/python -m scripts.fetch_corners_data")
-    logger.info("Then:            ./venv/bin/python -m scripts.train_model")
+    # ── Write LaLiga-only backward-compat file ───────────────────────────────
+    laliga_rows = [r for r in all_rows if r["league"] == "laliga"]
+    if laliga_rows:
+        with open(OUTPUT_LALIGA, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+            writer.writeheader()
+            writer.writerows(laliga_rows)
+        logger.info(f"✅  LaLiga-only file: {len(laliga_rows)} rows → {OUTPUT_LALIGA}")
+
+    breakdown = {}
+    for r in all_rows:
+        breakdown[r["league"]] = breakdown.get(r["league"], 0) + 1
+    for league, count in sorted(breakdown.items()):
+        logger.info(f"   {league}: {count} matches")
+
+    logger.info("\nNext steps:")
+    logger.info("  python -m scripts.fetch_nba_data")
+    logger.info("  python -m scripts.train_model       (retrain football model)")
+    logger.info("  python -m scripts.train_model_nba   (train NBA model)")
 
 
 if __name__ == "__main__":

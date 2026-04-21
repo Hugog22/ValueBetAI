@@ -150,7 +150,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
     
     return {
         "id": match.id, "homeTeam": home, "awayTeam": away, "date": match.date.isoformat() + "Z" if match.date else None,
-        "status": match.status, "oddsSource": source, "bestPick": {
+        "status": match.status, "oddsSource": source, "sport": "football", "bestPick": {
             "label": best["label"], "market": best["market"], "outcome": best["outcome"],
             "bookmakerOdds": best["bookmaker_odds"], "fairOdds": best["fair_odds"], "ev": best["ev"],
             "probability": best["probability"], "isValueBet": best["is_value"],
@@ -161,4 +161,108 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
         "topPicks": candidates[:3],
         "justification": f"{home} vs {away} match evaluation.",
         "rivalContext": {"homeOppPts": all_f.get("_home_opp_pts"), "awayOppPts": all_f.get("_away_opp_pts")}
+    }
+
+
+def _evaluate_match_nba(match: Match, nba_predictor, db: Session | None = None) -> dict:
+    """
+    Evaluate a NBA game using the NBA-specific predictor.
+    No draw market. O/U on total points instead of goals.
+    """
+    home, away = match.home_team.name, match.away_team.name
+    eps = 1e-6
+
+    # NBA features — use ELO-based fallback when no rolling stats available
+    features = {
+        "home_pts_avg10":          112.0,
+        "away_pts_avg10":          110.0,
+        "home_pts_allowed_avg10":  110.0,
+        "away_pts_allowed_avg10":  112.0,
+        "home_win_pct10":          0.52,
+        "away_win_pct10":          0.48,
+        "rest_days_home":          2.0,
+        "rest_days_away":          2.0,
+        "home_elo":                1500.0,
+        "away_elo":                1500.0,
+        "elo_diff":                0.0,
+    }
+
+    pred = nba_predictor.predict_game(features)
+
+    # Get h2h odds from DB or use pool fallback
+    odds_pool = _ODDS_POOL[match.id % len(_ODDS_POOL)]
+    if db is not None:
+        h2h = db.query(Odds).filter(Odds.match_id == match.id, Odds.market == "h2h").order_by(Odds.timestamp.desc()).first()
+        if h2h:
+            home_odds = float(h2h.home_odds)
+            away_odds = float(h2h.away_odds)
+            ou_odds_over  = odds_pool.get("over25", 1.90)
+            ou_odds_under = odds_pool.get("under25", 1.90)
+            source = f"{h2h.bookmaker}_live"
+        else:
+            home_odds     = odds_pool.get("home", 1.90)
+            away_odds     = odds_pool.get("away", 1.90)
+            ou_odds_over  = odds_pool.get("over25", 1.90)
+            ou_odds_under = odds_pool.get("under25", 1.90)
+            source = "mock"
+    else:
+        home_odds     = odds_pool.get("home", 1.90)
+        away_odds     = odds_pool.get("away", 1.90)
+        ou_odds_over  = odds_pool.get("over25", 1.90)
+        ou_odds_under = odds_pool.get("under25", 1.90)
+        source = "mock"
+
+    candidates = []
+
+    # Win/Loss markets (no draw in NBA)
+    for outcome, label, book, fair, prob in [
+        ("home", f"{home} Gana", home_odds, pred["fair_odds_home"], pred["prob_home_win"]),
+        ("away", f"{away} Gana", away_odds, pred["fair_odds_away"], pred["prob_away_win"]),
+    ]:
+        ev = (book / (fair + eps) - 1) * 100
+        candidates.append({
+            "market": "moneyline", "outcome": outcome, "label": label,
+            "probability": round(prob, 4),
+            "bookmaker_odds": book, "fair_odds": round(fair, 2),
+            "ev": round(ev, 2), "is_value": ev > 0,
+            "bookmaker_implied_prob": round(1.0 / book, 4) if book > 0 else 0,
+        })
+
+    # Over/Under total points
+    ou_thresh = pred["ou_threshold"]
+    for side, label, book, fair, prob in [
+        ("over",  f"Más de {ou_thresh:.0f} pts", ou_odds_over,  pred["fair_odds_over"],  pred["prob_over"]),
+        ("under", f"Menos de {ou_thresh:.0f} pts", ou_odds_under, pred["fair_odds_under"], pred["prob_under"]),
+    ]:
+        ev = (book / (fair + eps) - 1) * 100
+        candidates.append({
+            "market": "ou_pts", "outcome": side, "label": label,
+            "probability": round(prob, 4),
+            "bookmaker_odds": book, "fair_odds": round(fair, 2),
+            "ev": round(ev, 2), "is_value": ev > 0,
+            "bookmaker_implied_prob": round(1.0 / book, 4) if book > 0 else 0,
+        })
+
+    for c in candidates:
+        c["risk"] = _calculate_risk(c["probability"], c["bookmaker_odds"])
+        c["stake"] = _fractional_kelly(c["probability"], c["bookmaker_odds"])
+
+    candidates.sort(key=lambda x: x["ev"], reverse=True)
+    best = candidates[0]
+
+    return {
+        "id": match.id, "homeTeam": home, "awayTeam": away,
+        "date": match.date.isoformat() + "Z" if match.date else None,
+        "status": match.status, "oddsSource": source, "sport": "nba",
+        "bestPick": {
+            "label": best["label"], "market": best["market"], "outcome": best["outcome"],
+            "bookmakerOdds": best["bookmaker_odds"], "fairOdds": best["fair_odds"], "ev": best["ev"],
+            "probability": best["probability"], "isValueBet": best["is_value"],
+            "bookmaker_implied_prob": best["bookmaker_implied_prob"],
+            "risk": best["risk"], "stake": best["stake"],
+        },
+        "allCandidates": candidates,
+        "topPicks": candidates[:3],
+        "justification": f"{home} vs {away} — NBA game prediction.",
+        "rivalContext": {},
     }
