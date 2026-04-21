@@ -109,6 +109,26 @@ def run_pipeline():
     except Exception as e:
         logger.error(f"Failed to fetch odds: {e}")
 
+    # ── Settle bets for any matches that just finished ──────────────────────
+    logger.info("🎲 Settling pending bets for newly finished matches...")
+    try:
+        from core.bet_settler import settle_pending_bets
+        summary = settle_pending_bets()
+        logger.info(
+            f"✅ Bet settlement complete: {summary['won']} Won / "
+            f"{summary['lost']} Lost / {summary['void']} Void"
+        )
+    except Exception as e:
+        logger.error(f"Bet settlement failed: {e}")
+
+    # ── Refresh the AI prediction cache after new data ──────────────────────
+    logger.info("🔄 Refreshing AI prediction cache post-ETL...")
+    try:
+        from core.cache_service import refresh_cache
+        refresh_cache()
+    except Exception as e:
+        logger.error(f"Cache refresh failed: {e}")
+
 
 if __name__ == "__main__":
     run_pipeline()

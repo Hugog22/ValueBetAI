@@ -206,3 +206,66 @@ def get_bankroll_stats(
         current_bankroll=current_user.bankroll or 1000.0,
         recent_bets=recent_bets[:20]  # Return last 20 for UI
     )
+
+
+@router.post("/bets/settle")
+def manually_settle_bets(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Manually trigger bet settlement for all pending bets on finished matches.
+    Useful for testing and forcing an immediate settlement without waiting
+    for the hourly scheduler job.
+    """
+    from core.bet_settler import settle_pending_bets
+    try:
+        summary = settle_pending_bets()
+        return {
+            "status": "ok",
+            "settled": summary["settled"],
+            "won": summary["won"],
+            "lost": summary["lost"],
+            "void": summary["void"],
+            "bankroll_credited": summary["bankroll_credited"],
+            "errors": summary["errors"],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Settlement failed: {str(e)}")
+
+
+@router.get("/bets/settle/status")
+def get_settle_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Return how many of the current user's bets are still pending settlement,
+    and how many already have a result.
+    """
+    from db.models import Match
+    pending_count = (
+        db.query(Bet)
+        .join(Match, Bet.match_id == Match.id)
+        .filter(
+            Bet.user_id == current_user.id,
+            Bet.status == "Pending",
+            Match.status == "Finished",
+        )
+        .count()
+    )
+    total_pending = (
+        db.query(Bet)
+        .filter(Bet.user_id == current_user.id, Bet.status == "Pending")
+        .count()
+    )
+    return {
+        "total_pending_bets": total_pending,
+        "pending_on_finished_matches": pending_count,
+        "message": (
+            f"{pending_count} apuesta(s) listas para liquidar."
+            if pending_count > 0
+            else "No hay apuestas pendientes de liquidar."
+        )
+    }
+

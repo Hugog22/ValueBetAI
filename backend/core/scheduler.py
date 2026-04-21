@@ -47,6 +47,25 @@ def _parse_cron(expr: str) -> dict:
     }
 
 
+def _settle_and_refresh():
+    """
+    Composite job: settle pending bets then refresh the prediction cache.
+    Called hourly so that as soon as a match is marked Finished by the ETL,
+    bets get resolved and the AI cache reflects the latest data.
+    """
+    from core.bet_settler import settle_pending_bets
+    from core.cache_service import refresh_cache
+    try:
+        summary = settle_pending_bets()
+        if summary.get("settled", 0) > 0:
+            logger.info(f"🔄 [scheduler] Settled {summary['settled']} bets — triggering cache refresh.")
+            refresh_cache()
+        else:
+            logger.debug("[scheduler] No bets settled — skipping cache refresh.")
+    except Exception as e:
+        logger.error(f"❌ [scheduler] settle_and_refresh failed: {e}", exc_info=True)
+
+
 def start_scheduler():
     """
     Initialize and start the APScheduler.
@@ -55,6 +74,7 @@ def start_scheduler():
       1. Daily ETL — match data from Understat (04:00 AM Madrid).
       2. Smart cache refresh (valley) — Mon–Thu: 10h, 16h, 22h Madrid.
       3. Smart cache refresh (peak)   — Fri–Sun: every hour 12h–22h Madrid.
+      4. Hourly bet settlement + cache refresh (every hour, all days).
     """
     from core.config import settings
     from core.cache_service import refresh_cache
@@ -110,6 +130,17 @@ def start_scheduler():
     logger.info(
         f"  ✓ Task 3 → Peak refresh   | cron: \"{settings.CRON_WEEKEND}\" (Europe/Madrid)"
     )
+
+    # ── Task 4: Hourly bet settlement + conditional cache refresh ────────────
+    scheduler.add_job(
+        _settle_and_refresh,
+        trigger=CronTrigger(minute=5, timezone="Europe/Madrid"),  # xx:05 every hour
+        id="hourly_settle_and_refresh",
+        name="Hourly: settle pending bets + refresh AI cache if needed",
+        replace_existing=True,
+        misfire_grace_time=300,
+    )
+    logger.info("  ✓ Task 4 → Hourly bet settlement + conditional cache refresh (xx:05 Madrid).")
 
     scheduler.start()
     logger.info("✅ Smart Scheduler started. Quota budget: ~180 Odds API calls/month.")
