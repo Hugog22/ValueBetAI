@@ -140,7 +140,7 @@ def _calculate_risk(ai_prob: float, bookmaker_odds: float,
     if safe_prob > 0.55:
         return {"level": "BAJO",    "badge": "🟢 BAJO",    "bgClass": "bg-green-600 text-white font-bold"}
     if safe_prob >= 0.35:
-        return {"level": "MEDIO",   "badge": "🟡 MEDIO",   "bgClass": "bg-yellow-400 text-black font-bold"}
+        return {"level": "MEDIO",   "badge": "🟡 MEDIO",   "bgClass": "bg-yellow-600 text-white font-bold"}
     if safe_prob >= 0.15:
         return {"level": "ALTO",    "badge": "🟠 ALTO",    "bgClass": "bg-orange-500 text-white font-bold"}
     return     {"level": "LOTERÍA", "badge": "🔴 LOTERÍA", "bgClass": "bg-red-600 text-white font-bold"}

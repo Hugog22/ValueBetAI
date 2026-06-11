@@ -8,6 +8,9 @@ import BentoCard from '@/components/BentoCard';
 import BetModal from '@/components/BetModal';
 import WorldCupBanner from '@/components/WorldCupBanner';
 
+// Safelist for Tailwind JIT (backend-generated classes)
+const _tailwindSafelist = 'bg-green-600 bg-yellow-400 bg-yellow-600 bg-orange-500 bg-red-600 bg-red-900 text-white text-black font-bold font-black';
+
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
 
 // ── Sport Config ─────────────────────────────────────────────────────────────
