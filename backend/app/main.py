@@ -44,13 +44,17 @@ async def lifespan(app: FastAPI):
         logger.info("🚀 Starting Value Betting API…")
         Base.metadata.create_all(bind=engine)
 
-        # Pre-warm the cache synchronously so the very first request is instant.
-        # If it fails (e.g. no odds yet), the scheduler will fill it later.
-        logger.info("🔄 Pre-warming prediction cache at startup…")
-        try:
-            refresh_cache()
-        except Exception as e:
-            logger.warning(f"⚠️  Startup cache warm-up failed (will retry on next schedule): {e}")
+        # Pre-warm the cache in the background so we don't block the port binding.
+        # Render has a strict 60s port bind timeout, and World Cup odds take ~70s to compute.
+        logger.info("🔄 Triggering background prediction cache warm-up…")
+        import threading
+        def _warm_cache_bg():
+            try:
+                refresh_cache()
+            except Exception as e:
+                logger.warning(f"⚠️  Startup cache warm-up failed: {e}")
+                
+        threading.Thread(target=_warm_cache_bg, daemon=True).start()
 
         start_scheduler()
         yield
