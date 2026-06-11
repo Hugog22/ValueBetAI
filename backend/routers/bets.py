@@ -80,6 +80,18 @@ def place_virtual_bet(
         if bet_in.stake > current_bankroll:
             raise HTTPException(status_code=400, detail=f"Saldo insuficiente. Disponible: {current_bankroll:.2f} \u20ac")
 
+        # Check if the user already has a bet for this match
+        existing_bet = db.query(Bet).filter(
+            Bet.user_id == current_user.id,
+            Bet.match_id == bet_in.match_id
+        ).first()
+        
+        if existing_bet:
+            raise HTTPException(
+                status_code=400, 
+                detail="Ya tienes una posición abierta para este partido en tu portfolio."
+            )
+
         # Deduct stake immediately from bankroll
         try:
             current_user.bankroll = current_bankroll - bet_in.stake
