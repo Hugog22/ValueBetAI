@@ -1,0 +1,24 @@
+{
+  "trained_at": "2026-06-11T13:42:51.634166",
+  "training_rows": 96,
+  "features": [
+    "home_fifa_pts",
+    "away_fifa_pts",
+    "fifa_pts_diff",
+    "home_squad_quality",
+    "away_squad_quality",
+    "squad_quality_diff",
+    "home_form_pts5",
+    "away_form_pts5",
+    "form_diff",
+    "home_h2h_win_rate",
+    "away_h2h_win_rate",
+    "is_knockout",
+    "home_goals_avg5",
+    "away_goals_avg5",
+    "home_conceded_avg5",
+    "away_conceded_avg5"
+  ],
+  "cv_1x2_acc": 0.4028,
+  "cv_ou25_logloss": 0.6932
+}

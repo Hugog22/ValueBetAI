@@ -6,6 +6,7 @@ Centralized in-RAM cache for pre-computed football predictions.
 Structure:
     _cache["sports"][sport_key]["jornada"] → list of evaluated matches
     _cache["sports"][sport_key]["parlay"]  → dict (CombinAIA for that sport)
+    _cache["sports"][sport_key]["is_off_season"] → bool
     _cache["all_parlays"]                  → list of all non-empty parlays
     _cache["last_updated"]                 → epoch float
 
@@ -13,7 +14,7 @@ Backward-compatible aliases (LaLiga default):
     get_cache()["jornada"] → _cache["sports"]["laliga"]["jornada"]
     get_cache()["parlay"]  → _cache["sports"]["laliga"]["parlay"]
 
-Supported sports: La Liga, Premier League, Champions League.
+Supported sports: La Liga, Premier League, Champions League, World Cup 2026.
 """
 
 import logging
@@ -23,14 +24,18 @@ from functools import reduce
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_SPORTS = ["laliga", "premier", "champions"]
+SUPPORTED_SPORTS = ["laliga", "premier", "champions", "worldcup"]
 
 # Sport display metadata
 _SPORT_META = {
     "laliga":    {"label": "La Liga",          "flag": "🇪🇸"},
     "premier":   {"label": "Premier League",   "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿"},
     "champions": {"label": "Champions League", "flag": "🏆"},
+    "worldcup":  {"label": "Mundial 2026",     "flag": "⚽"},
 }
+
+# Months when European leagues are typically off (June–July)
+_OFF_SEASON_MONTHS = {6, 7}
 
 
 # ---------------------------------------------------------------------------
@@ -38,7 +43,10 @@ _SPORT_META = {
 # ---------------------------------------------------------------------------
 
 _cache: dict = {
-    "sports":       {s: {"jornada": [], "parlay": {}} for s in SUPPORTED_SPORTS},
+    "sports": {
+        s: {"jornada": [], "parlay": {}, "is_off_season": False}
+        for s in SUPPORTED_SPORTS
+    },
     "all_parlays":  [],
     "boosts":       [],
     "last_updated": 0.0,
@@ -54,6 +62,17 @@ def get_cache() -> dict:
 
 def is_cache_warm() -> bool:
     return _cache["last_updated"] > 0.0
+
+
+def get_sport_info(sport_key: str) -> dict:
+    """Return sport metadata including off-season flag."""
+    sport = _cache["sports"].get(sport_key, {"jornada": [], "parlay": {}, "is_off_season": False})
+    meta  = _SPORT_META.get(sport_key, {"label": sport_key, "flag": ""})
+    return {
+        **meta,
+        "match_count":    len(sport["jornada"]),
+        "is_off_season":  sport["is_off_season"],
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +141,7 @@ def _build_parlay(jornada: list[dict]) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Team name helpers — interim sport detection without a sport_key DB column
+# Team name helpers
 # ---------------------------------------------------------------------------
 
 def _get_laliga_team_names(db) -> set[str]:
@@ -157,6 +176,20 @@ def _get_champions_team_names() -> set[str]:
     }
 
 
+def _get_worldcup_team_names() -> set[str]:
+    """Return all 48 FIFA World Cup 2026 national team names."""
+    try:
+        from etl.world_cup_etl import get_world_cup_team_names
+        return get_world_cup_team_names()
+    except Exception:
+        return set()
+
+
+def _is_off_season() -> bool:
+    """True during June–July when European leagues are off."""
+    return datetime.utcnow().month in _OFF_SEASON_MONTHS
+
+
 # ---------------------------------------------------------------------------
 # Full cache refresh
 # ---------------------------------------------------------------------------
@@ -167,22 +200,33 @@ def refresh_cache() -> None:
     in-RAM cache.
 
     Steps:
-      1. Refresh La Liga odds via flush_odds (The Odds API).
-      2. Sync Premier League and Champions League via multi_sport_etl.
-      3. Evaluate all upcoming matches with the football predictor.
-      4. Tag matches per sport by team name heuristic.
-      5. Build CombinAIas (parlays) per sport and the all_parlays list.
+      1. Sync World Cup matches (The Odds API + football-data.org).
+      2. Refresh La Liga odds via flush_odds (The Odds API).
+      3. Sync Premier League and Champions League via multi_sport_etl.
+      4. Evaluate all upcoming matches with the correct predictor.
+      5. Tag matches per sport by team name heuristic.
+      6. Mark European leagues as off-season when no upcoming matches found.
+      7. Build CombinAIas (parlays) per sport and the all_parlays list.
     """
-    logger.info("🔄 [cache_service] Starting multi-sport cache refresh...")
+    logger.info("🔄 [cache_service] Starting multi-sport cache refresh…")
     t0 = time.time()
 
     try:
         from db.session import SessionLocal
         from db.models import Match
-        from core.shared_predictor import predictor
-        from core.match_evaluator import _evaluate_match
+        from core.shared_predictor import predictor, world_cup_predictor
+        from core.match_evaluator import _evaluate_match, _evaluate_world_cup_match
 
-        # ── Step 1: Refresh La Liga odds ──────────────────────────────────
+        # ── Step 1: Sync World Cup matches ────────────────────────────────
+        try:
+            from etl.world_cup_etl import sync_world_cup_odds, sync_world_cup_schedule
+            wc_new1 = sync_world_cup_odds()
+            wc_new2 = sync_world_cup_schedule()
+            logger.info(f"✅ [cache] World Cup sync: odds={wc_new1} new, schedule={wc_new2} new")
+        except Exception as e:
+            logger.warning(f"⚠️  [cache] World Cup sync failed: {e}")
+
+        # ── Step 2: Refresh La Liga odds ──────────────────────────────────
         try:
             from scripts.flush_odds import flush_and_reload
             flush_and_reload()
@@ -190,7 +234,7 @@ def refresh_cache() -> None:
         except Exception as e:
             logger.warning(f"⚠️  [cache] LaLiga odds refresh failed: {e}")
 
-        # ── Step 2: Sync Premier League and Champions League ──────────────
+        # ── Step 3: Sync Premier League and Champions League ──────────────
         try:
             from etl.multi_sport_etl import sync_all_sports
             sync_results = sync_all_sports()
@@ -198,34 +242,44 @@ def refresh_cache() -> None:
         except Exception as e:
             logger.warning(f"⚠️  [cache] Multi-sport sync failed: {e}")
 
-        # ── Step 3: Evaluate all upcoming matches ─────────────────────────
+        # ── Step 4: Evaluate all upcoming matches ─────────────────────────
         db = SessionLocal()
         try:
-            now       = datetime.utcnow()
-            seven_days = now + timedelta(days=7)
-            upcoming  = (
+            now        = datetime.utcnow()
+            thirty_days = now + timedelta(days=30)  # wider window for WC
+            upcoming   = (
                 db.query(Match)
-                .filter(Match.date >= now, Match.date <= seven_days)
+                .filter(Match.date >= now, Match.date <= thirty_days)
                 .order_by(Match.date.asc())
-                .limit(60)
+                .limit(80)
                 .all()
             )
 
-            if not upcoming:
-                logger.warning("⚠️  [cache] No upcoming matches found — keeping stale cache.")
-                return
+            wc_teams       = _get_worldcup_team_names()
+            jornada_all:    list[dict] = []
+            jornada_wc:     list[dict] = []
 
-            jornada_all: list[dict] = []
             for m in upcoming:
                 try:
-                    jornada_all.append(_evaluate_match(m, predictor, db))
+                    home_name = m.home_team.name
+                    away_name = m.away_team.name
+
+                    # Route to World Cup evaluator if both teams are national teams
+                    if home_name in wc_teams or away_name in wc_teams:
+                        result = _evaluate_world_cup_match(m, world_cup_predictor, db)
+                        jornada_wc.append(result)
+                    else:
+                        result = _evaluate_match(m, predictor, db)
+                        jornada_all.append(result)
                 except Exception as e:
                     logger.warning(f"⚠️  [cache] Skipping match {m.id}: {e}")
 
-            # ── Step 4: Tag matches per sport ─────────────────────────────
+            # ── Step 5: Tag club matches per sport ────────────────────────
             laliga_teams    = _get_laliga_team_names(db)
             premier_teams   = _get_premier_team_names()
             champions_teams = _get_champions_team_names()
+
+            off_season_now  = _is_off_season()
 
             for sport_key, team_set in [
                 ("laliga",    laliga_teams),
@@ -237,13 +291,20 @@ def refresh_cache() -> None:
                     if team_set
                     else (jornada_all if sport_key == "laliga" else [])
                 )
-                _cache["sports"][sport_key]["jornada"] = sport_jornada
-                _cache["sports"][sport_key]["parlay"]  = _build_parlay(sport_jornada)
+                is_off = len(sport_jornada) == 0 and off_season_now
+                _cache["sports"][sport_key]["jornada"]      = sport_jornada
+                _cache["sports"][sport_key]["parlay"]       = _build_parlay(sport_jornada)
+                _cache["sports"][sport_key]["is_off_season"] = is_off
+
+            # World Cup always gets its own bucket
+            _cache["sports"]["worldcup"]["jornada"]       = jornada_wc
+            _cache["sports"]["worldcup"]["parlay"]        = _build_parlay(jornada_wc)
+            _cache["sports"]["worldcup"]["is_off_season"] = False  # WC is never "off-season"
 
         finally:
             db.close()
 
-        # ── Step 5: Build the all_parlays list ────────────────────────────
+        # ── Step 6: Build the all_parlays list ────────────────────────────
         all_parlays = []
         for sk in SUPPORTED_SPORTS:
             parlay = _cache["sports"][sk]["parlay"]
@@ -258,7 +319,7 @@ def refresh_cache() -> None:
         _cache["boosts"]       = []
         _cache["last_updated"] = time.time()
 
-        elapsed      = round(time.time() - t0, 2)
+        elapsed       = round(time.time() - t0, 2)
         total_matches = sum(len(_cache["sports"][s]["jornada"]) for s in SUPPORTED_SPORTS)
         logger.info(
             f"✅ [cache] Refresh complete in {elapsed}s — "

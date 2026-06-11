@@ -2,7 +2,7 @@
  * page.tsx  — Server Component with ISR
  * ----------------------------------------
  * Fetches initial data on the server with Next.js ISR (revalidate: 60 s).
- * Fetches: LaLiga jornada + all CombinAIas across all sports.
+ * Fetches: World Cup matches (priority), LaLiga matches + all CombinAIas.
  *
  * Interactive elements (sport selector, filters, bet modal) live in
  * MatchesDashboard, a separate client component that receives data as props.
@@ -30,18 +30,24 @@ async function fetchJSON<T>(url: string, fallback: T): Promise<T> {
 }
 
 export default async function Home() {
-  // Fetch LaLiga matches + all CombinAIas in parallel
-  const [matches, allParlays] = await Promise.all([
+  // Fetch World Cup, LaLiga + all CombinAIas in parallel
+  const [worldCupMatches, matches, allParlays] = await Promise.all([
+    fetchJSON<object[]>(`${API}/api/matches/worldcup/jornada`, []),
     fetchJSON<object[]>(`${API}/api/matches/jornada`, []),
     fetchJSON<object[]>(`${API}/api/sports/all_parlays`, []),
   ]);
+
+  const initialWorldCupMatches = Array.isArray(worldCupMatches)
+    ? worldCupMatches
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    : ((worldCupMatches as any)?.data ?? []);
 
   const initialMatches = Array.isArray(matches)
     ? matches
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     : ((matches as any)?.data ?? []);
 
-  // Use the first parlay (LaLiga) as the initialParlay for backward compat
+  // Use the first parlay as the initialParlay for backward compat
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const initialParlay = (allParlays as any[])[0] ?? null;
 
@@ -54,6 +60,8 @@ export default async function Home() {
           initialMatches={initialMatches as any}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           initialParlay={initialParlay as any}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          initialWorldCupMatches={initialWorldCupMatches as any}
         />
       </main>
     </div>

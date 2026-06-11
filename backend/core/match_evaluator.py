@@ -3,12 +3,11 @@ match_evaluator.py
 ------------------
 Evaluates upcoming football matches and computes value-bet candidates.
 
-Responsibilities:
-  - Build match features from DB data (ELO, xG, possession, rest days, absences).
-  - Retrieve live or mock odds.
-  - Run the football predictor to get 1x2 and O/U 2.5 probabilities.
-  - Calculate Expected Value (EV) and risk levels for each market.
-  - Return a structured dict consumed by cache_service and the bets router.
+Supports two evaluator paths:
+  - Club football (La Liga, Premier, Champions): _evaluate_match()
+  - World Cup national teams               : _evaluate_world_cup_match()
+
+The correct evaluator is selected by cache_service based on sport key.
 """
 
 import random
@@ -36,38 +35,50 @@ _ODDS_POOL = [
     {"home": 1.70, "draw": 3.60, "away": 5.00, "over25": 1.95, "under25": 1.85, "over_corners": 1.92, "under_corners": 1.88},
 ]
 
+# World Cup odds pool (slightly tighter markets — bookies price WC carefully)
+_WC_ODDS_POOL = [
+    {"home": 1.60, "draw": 3.80, "away": 5.00, "over25": 2.10, "under25": 1.72},
+    {"home": 2.00, "draw": 3.40, "away": 3.50, "over25": 1.85, "under25": 1.95},
+    {"home": 2.40, "draw": 3.20, "away": 3.00, "over25": 1.95, "under25": 1.85},
+    {"home": 1.75, "draw": 3.60, "away": 4.50, "over25": 2.20, "under25": 1.65},
+    {"home": 3.00, "draw": 3.30, "away": 2.30, "over25": 2.00, "under25": 1.80},
+    {"home": 2.20, "draw": 3.10, "away": 3.30, "over25": 1.90, "under25": 1.90},
+]
+
 
 # ---------------------------------------------------------------------------
 # Odds retrieval
 # ---------------------------------------------------------------------------
 
-def _get_odds(match: Match, db: Session | None = None) -> dict:
+def _get_odds(match: Match, db: Session | None = None,
+              pool: list[dict] | None = None) -> dict:
     """Return live odds from DB or fall back to mock pool."""
+    pool = pool or _ODDS_POOL
     if db is not None:
         h2h  = db.query(Odds).filter(Odds.match_id == match.id, Odds.market == "h2h").order_by(Odds.timestamp.desc()).first()
         ou25 = db.query(Odds).filter(Odds.match_id == match.id, Odds.market == "totals_2.5").order_by(Odds.timestamp.desc()).first()
         if h2h:
-            pool = _ODDS_POOL[match.id % len(_ODDS_POOL)]
+            mock = pool[match.id % len(pool)]
             return {
-                "home":  float(h2h.home_odds),
-                "draw":  float(h2h.draw_odds),
-                "away":  float(h2h.away_odds),
-                "over25":  float(ou25.home_odds) if ou25 else pool["over25"],
-                "under25": float(ou25.away_odds) if ou25 else pool["under25"],
-                "over_corners":  pool.get("over_corners",  1.90),
-                "under_corners": pool.get("under_corners", 1.90),
-                "_source": f"{h2h.bookmaker}_live",
+                "home":     float(h2h.home_odds),
+                "draw":     float(h2h.draw_odds),
+                "away":     float(h2h.away_odds),
+                "over25":   float(ou25.home_odds) if ou25 else mock["over25"],
+                "under25":  float(ou25.away_odds) if ou25 else mock["under25"],
+                "over_corners":  mock.get("over_corners",  1.90),
+                "under_corners": mock.get("under_corners", 1.90),
+                "_source":  f"{h2h.bookmaker}_live",
             }
-    pool = _ODDS_POOL[match.id % len(_ODDS_POOL)]
-    return {**pool, "_source": "mock"}
+    mock = pool[match.id % len(pool)]
+    return {**mock, "_source": "mock"}
 
 
 # ---------------------------------------------------------------------------
-# Feature engineering
+# Feature engineering — club football
 # ---------------------------------------------------------------------------
 
 def _build_match_features(match: Match) -> dict:
-    """Build ELO-based proxy features when no rolling stats exist in DB."""
+    """Build ELO-based proxy features for club football matches."""
     home, away = match.home_team.name, match.away_team.name
 
     def get_elo(team_name: str) -> int:
@@ -87,23 +98,23 @@ def _build_match_features(match: Match) -> dict:
     rng      = random.Random(match.id)
 
     return {
-        "home_elo":                  home_elo,
-        "away_elo":                  away_elo,
-        "elo_diff":                  home_elo - away_elo,
-        "home_xg_for_avg10":         round(1.2 * h_pow, 2),
-        "away_xg_for_avg10":         round(1.1 * a_pow, 2),
-        "xg_diff":                   round((1.2 * h_pow) - (1.1 * a_pow), 2),
-        "home_possession_avg10":     round(50 * h_pow, 1),
-        "away_possession_avg10":     round(50 * a_pow, 1),
-        "possession_diff":           round((50 * h_pow) - (50 * a_pow), 1),
-        "home_shots_target_avg10":   round(4.5 * h_pow, 1),
-        "away_shots_target_avg10":   round(4.0 * a_pow, 1),
-        "shots_diff":                round((4.5 * h_pow) - (4.0 * a_pow), 1),
-        "home_absences":             rng.randint(0, 3),
-        "away_absences":             rng.randint(0, 3),
-        "absence_severity":          rng.randint(0, 1),
-        "rest_days_home":            rng.randint(4, 7),
-        "rest_days_away":            rng.randint(4, 7),
+        "home_elo":          home_elo,
+        "away_elo":          away_elo,
+        "elo_diff":          home_elo - away_elo,
+        "home_xg_for_avg10": round(1.2 * h_pow, 2),
+        "away_xg_for_avg10": round(1.1 * a_pow, 2),
+        "xg_diff":           round((1.2 * h_pow) - (1.1 * a_pow), 2),
+        "home_possession_avg10":   round(50 * h_pow, 1),
+        "away_possession_avg10":   round(50 * a_pow, 1),
+        "possession_diff":         round((50 * h_pow) - (50 * a_pow), 1),
+        "home_shots_target_avg10": round(4.5 * h_pow, 1),
+        "away_shots_target_avg10": round(4.0 * a_pow, 1),
+        "shots_diff":              round((4.5 * h_pow) - (4.0 * a_pow), 1),
+        "home_absences":     rng.randint(0, 3),
+        "away_absences":     rng.randint(0, 3),
+        "absence_severity":  rng.randint(0, 1),
+        "rest_days_home":    rng.randint(4, 7),
+        "rest_days_away":    rng.randint(4, 7),
     }
 
 
@@ -116,11 +127,11 @@ def _calculate_risk(ai_prob: float, bookmaker_odds: float,
     """Classify betting risk based on AI probability vs market probability."""
     house_prob = (1.0 / bookmaker_odds) if bookmaker_odds > 0 else 0.0
 
-    # Pull back extreme deviations unless strongly supported by xG
+    # Pull back extreme deviations unless strongly supported
     if abs(ai_prob - house_prob) > 0.15 and abs(xg_diff) < 1.0:
         ai_prob = house_prob + (0.15 if ai_prob > house_prob else -0.15)
 
-    # Flag obvious model errors (high prob on draws or heavy underdogs)
+    # Flag obvious model errors
     if ai_prob > 0.50 and (is_draw or bookmaker_odds >= 4.0):
         return {"level": "ERROR", "badge": "⚠️ ERROR MODELO", "bgClass": "bg-red-900 text-white font-black"}
 
@@ -139,8 +150,8 @@ def _calculate_risk(ai_prob: float, bookmaker_odds: float,
 # Stake sizing — fractional Kelly criterion
 # ---------------------------------------------------------------------------
 
-def _fractional_kelly(prob: float, odds: float, fraction: float = 0.25) -> int:
-    """Return a 1–10 stake unit recommendation using fractional Kelly."""
+def _fractional_kelly(prob: float, odds: float, fraction: float = 0.20) -> int:
+    """Return a 1–10 stake unit recommendation using fractional Kelly (20%)."""
     if odds <= 1.0 or prob <= 0:
         return 1
     b = odds - 1.0
@@ -151,12 +162,12 @@ def _fractional_kelly(prob: float, odds: float, fraction: float = 0.25) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Main evaluator
+# Club football evaluator
 # ---------------------------------------------------------------------------
 
 def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
     """
-    Evaluate a football match and return a structured prediction dict.
+    Evaluate a club football match and return a structured prediction dict.
 
     Returns a dict with keys: id, homeTeam, awayTeam, date, status,
     oddsSource, sport, bestPick, allCandidates, topPicks, justification.
@@ -178,9 +189,9 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
         fair = float(pred["fair_odds_1x2"][outcome])
         ev   = (book / (fair + eps) - 1) * 100
         candidates.append({
-            "market":   "1x2",
-            "outcome":  outcome,
-            "label":    label,
+            "market":                 "1x2",
+            "outcome":                outcome,
+            "label":                  label,
             "probability":            float(pred["probabilities"][outcome]),
             "bookmaker_odds":         book,
             "fair_odds":              round(fair, 2),
@@ -199,9 +210,9 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
         fair = float(pred["fair_odds_ou25"][side])
         ev   = (book / (fair + eps) - 1) * 100
         candidates.append({
-            "market":   "ou25",
-            "outcome":  side,
-            "label":    label,
+            "market":                 "ou25",
+            "outcome":                side,
+            "label":                  label,
             "probability":            round(prob, 4),
             "bookmaker_odds":         book,
             "fair_odds":              round(fair, 2),
@@ -219,13 +230,13 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
     best = candidates[0]
 
     return {
-        "id":        match.id,
-        "homeTeam":  home,
-        "awayTeam":  away,
-        "date":      match.date.isoformat() + "Z" if match.date else None,
-        "status":    match.status,
+        "id":         match.id,
+        "homeTeam":   home,
+        "awayTeam":   away,
+        "date":       match.date.isoformat() + "Z" if match.date else None,
+        "status":     match.status,
         "oddsSource": source,
-        "sport":     "football",
+        "sport":      "football",
         "bestPick": {
             "label":                  best["label"],
             "market":                 best["market"],
@@ -242,4 +253,124 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
         "allCandidates": candidates,
         "topPicks":      candidates[:3],
         "justification": f"{home} vs {away} — evaluación de fútbol.",
+    }
+
+
+# ---------------------------------------------------------------------------
+# World Cup evaluator
+# ---------------------------------------------------------------------------
+
+def _evaluate_world_cup_match(match: Match, wc_predictor,
+                               db: Session | None = None) -> dict:
+    """
+    Evaluate a World Cup national team match.
+    Uses WorldCupPredictor with FIFA rankings, squad quality, and H2H stats.
+    """
+    from models.world_cup_predictor import FIFA_POINTS, TEAM_ALIASES
+
+    home, away = match.home_team.name, match.away_team.name
+
+    # Detect knockout stage (heuristic: if odds are very skewed it may be knockout)
+    # The ETL doesn't store stage info in the DB currently; default to group stage
+    is_knockout = False
+
+    # Get prediction from World Cup specialist model
+    pred = wc_predictor.predict_match(home, away, is_knockout=is_knockout)
+
+    # Get odds (real or mock WC pool)
+    odds   = _get_odds(match, db, pool=_WC_ODDS_POOL)
+    source = odds.pop("_source", "mock")
+
+    eps        = 1e-6
+    candidates = []
+
+    # 1x2 markets
+    for outcome, label in [("home", "Victoria Local"), ("draw", "Empate"), ("away", "Victoria Visitante")]:
+        book = float(odds[outcome])
+        fair = float(pred["fair_odds_1x2"][outcome])
+        ev   = (book / (fair + eps) - 1) * 100
+        prob = float(pred["probabilities"][outcome])
+        candidates.append({
+            "market":                 "1x2",
+            "outcome":                outcome,
+            "label":                  label,
+            "probability":            prob,
+            "bookmaker_odds":         book,
+            "fair_odds":              round(fair, 2),
+            "ev":                     round(ev, 2),
+            "is_value":               ev > 0,
+            "bookmaker_implied_prob": round(1.0 / book, 4) if book > 0 else 0,
+        })
+
+    # Over/Under 2.5 markets
+    prob_over = pred["prob_over25"]
+    for side, prob, label, key in [
+        ("over",  prob_over,     "Más de 2.5",   "over25"),
+        ("under", 1 - prob_over, "Menos de 2.5", "under25"),
+    ]:
+        book = float(odds[key])
+        fair = float(pred["fair_odds_ou25"][side])
+        ev   = (book / (fair + eps) - 1) * 100
+        candidates.append({
+            "market":                 "ou25",
+            "outcome":                side,
+            "label":                  label,
+            "probability":            round(prob, 4),
+            "bookmaker_odds":         book,
+            "fair_odds":              round(fair, 2),
+            "ev":                     round(ev, 2),
+            "is_value":               ev > 0,
+            "bookmaker_implied_prob": round(1.0 / book, 4) if book > 0 else 0,
+        })
+
+    # Annotate with risk and stake
+    for c in candidates:
+        c["risk"]  = _calculate_risk(c["probability"], c["bookmaker_odds"])
+        c["stake"] = _fractional_kelly(c["probability"], c["bookmaker_odds"])
+
+    candidates.sort(key=lambda x: x["ev"], reverse=True)
+    best = candidates[0]
+
+    # Build rich justification with FIFA context
+    home_pts    = pred.get("home_fifa_pts", 0)
+    away_pts    = pred.get("away_fifa_pts", 0)
+    home_qual   = pred.get("home_squad_quality", 0)
+    away_qual   = pred.get("away_squad_quality", 0)
+    h2h_n       = pred.get("h2h_matches", 0)
+    h2h_note    = f"H2H: {h2h_n} partidos históricos." if h2h_n > 0 else "Primer enfrentamiento en un Mundial."
+
+    justification = (
+        f"FIFA Rankings: {home} ({home_pts:.0f} pts) vs {away} ({away_pts:.0f} pts). "
+        f"Calidad de plantilla: {home_qual:.0f} vs {away_qual:.0f}/100. {h2h_note}"
+    )
+
+    return {
+        "id":         match.id,
+        "homeTeam":   home,
+        "awayTeam":   away,
+        "date":       match.date.isoformat() + "Z" if match.date else None,
+        "status":     match.status,
+        "oddsSource": source,
+        "sport":      "worldcup",
+        # Extra World Cup context for the frontend
+        "homeFifaPts":    home_pts,
+        "awayFifaPts":    away_pts,
+        "homeSquadQuality": home_qual,
+        "awaySquadQuality": away_qual,
+        "bestPick": {
+            "label":                  best["label"],
+            "market":                 best["market"],
+            "outcome":                best["outcome"],
+            "bookmakerOdds":          best["bookmaker_odds"],
+            "fairOdds":               best["fair_odds"],
+            "ev":                     best["ev"],
+            "probability":            best["probability"],
+            "isValueBet":             best["is_value"],
+            "bookmaker_implied_prob": best["bookmaker_implied_prob"],
+            "risk":                   best["risk"],
+            "stake":                  best["stake"],
+        },
+        "allCandidates": candidates,
+        "topPicks":      candidates[:3],
+        "justification": justification,
     }

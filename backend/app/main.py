@@ -124,7 +124,7 @@ def get_jornada():
     return jornada
 
 
-VALID_SPORTS = {"laliga", "premier", "champions"}
+VALID_SPORTS = {"laliga", "premier", "champions", "worldcup"}
 
 @app.get("/api/matches/{sport}/jornada")
 def get_sport_jornada(sport: str):
@@ -171,6 +171,16 @@ def get_all_parlays():
     """
     cache = get_cache()
     return cache.get("all_parlays", [])
+
+
+@app.get("/api/sports/status")
+def get_sports_status():
+    """
+    Returns per-sport metadata: match count, off-season flag, label, flag emoji.
+    Frontend uses this to show/hide off-season badges without loading matches.
+    """
+    from core.cache_service import get_sport_info, SUPPORTED_SPORTS
+    return {sk: get_sport_info(sk) for sk in SUPPORTED_SPORTS}
 
 
 @app.get("/api/super-boosts")

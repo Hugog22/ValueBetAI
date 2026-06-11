@@ -7,6 +7,15 @@
   --color-accent-emerald: #064E3B; /* Forest Emerald */
   --color-accent-gold: #B45309;
   --color-muted-text: #64748B;
+
+  /* World Cup theme tokens */
+  --wc-gold:       #FFD700;
+  --wc-gold-dark:  #B8860B;
+  --wc-deep:       #0A0F1E;
+  --wc-blue:       #1B2A4A;
+  --wc-red:        #C0392B;
+  --wc-shimmer-1:  rgba(255, 215, 0, 0.15);
+  --wc-shimmer-2:  rgba(255, 215, 0, 0.05);
 }
 
 @layer utilities {
@@ -44,6 +53,69 @@
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  /* ── World Cup card ── */
+  .wc-card {
+    background: linear-gradient(135deg, #0A0F1E 0%, #1B2A4A 60%, #0D1B35 100%);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    transition: all 0.3s ease;
+  }
+
+  .wc-card:hover {
+    border-color: rgba(255, 215, 0, 0.45);
+    box-shadow: 0 8px 32px rgba(255, 215, 0, 0.08);
+  }
+
+  /* ── World Cup banner ── */
+  .wc-banner {
+    background: linear-gradient(135deg, #0A0F1E 0%, #1a2744 45%, #0f1c36 100%);
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255,215,0,0.1);
+  }
+
+  /* ── Shimmer animation for the banner ── */
+  .wc-shimmer-bar {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgba(255, 215, 0, 0.06) 50%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: wc-shimmer 4s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes wc-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ── Trophy pulse badge ── */
+  .wc-trophy-badge {
+    animation: wc-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes wc-pulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(255,215,0,0.3)); }
+    50%       { transform: scale(1.05); filter: drop-shadow(0 0 16px rgba(255,215,0,0.6)); }
+  }
+
+  /* ── Off-season badge ── */
+  .badge-off-season {
+    background: linear-gradient(135deg, #F1F5F9, #E2E8F0);
+    border: 1px solid #CBD5E1;
+    color: #64748B;
+  }
+
+  /* ── FIFA rank bar ── */
+  .fifa-rank-bar {
+    height: 3px;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #FFD700, #B8860B);
   }
 }
 
