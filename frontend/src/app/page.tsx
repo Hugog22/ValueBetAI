@@ -49,7 +49,7 @@ export default async function Home() {
 
   // Prefer World Cup parlay, fallback to first available
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const initialParlay = (allParlays as any[]).find(p => p.sport === 'worldcup') || (allParlays as any[])[0] ?? null;
+  const initialParlay = (allParlays as any[]).find(p => p.sport === 'worldcup') ?? (allParlays as any[])[0] ?? null;
 
   return (
     <div className="min-h-screen bg-[#FCF9F1] text-[#1A1C1E] font-sans selection:bg-[#064E3B]/10 selection:text-[#064E3B] overflow-x-hidden">
