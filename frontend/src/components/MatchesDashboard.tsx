@@ -464,11 +464,11 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
       </section>
 
       {/* ── RADAR DE VALOR ───────────────────────────────────────────────── */}
-      <section id="radar-de-valor" className="py-24 bg-[#1A1C1E]">
+      <section id="radar-de-valor" className="py-24">
         <div className="flex flex-col md:flex-row items-center justify-between mb-12 border-b border-[#E5E7EB] pb-6">
           <div className="flex items-center gap-3">
             <span className="text-2xl">{activeSportConfig.flag}</span>
-            <h2 className="text-3xl font-editorial font-bold text-white">
+            <h2 className="text-3xl font-editorial font-bold text-[#1A1C1E]">
               Radar de Valor —{' '}
               <span className={isWorldCupActive ? 'text-amber-600' : 'text-[#064E3B]'}>
                 {activeSportConfig.label}
