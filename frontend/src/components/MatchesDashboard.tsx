@@ -18,7 +18,7 @@ const SPORTS = [
     label:    'Mundial 2026',
     subtitle: 'FIFA World Cup',
     flag:     '⚽',
-    image:    'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Maradona-Mundial_86_con_la_copa.JPG/800px-Maradona-Mundial_86_con_la_copa.JPG',
+    image:    '/maradona.jpg',
     isWorldCup: true,
     isOffSeason: false, // World Cup is never off-season
   },
@@ -27,7 +27,7 @@ const SPORTS = [
     label:    'La Liga',
     subtitle: 'España',
     flag:     '🇪🇸',
-    image:    'https://images.unsplash.com/photo-1553158013-05c06634863f?q=80&w=400&h=400&auto=format&fit=crop',
+    image:    'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=400&h=400&auto=format&fit=crop',
     isWorldCup: false,
     isOffSeason: true, // Off until September 2026
   },
