@@ -153,28 +153,34 @@ export default function BankrollPage() {
 
                             {/* ADMIN SYSTEM STATS */}
                             {user?.email === 'hugodesax123@gmail.com' && adminStats && (
-                                <div className="mb-16">
+                                <div className="mb-20">
                                     <div className="flex items-center gap-3 mb-6">
-                                        <span className="h-px w-8 bg-blue-500"></span>
-                                        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600">Admin Only</span>
+                                        <span className="h-px w-8 bg-[#0A0F1E]"></span>
+                                        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#0A0F1E]">Acceso Administrador</span>
                                     </div>
-                                    <h2 className="text-3xl font-editorial font-bold text-[#1A1C1E] mb-6">Rendimiento Global del Sistema</h2>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                                        <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
-                                            <div className="text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-2">Total Predicciones</div>
-                                            <div className="text-3xl font-bold text-blue-900">{adminStats.total_bets}</div>
+                                    <h2 className="text-4xl font-editorial font-bold text-[#1A1C1E] mb-8">Rendimiento <span className="italic font-light">Global del Sistema</span></h2>
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                                        <div className="bg-[#0A0F1E] p-6 rounded-[2rem] shadow-xl">
+                                            <div className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-2">Total Predicciones</div>
+                                            <div className="text-3xl font-editorial font-bold text-white">{adminStats.total_predictions}</div>
                                         </div>
-                                        <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100">
+                                        <div className="bg-emerald-50/50 p-6 rounded-[2rem] border border-emerald-100">
                                             <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest mb-2">Acertadas</div>
-                                            <div className="text-3xl font-bold text-emerald-900">{adminStats.won}</div>
+                                            <div className="text-3xl font-editorial font-bold text-emerald-900">{adminStats.won_predictions}</div>
                                         </div>
-                                        <div className="bg-rose-50 p-6 rounded-2xl border border-rose-100">
+                                        <div className="bg-rose-50/50 p-6 rounded-[2rem] border border-rose-100">
                                             <div className="text-[10px] font-bold text-rose-800 uppercase tracking-widest mb-2">Falladas</div>
-                                            <div className="text-3xl font-bold text-rose-900">{adminStats.lost}</div>
+                                            <div className="text-3xl font-editorial font-bold text-rose-900">{adminStats.lost_predictions}</div>
                                         </div>
-                                        <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100">
-                                            <div className="text-[10px] font-bold text-amber-800 uppercase tracking-widest mb-2">Efectividad Global</div>
-                                            <div className="text-3xl font-bold text-amber-900">{adminStats.win_rate}%</div>
+                                        <div className="bg-[#FCF9F1] p-6 rounded-[2rem] border border-[#FFD700]/30 shadow-[0_10px_30px_rgba(255,215,0,0.05)]">
+                                            <div className="text-[10px] font-bold text-[#B8860B] uppercase tracking-widest mb-2">Efectividad Global</div>
+                                            <div className="text-3xl font-editorial font-bold text-[#1A1C1E]">{adminStats.hit_rate}%</div>
+                                        </div>
+                                        <div className="bg-white p-6 rounded-[2rem] border border-[#E5E7EB]">
+                                            <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-2">Yield Hipotético</div>
+                                            <div className={`text-3xl font-editorial font-bold ${adminStats.hypothetical_yield >= 0 ? 'text-[#064E3B]' : 'text-red-600'}`}>
+                                                {adminStats.hypothetical_yield >= 0 ? '+' : ''}{adminStats.hypothetical_yield}%
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

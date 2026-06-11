@@ -29,6 +29,7 @@ from core.cache_service import get_cache, refresh_cache, is_cache_warm
 # Routers
 from routers.bets import router as bets_router
 from routers.auth import router as auth_router
+from routers.admin import router as admin_router
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,7 @@ app.add_middleware(
 
 app.include_router(bets_router)
 app.include_router(auth_router)
+app.include_router(admin_router)
 
 
 # ---------------------------------------------------------------------------

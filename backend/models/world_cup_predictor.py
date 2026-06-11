@@ -240,13 +240,12 @@ def _analytic_predict(home_pts: float, away_pts: float,
 
     delta = home_str - away_str + form_diff * 30
 
-    # Bradley-Terry logistic for home win
-    p_home = 1.0 / (1.0 + 10.0 ** (-delta / 800.0))
+    # Bradley-Terry logistic for home win (extremely sharp curve to crush mismatches)
+    p_home = 1.0 / (1.0 + 10.0 ** (-delta / 150.0))
 
-    # Draw probability: peaks at 0.28 when evenly matched, lower for mismatches
-    # Knockout stages have fewer draws (extra time replaces them)
-    draw_base = 0.30 * (1.0 - abs(delta) / 3000.0)
-    draw_base = max(0.05, min(0.30, draw_base))
+    # Draw probability: peaks at 0.28 when evenly matched, collapses for huge mismatches
+    draw_base = 0.30 * (1.0 - abs(delta) / 800.0)
+    draw_base = max(0.01, min(0.30, draw_base))
     if is_knockout:
         draw_base *= 0.40  # penalties replace draws in knockout
 

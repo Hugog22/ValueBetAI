@@ -90,8 +90,28 @@ def start_scheduler():
         name="Daily: sync matches from Understat",
         replace_existing=True,
         misfire_grace_time=600,
-    )
     logger.info("  ✓ Task 1 → Daily ETL at 04:00 Madrid time.")
+
+    # ── Task 1.5: Auto-Retrain ML Models (After ETL) ──────────────────────────
+    import subprocess
+    def _run_training():
+        logger.info("🤖 Starting automated ML retraining...")
+        try:
+            subprocess.run(["python", "scripts/train_model.py"], check=True)
+            subprocess.run(["python", "scripts/train_model_worldcup.py"], check=True)
+            logger.info("✅ ML retraining complete. Models updated.")
+        except Exception as e:
+            logger.error(f"❌ ML retraining failed: {e}")
+
+    scheduler.add_job(
+        _run_training,
+        trigger=CronTrigger(hour=4, minute=30, timezone="Europe/Madrid"),
+        id="daily_model_retrain",
+        name="Daily: Retrain XGBoost Models",
+        replace_existing=True,
+        misfire_grace_time=600,
+    )
+    logger.info("  ✓ Task 1.5 → Daily Auto-Retrain at 04:30 Madrid time.")
 
     # ── Task 2: Valley days cache refresh (Mon–Thu) ───────────────────────────
     try:
