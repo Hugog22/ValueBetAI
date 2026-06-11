@@ -159,30 +159,37 @@ export default function BankrollPage() {
                                         <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#0A0F1E]">Acceso Administrador</span>
                                     </div>
                                     <h2 className="text-4xl font-editorial font-bold text-[#1A1C1E] mb-8">Rendimiento <span className="italic font-light">Global del Sistema</span></h2>
-                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                                        <div className="bg-[#0A0F1E] p-6 rounded-[2rem] shadow-xl">
-                                            <div className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-2">Total Predicciones</div>
-                                            <div className="text-3xl font-editorial font-bold text-white">{adminStats.total_predictions}</div>
+                                    
+                                    {adminStats.detail || adminStats.total_predictions === undefined ? (
+                                        <div className="bg-red-50 p-6 rounded-[2rem] border border-red-100 text-red-600 text-sm font-bold">
+                                            Aviso: El backend aún se está actualizando o requiere reiniciarse (Respuesta: {adminStats.detail || "Datos no disponibles"}).
                                         </div>
-                                        <div className="bg-emerald-50/50 p-6 rounded-[2rem] border border-emerald-100">
-                                            <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest mb-2">Acertadas</div>
-                                            <div className="text-3xl font-editorial font-bold text-emerald-900">{adminStats.won_predictions}</div>
-                                        </div>
-                                        <div className="bg-rose-50/50 p-6 rounded-[2rem] border border-rose-100">
-                                            <div className="text-[10px] font-bold text-rose-800 uppercase tracking-widest mb-2">Falladas</div>
-                                            <div className="text-3xl font-editorial font-bold text-rose-900">{adminStats.lost_predictions}</div>
-                                        </div>
-                                        <div className="bg-[#FCF9F1] p-6 rounded-[2rem] border border-[#FFD700]/30 shadow-[0_10px_30px_rgba(255,215,0,0.05)]">
-                                            <div className="text-[10px] font-bold text-[#B8860B] uppercase tracking-widest mb-2">Efectividad Global</div>
-                                            <div className="text-3xl font-editorial font-bold text-[#1A1C1E]">{adminStats.hit_rate}%</div>
-                                        </div>
-                                        <div className="bg-white p-6 rounded-[2rem] border border-[#E5E7EB]">
-                                            <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-2">Yield Hipotético</div>
-                                            <div className={`text-3xl font-editorial font-bold ${adminStats.hypothetical_yield >= 0 ? 'text-[#064E3B]' : 'text-red-600'}`}>
-                                                {adminStats.hypothetical_yield >= 0 ? '+' : ''}{adminStats.hypothetical_yield}%
+                                    ) : (
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                                            <div className="bg-[#0A0F1E] p-6 rounded-[2rem] shadow-xl">
+                                                <div className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-2">Total Predicciones</div>
+                                                <div className="text-3xl font-editorial font-bold text-white">{adminStats.total_predictions}</div>
+                                            </div>
+                                            <div className="bg-emerald-50/50 p-6 rounded-[2rem] border border-emerald-100">
+                                                <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest mb-2">Acertadas</div>
+                                                <div className="text-3xl font-editorial font-bold text-emerald-900">{adminStats.won_predictions}</div>
+                                            </div>
+                                            <div className="bg-rose-50/50 p-6 rounded-[2rem] border border-rose-100">
+                                                <div className="text-[10px] font-bold text-rose-800 uppercase tracking-widest mb-2">Falladas</div>
+                                                <div className="text-3xl font-editorial font-bold text-rose-900">{adminStats.lost_predictions}</div>
+                                            </div>
+                                            <div className="bg-[#FCF9F1] p-6 rounded-[2rem] border border-[#FFD700]/30 shadow-[0_10px_30px_rgba(255,215,0,0.05)]">
+                                                <div className="text-[10px] font-bold text-[#B8860B] uppercase tracking-widest mb-2">Efectividad Global</div>
+                                                <div className="text-3xl font-editorial font-bold text-[#1A1C1E]">{adminStats.hit_rate}%</div>
+                                            </div>
+                                            <div className="bg-white p-6 rounded-[2rem] border border-[#E5E7EB]">
+                                                <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-2">Yield Hipotético</div>
+                                                <div className={`text-3xl font-editorial font-bold ${adminStats.hypothetical_yield >= 0 ? 'text-[#064E3B]' : 'text-red-600'}`}>
+                                                    {adminStats.hypothetical_yield >= 0 ? '+' : ''}{adminStats.hypothetical_yield}%
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
 
