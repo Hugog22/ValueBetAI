@@ -33,13 +33,6 @@ const SPORTS = [
     flag:     '🏆',
     image:    'https://images.unsplash.com/photo-1518063319789-7217e6706b04?q=80&w=400&h=400&auto=format&fit=crop',
   },
-  {
-    key:      'nba',
-    label:    'NBA',
-    subtitle: 'EUA',
-    flag:     '🏀',
-    image:    'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=400&h=400&auto=format&fit=crop',
-  },
 ] as const;
 
 type SportKey = typeof SPORTS[number]['key'];
@@ -93,12 +86,13 @@ export default function MatchesDashboard({ initialMatches, initialParlay }: Prop
     laliga:    initialMatches,
     premier:   [],
     champions: [],
-    nba:       [],
   });
 
   // Parlays — seeded from ISR for LaLiga
   const [allParlays, setAllParlays] = useState<ParlayData[]>(
-    initialParlay?.legs?.length ? [{ sport: 'laliga', label: 'La Liga', flag: '🇪🇸', ...initialParlay }] : []
+    initialParlay?.legs?.length
+      ? [{ ...initialParlay, sport: 'laliga', label: 'La Liga', flag: '🇪🇸' }]
+      : []
   );
 
   // UI state
@@ -174,15 +168,10 @@ export default function MatchesDashboard({ initialMatches, initialParlay }: Prop
 
   const featuredMatch = activeMatches.find(m => m.bestPick?.isValueBet) || activeMatches[0];
 
-  // Tailwind safelist
-  const _safelist = 'bg-green-600 bg-yellow-400 bg-orange-500 bg-red-600 text-white text-black font-bold hidden';
-
   const activeSportConfig = SPORTS.find(s => s.key === activeSport)!;
 
   return (
     <>
-      <div className={_safelist} aria-hidden />
-
       {/* ── HERO / FEATURED ─────────────────────────────────────────────── */}
       {featuredMatch && (
         <section className="mb-20">

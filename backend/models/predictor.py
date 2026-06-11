@@ -32,12 +32,21 @@ PATH_OU25_RF  = os.path.join(MODELS_DIR, "ensemble_ou2.5_rf.pkl")
 PATH_CORNERS  = os.path.join(MODELS_DIR, "xgb_corners.json")
 
 FEATURES_CORE = [
+    # Own form
+    "home_xg_for_avg5", "home_xg_ag_avg5", "home_goals_avg5", "home_pts_avg5",
+    "away_xg_for_avg5", "away_xg_ag_avg5", "away_goals_avg5", "away_pts_avg5",
+    # Opponent-adjusted
+    "home_opp_pts_avg5", "home_opp_xgag_avg5",
+    "away_opp_pts_avg5", "away_opp_xgag_avg5",
+    "home_xg_adj", "away_xg_adj",
+    # Differential signals
+    "xg_diff", "form_diff", "opp_diff", "xg_adj_diff",
+    # Fatigue
+    "rest_days_home", "rest_days_away",
+    # ELO — absolute team strength
     "home_elo", "away_elo", "elo_diff",
-    "home_xg_for_avg10", "away_xg_for_avg10", "xg_diff",
-    "home_possession_avg10", "away_possession_avg10", "possession_diff",
-    "home_shots_target_avg10", "away_shots_target_avg10", "shots_diff",
-    "home_absences", "away_absences", "absence_severity",
-    "rest_days_home", "rest_days_away"
+    # League encoding — model learns league-specific patterns
+    "league_encoded",
 ]
 
 FEATURES_CORNERS = FEATURES_CORE + [
@@ -75,6 +84,8 @@ DEFAULTS: dict[str, float] = {
     "home_elo":          1500.0,
     "away_elo":          1500.0,
     "elo_diff":          0.0,
+    # League encoding fallback
+    "league_encoded":    0,
     # Corners (model C)
     "home_corners_avg5": 5.2,
     "away_corners_avg5": 4.3,

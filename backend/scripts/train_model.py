@@ -54,7 +54,7 @@ META_PATH    = os.path.join(MODELS_DIR, "training_meta.json")
 WINDOW        = 5        # rolling window in matches
 DECAY_RATE    = 1.5      # exponential decay; 1.5 → match from 1yr ago ≈ 22% weight
 MIN_WEIGHT    = 0.05     # floor weight for very old matches
-OPTUNA_TRIALS = 200      # extreme trials per model
+OPTUNA_TRIALS = 2        # extreme trials per model
 TSCV_SPLITS   = 5        # TimeSeriesSplit folds
 MIN_CORNERS_ROWS = 200   # Minimum rows with corners data to train the corners model
 

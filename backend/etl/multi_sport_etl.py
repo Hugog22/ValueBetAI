@@ -1,12 +1,12 @@
 """
 multi_sport_etl.py
 ------------------
-ETL pipeline for non-Understat sports (Premier, Champions, NBA).
+ETL pipeline for non-Understat football leagues (Premier League, Champions League).
 
 For each sport, this module:
 1. Fetches upcoming events from The Odds API (home_team, away_team, commence_time).
 2. Upserts Team + Match rows in the database so the evaluator can reference them.
-3. Stores odds in the Odds table for EV calculation.
+3. Stores h2h odds in the Odds table for EV calculation.
 
 This complements the Understat ETL (run_etl.py) which handles La Liga natively.
 """
@@ -19,19 +19,17 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-# Mapping: our internal sport key → The Odds API sport key
+# Mapping: internal sport key → The Odds API sport key
 SPORT_ODDS_KEY = {
     "premier":   "soccer_england_premier_league",
     "champions": "soccer_uefa_champions_league",
-    "nba":       "basketball_nba",
 }
 
-# Mapping: sport key → sport type
+# Mapping: sport key → sport type (all football)
 SPORT_TYPE = {
     "laliga":    "football",
     "premier":   "football",
     "champions": "football",
-    "nba":       "basketball",
 }
 
 
@@ -48,7 +46,7 @@ def sync_sport_matches(sport_key: str) -> int:
 
     Parameters
     ----------
-    sport_key : "premier" | "champions" | "nba"
+    sport_key : "premier" | "champions"
     """
     if sport_key not in SPORT_ODDS_KEY:
         logger.warning(f"[multi_sport_etl] Unknown sport_key: {sport_key}")
@@ -200,7 +198,7 @@ def sync_sport_matches(sport_key: str) -> int:
 
 
 def sync_all_sports() -> dict:
-    """Sync matches for all non-Understat sports. Returns {sport_key: new_matches}."""
+    """Sync Premier League and Champions League from The Odds API. Returns {sport_key: new_matches}."""
     results = {}
     for sport_key in SPORT_ODDS_KEY:
         results[sport_key] = sync_sport_matches(sport_key)
