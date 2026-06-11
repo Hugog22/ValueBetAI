@@ -207,7 +207,7 @@ def sync_world_cup_schedule() -> int:
 
     if not fd_key:
         logger.warning("[world_cup_etl] FOOTBALL_DATA_API_KEY not set — skipping schedule sync")
-        return generate_synthetic_wc_matches_if_needed()
+        return 0
 
     from db.session import SessionLocal
     from db.models import Match
@@ -221,7 +221,7 @@ def sync_world_cup_schedule() -> int:
         resp    = httpx.get(url, headers=headers, timeout=30)
         if resp.status_code in (404, 422):
             logger.warning("[world_cup_etl] WC schedule not available on football-data.org yet")
-            return generate_synthetic_wc_matches_if_needed()
+            return 0
         resp.raise_for_status()
         matches = resp.json().get("matches", [])
         logger.info(f"[world_cup_etl] {len(matches)} WC matches from football-data.org")
@@ -282,9 +282,6 @@ def sync_world_cup_schedule() -> int:
 
         db.commit()
         logger.info(f"[world_cup_etl] {new_count} new WC matches from football-data.org schedule")
-
-        syn_count = generate_synthetic_wc_matches_if_needed()
-        new_count += syn_count
 
     except Exception as e:
         logger.error(f"[world_cup_etl] Schedule sync failed: {e}", exc_info=True)
