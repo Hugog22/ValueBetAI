@@ -18,7 +18,7 @@ const SPORTS = [
     label:    'Mundial 2026',
     subtitle: 'FIFA World Cup',
     flag:     '⚽',
-    image:    'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=400&h=400&auto=format&fit=crop',
+    image:    'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Maradona-Mundial_86_con_la_copa.JPG/800px-Maradona-Mundial_86_con_la_copa.JPG',
     isWorldCup: true,
     isOffSeason: false, // World Cup is never off-season
   },
@@ -27,7 +27,7 @@ const SPORTS = [
     label:    'La Liga',
     subtitle: 'España',
     flag:     '🇪🇸',
-    image:    'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=400&h=400&auto=format&fit=crop',
+    image:    'https://images.unsplash.com/photo-1553158013-05c06634863f?q=80&w=400&h=400&auto=format&fit=crop',
     isWorldCup: false,
     isOffSeason: true, // Off until September 2026
   },
@@ -36,7 +36,7 @@ const SPORTS = [
     label:    'Premier League',
     subtitle: 'Inglaterra',
     flag:     '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-    image:    'https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=400&h=400&auto=format&fit=crop',
+    image:    'https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=400&h=400&auto=format&fit=crop',
     isWorldCup: false,
     isOffSeason: true, // Off until August 2026
   },
@@ -45,7 +45,7 @@ const SPORTS = [
     label:    'Champions',
     subtitle: 'Europa',
     flag:     '🏆',
-    image:    'https://images.unsplash.com/photo-1518063319789-7217e6706b04?q=80&w=400&h=400&auto=format&fit=crop',
+    image:    'https://images.unsplash.com/photo-1614632537190-23e4146777db?q=80&w=400&h=400&auto=format&fit=crop',
     isWorldCup: false,
     isOffSeason: true, // Off until September 2026
   },
@@ -109,6 +109,16 @@ const COUNTRY_FLAGS: Record<string, string> = {
   'Costa Rica': '🇨🇷', Panama: '🇵🇦', Venezuela: '🇻🇪', Chile: '🇨🇱',
   Paraguay: '🇵🇾', Bolivia: '🇧🇴', Honduras: '🇭🇳', 'El Salvador': '🇸🇻',
   'New Zealand': '🇳🇿', 'Saudi Arabia': '🇸🇦',
+  Egypt: '🇪🇬', Iran: '🇮🇷', 'Cape Verde': '🇨🇻', 'Cape Verde Islands': '🇨🇻',
+  'Bosnia & Herzegovina': '🇧🇦', 'Bosnia-Herzegovina': '🇧🇦',
+  Peru: '🇵🇪', Sweden: '🇸🇪', Wales: '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'Northern Ireland': '🏴󠁧󠁢󠁮󠁩󠁲󠁿',
+  'Republic of Ireland': '🇮🇪', Ireland: '🇮🇪', Iceland: '🇮🇸', Norway: '🇳🇴',
+  Finland: '🇫🇮', 'Ivory Coast': '🇨🇮', "Cote d'Ivoire": '🇨🇮', Nigeria: '🇳🇬',
+  Cameroon: '🇨🇲', Ghana: '🇬🇭', Algeria: '🇩🇿', Tunisia: '🇹🇳', Mali: '🇲🇱',
+  'South Africa': '🇿🇦', Qatar: '🇶🇦', UAE: '🇦🇪', Iraq: '🇮🇶', Syria: '🇸🇾',
+  China: '🇨🇳', 'China PR': '🇨🇳', India: '🇮🇳', Vietnam: '🇻🇳', Thailand: '🇹🇭',
+  Jamaica: '🇯🇲', 'Trinidad and Tobago': '🇹🇹',
+
 };
 
 const COUNTRY_NAMES_ES: Record<string, string> = {
@@ -127,7 +137,13 @@ const COUNTRY_NAMES_ES: Record<string, string> = {
   Iran: 'Irán', Australia: 'Australia', 'New Zealand': 'Nueva Zelanda',
   'Cape Verde': 'Cabo Verde', 'Cape Verde Islands': 'Cabo Verde',
   'Bosnia & Herzegovina': 'Bosnia y Herzegovina', 'Bosnia-Herzegovina': 'Bosnia y Herzegovina',
-  Croatia: 'Croacia',
+  Croatia: 'Croacia', Peru: 'Perú', Sweden: 'Suecia', Wales: 'Gales', 'Northern Ireland': 'Irlanda del Norte',
+  'Republic of Ireland': 'República de Irlanda', Ireland: 'Irlanda', Iceland: 'Islandia', Norway: 'Noruega',
+  Finland: 'Finlandia', 'Ivory Coast': 'Costa de Marfil', "Cote d'Ivoire": 'Costa de Marfil', Nigeria: 'Nigeria',
+  Cameroon: 'Camerún', Ghana: 'Ghana', Algeria: 'Argelia', Tunisia: 'Túnez', Mali: 'Malí',
+  'South Africa': 'Sudáfrica', Qatar: 'Catar', UAE: 'EAU', Iraq: 'Irak', Syria: 'Siria',
+  China: 'China', 'China PR': 'China', India: 'India', Vietnam: 'Vietnam', Thailand: 'Tailandia',
+  Jamaica: 'Jamaica', 'Trinidad and Tobago': 'Trinidad y Tobago',
 };
 
 function getFlag(teamName: string): string {
@@ -366,7 +382,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
       )}
 
       {/* ── EXPLORAR MERCADOS — Sport Selector ───────────────────────────── */}
-      <section className="mb-20">
+      <section id="explorar-mercados" className="py-20 bg-[#FCF9F1]">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-editorial font-bold text-[#1A1C1E]">Explorar Mercados</h2>
         </div>
@@ -448,11 +464,11 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
       </section>
 
       {/* ── RADAR DE VALOR ───────────────────────────────────────────────── */}
-      <section>
+      <section id="radar-de-valor" className="py-24 bg-[#1A1C1E]">
         <div className="flex flex-col md:flex-row items-center justify-between mb-12 border-b border-[#E5E7EB] pb-6">
           <div className="flex items-center gap-3">
             <span className="text-2xl">{activeSportConfig.flag}</span>
-            <h2 className="text-3xl font-editorial font-bold text-[#1A1C1E]">
+            <h2 className="text-3xl font-editorial font-bold text-white">
               Radar de Valor —{' '}
               <span className={isWorldCupActive ? 'text-amber-600' : 'text-[#064E3B]'}>
                 {activeSportConfig.label}
