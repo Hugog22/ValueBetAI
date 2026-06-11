@@ -35,6 +35,7 @@ interface BetRecord {
 
 export default function BankrollPage() {
     const [stats, setStats] = useState<BankrollStats | null>(null);
+    const [adminStats, setAdminStats] = useState<any>(null);
     const { token, user, logout } = useAuth();
 
     useEffect(() => {
@@ -45,7 +46,16 @@ export default function BankrollPage() {
             .then(res => res.json())
             .then(data => setStats(data))
             .catch(err => console.error("Error fetching bankroll", err));
-    }, [token]);
+            
+        if (user?.email === 'hugodesax123@gmail.com') {
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/admin/system-stats`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(res => res.json())
+                .then(data => setAdminStats(data))
+                .catch(err => console.error("Error fetching admin stats", err));
+        }
+    }, [token, user]);
 
     const getSelectionLabel = (bet: BetRecord) => {
         const sel = bet.selection.toLowerCase();
@@ -141,6 +151,35 @@ export default function BankrollPage() {
                                 </div>
                             </div>
 
+                            {/* ADMIN SYSTEM STATS */}
+                            {user?.email === 'hugodesax123@gmail.com' && adminStats && (
+                                <div className="mb-16">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <span className="h-px w-8 bg-blue-500"></span>
+                                        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600">Admin Only</span>
+                                    </div>
+                                    <h2 className="text-3xl font-editorial font-bold text-[#1A1C1E] mb-6">Rendimiento Global del Sistema</h2>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                        <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
+                                            <div className="text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-2">Total Predicciones</div>
+                                            <div className="text-3xl font-bold text-blue-900">{adminStats.total_bets}</div>
+                                        </div>
+                                        <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100">
+                                            <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest mb-2">Acertadas</div>
+                                            <div className="text-3xl font-bold text-emerald-900">{adminStats.won}</div>
+                                        </div>
+                                        <div className="bg-rose-50 p-6 rounded-2xl border border-rose-100">
+                                            <div className="text-[10px] font-bold text-rose-800 uppercase tracking-widest mb-2">Falladas</div>
+                                            <div className="text-3xl font-bold text-rose-900">{adminStats.lost}</div>
+                                        </div>
+                                        <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100">
+                                            <div className="text-[10px] font-bold text-amber-800 uppercase tracking-widest mb-2">Efectividad Global</div>
+                                            <div className="text-3xl font-bold text-amber-900">{adminStats.win_rate}%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex items-center justify-between mb-10 border-b border-[#E5E7EB] pb-6">
                                 <h2 className="text-3xl font-editorial font-bold text-[#1A1C1E]">Libro de Órdenes</h2>
                                 <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.2em]">{(stats.recent_bets || []).length} Operaciones</span>
@@ -173,7 +212,7 @@ export default function BankrollPage() {
                                                     </td>
                                                     <td className="px-8 py-6">
                                                         <div className="font-editorial text-lg font-bold text-[#1A1C1E] group-hover:text-[#064E3B] transition-colors line-clamp-1 mb-1">
-                                                            {bet.home_team} <span className="text-[#64748B] font-sans font-medium text-sm">v</span> {bet.away_team}
+                                                            {bet.home_team} <span className="text-[#64748B] font-sans font-medium text-sm">vs</span> {bet.away_team}
                                                         </div>
                                                         <div className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest">
                                                             <span className="opacity-60">{bet.market}: </span> 
