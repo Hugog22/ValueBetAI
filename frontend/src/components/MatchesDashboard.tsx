@@ -519,7 +519,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                 key={match.id}
                 className={isWorldCupActive ? 'wc-card rounded-[2rem] overflow-hidden' : ''}
               >
-                <BentoCard key={match.id} className="flex flex-col h-full">
+                <BentoCard key={match.id} className={`flex flex-col h-full ${isWorldCupActive ? '!bg-transparent !border-none' : ''}`}>
                   {/* World Cup match header with flags */}
                   {isWorldCupActive ? (
                     <div className="flex justify-between items-start mb-4">
