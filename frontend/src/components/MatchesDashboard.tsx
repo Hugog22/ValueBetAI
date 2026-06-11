@@ -182,7 +182,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
   // Parlays — seeded from ISR, refreshed from API
   const [allParlays, setAllParlays] = useState<ParlayData[]>(
     initialParlay?.legs?.length
-      ? [{ ...initialParlay, sport: 'laliga', label: 'La Liga', flag: '🇪🇸' }]
+      ? [initialParlay]
       : []
   );
 
