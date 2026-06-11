@@ -90,6 +90,7 @@ def start_scheduler():
         name="Daily: sync matches from Understat",
         replace_existing=True,
         misfire_grace_time=600,
+    )
     logger.info("  ✓ Task 1 → Daily ETL at 04:00 Madrid time.")
 
     # ── Task 1.5: Auto-Retrain ML Models (After ETL) ──────────────────────────
