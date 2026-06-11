@@ -111,8 +111,33 @@ const COUNTRY_FLAGS: Record<string, string> = {
   'New Zealand': '🇳🇿', 'Saudi Arabia': '🇸🇦',
 };
 
+const COUNTRY_NAMES_ES: Record<string, string> = {
+  Spain: 'España', England: 'Inglaterra', France: 'Francia', Germany: 'Alemania',
+  Italy: 'Italia', Belgium: 'Bélgica', Netherlands: 'Países Bajos',
+  Switzerland: 'Suiza', Poland: 'Polonia', Denmark: 'Dinamarca',
+  Serbia: 'Serbia', Turkey: 'Turquía', Austria: 'Austria', Ukraine: 'Ucrania',
+  Hungary: 'Hungría', Slovakia: 'Eslovaquia', Romania: 'Rumanía', Slovenia: 'Eslovenia',
+  Czechia: 'República Checa', Scotland: 'Escocia', Greece: 'Grecia', Albania: 'Albania',
+  Georgia: 'Georgia', Brazil: 'Brasil', Argentina: 'Argentina', Colombia: 'Colombia', Uruguay: 'Uruguay',
+  Ecuador: 'Ecuador', Chile: 'Chile', Venezuela: 'Venezuela', Bolivia: 'Bolivia',
+  Paraguay: 'Paraguay', 'United States': 'Estados Unidos', USA: 'EE.UU.', Mexico: 'México',
+  Canada: 'Canadá', 'Costa Rica': 'Costa Rica', Panama: 'Panamá',
+  Honduras: 'Honduras', 'El Salvador': 'El Salvador', Morocco: 'Marruecos', Senegal: 'Senegal', Egypt: 'Egipto',
+  Japan: 'Japón', 'South Korea': 'Corea del Sur', 'Saudi Arabia': 'Arabia Saudita',
+  Iran: 'Irán', Australia: 'Australia', 'New Zealand': 'Nueva Zelanda',
+  'Cape Verde': 'Cabo Verde', 'Cape Verde Islands': 'Cabo Verde',
+  'Bosnia & Herzegovina': 'Bosnia y Herzegovina', 'Bosnia-Herzegovina': 'Bosnia y Herzegovina',
+  Croatia: 'Croacia',
+};
+
 function getFlag(teamName: string): string {
   return COUNTRY_FLAGS[teamName] || '🏳';
+}
+
+function getEsName(teamName: string): string {
+  const upper = teamName.toUpperCase();
+  const found = Object.keys(COUNTRY_NAMES_ES).find(k => k.toUpperCase() === upper);
+  return found ? COUNTRY_NAMES_ES[found] : teamName;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -300,8 +325,8 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                       <div key={li} className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10">
                         <div className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1 truncate">
                           {isWcParlay
-                            ? `${getFlag(leg.homeTeam)} ${leg.homeTeam} v ${leg.awayTeam} ${getFlag(leg.awayTeam)}`
-                            : `${leg.homeTeam} v ${leg.awayTeam}`
+                            ? `${getFlag(leg.homeTeam)} ${getEsName(leg.homeTeam)} vs ${getEsName(leg.awayTeam)} ${getFlag(leg.awayTeam)}`
+                            : `${getEsName(leg.homeTeam)} vs ${getEsName(leg.awayTeam)}`
                           }
                         </div>
                         <div className="flex justify-between items-end">
@@ -528,11 +553,11 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                           {new Date(match.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </span>
                         <h3 className="text-lg font-editorial font-bold text-white">
-                          {getFlag(match.homeTeam)} {match.homeTeam}
+                          {getFlag(match.homeTeam)} {getEsName(match.homeTeam)}
                         </h3>
                         <div className="text-white/40 text-xs font-bold my-0.5">vs</div>
                         <h3 className="text-lg font-editorial font-bold text-white">
-                          {getFlag(match.awayTeam)} {match.awayTeam}
+                          {getFlag(match.awayTeam)} {getEsName(match.awayTeam)}
                         </h3>
                       </div>
                       {match.bestPick?.risk && (
@@ -547,7 +572,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                         <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">
                           {new Date(match.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        <h3 className="text-xl font-editorial font-bold text-[#1A1C1E]">{match.homeTeam} v {match.awayTeam}</h3>
+                        <h3 className="text-xl font-editorial font-bold text-[#1A1C1E]">{getEsName(match.homeTeam)} vs {getEsName(match.awayTeam)}</h3>
                       </div>
                       {match.bestPick?.risk && (
                         <div className={`${match.bestPick.risk.bgClass} px-3 py-1 rounded-lg text-[8px] font-bold uppercase tracking-widest`}>
