@@ -309,10 +309,15 @@ def _do_refresh() -> None:
                     # Route to World Cup evaluator if both teams are national teams
                     if home_name in wc_teams or away_name in wc_teams:
                         result = _evaluate_world_cup_match(m, world_cup_predictor, db)
-                        jornada_wc.append(result)
+                        if result:
+                            jornada_wc.append(result)
                     else:
                         result = _evaluate_match(m, predictor, db)
-                        jornada_all.append(result)
+                        if result:
+                            jornada_all.append(result)
+                            
+                    if not result:
+                        continue
                         
                     # Auto-track the system's value bet recommendation
                     best_pick = result.get("bestPick")

@@ -50,27 +50,23 @@ _WC_ODDS_POOL = [
 # Odds retrieval
 # ---------------------------------------------------------------------------
 
-def _get_odds(match: Match, db: Session | None = None,
-              pool: list[dict] | None = None) -> dict:
-    """Return live odds from DB or fall back to mock pool."""
-    pool = pool or _ODDS_POOL
+def _get_odds(match: Match, db: Session | None = None) -> dict | None:
+    """Return live odds from DB. Returns None if no real odds exist."""
     if db is not None:
         h2h  = db.query(Odds).filter(Odds.match_id == match.id, Odds.market == "h2h").order_by(Odds.timestamp.desc()).first()
         ou25 = db.query(Odds).filter(Odds.match_id == match.id, Odds.market == "totals_2.5").order_by(Odds.timestamp.desc()).first()
         if h2h:
-            mock = pool[match.id % len(pool)]
             return {
                 "home":     float(h2h.home_odds),
                 "draw":     float(h2h.draw_odds),
                 "away":     float(h2h.away_odds),
-                "over25":   float(ou25.home_odds) if ou25 else mock["over25"],
-                "under25":  float(ou25.away_odds) if ou25 else mock["under25"],
-                "over_corners":  mock.get("over_corners",  1.90),
-                "under_corners": mock.get("under_corners", 1.90),
+                "over25":   float(ou25.home_odds) if ou25 else 1.90,
+                "under25":  float(ou25.away_odds) if ou25 else 1.90,
+                "over_corners":  1.90,
+                "under_corners": 1.90,
                 "_source":  f"{h2h.bookmaker}_live",
             }
-    mock = pool[match.id % len(pool)]
-    return {**mock, "_source": "mock"}
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -190,6 +186,8 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
     home, away = match.home_team.name, match.away_team.name
     features   = _build_match_features(match)
     odds       = _get_odds(match, db)
+    if odds is None:
+        return None
     source     = odds.pop("_source", "mock")
 
     predict_features = {k: v for k, v in features.items() if not k.startswith("_")}
@@ -294,8 +292,11 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     # Get prediction from World Cup specialist model
     pred = wc_predictor.predict_match(home, away, is_knockout=is_knockout)
 
-    # Get odds (real or mock WC pool)
-    odds   = _get_odds(match, db, pool=_WC_ODDS_POOL)
+    # Get odds (real only)
+    odds   = _get_odds(match, db)
+    if odds is None:
+        return None
+        
     source = odds.pop("_source", "mock")
 
     eps        = 1e-6
