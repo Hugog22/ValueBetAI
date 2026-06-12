@@ -65,6 +65,7 @@ def get_system_stats(
         db.query(Bet, Match)
         .join(Match, Bet.match_id == Match.id)
         .filter(Bet.status.in_(["Won", "Lost"]))
+        .filter(Bet.user_id == None)
         .all()
     )
 
@@ -131,6 +132,7 @@ def get_predictions_detail(
         db.query(Bet, Match, User)
         .join(Match, Bet.match_id == Match.id)
         .outerjoin(User, Bet.user_id == User.id)
+        .filter(Bet.user_id == None)
         .filter(Bet.placed_at >= since)
         .filter(Bet.status.in_(["Won", "Lost", "Void"]))
         .order_by(Bet.placed_at.desc())

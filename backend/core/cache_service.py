@@ -288,10 +288,10 @@ def _do_refresh() -> None:
         db = SessionLocal()
         try:
             now        = datetime.utcnow()
-            thirty_days = now + timedelta(days=30)  # wider window for WC
+            seven_days = now + timedelta(days=7)
             upcoming   = (
                 db.query(Match)
-                .filter(Match.date >= now, Match.date <= thirty_days)
+                .filter(Match.date >= now, Match.date <= seven_days)
                 .order_by(Match.date.asc())
                 .limit(80)
                 .all()
