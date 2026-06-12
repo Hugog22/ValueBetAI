@@ -343,8 +343,8 @@ class WorldCupPredictor:
 
         home_pts   = _get_fifa_pts(home_n)
         away_pts   = _get_fifa_pts(away_n)
-        home_qual  = _squad_quality.get(home_n)
-        away_qual  = _squad_quality.get(away_n)
+        home_qual  = _squad_quality.get(home_n) or DEFAULTS["home_squad_quality"]
+        away_qual  = _squad_quality.get(away_n) or DEFAULTS["away_squad_quality"]
 
         h2h_home   = _h2h.get_stats(home_n, away_n)
         h2h_away   = _h2h.get_stats(away_n, home_n)

@@ -54,7 +54,7 @@ async def lifespan(app: FastAPI):
             from db.session import SessionLocal
             with SessionLocal() as db:
                 logger.info("🧹 Ejecutando limpieza de equipos duplicados en el arranque...")
-                fix_duplicate_teams(db)
+                fix_duplicate_teams()
                 logger.info("✅ Limpieza de duplicados completada.")
         except Exception as e:
             logger.error(f"⚠️ Failed to clean duplicates: {e}")
