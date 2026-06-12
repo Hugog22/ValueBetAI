@@ -256,6 +256,7 @@ def _do_refresh() -> None:
         from db.models import Match, Bet, Odds
         from core.shared_predictor import predictor, world_cup_predictor
         from core.match_evaluator import _evaluate_match, _evaluate_world_cup_match
+        from core.config import settings
 
         # ── Step 1: Sync World Cup matches ────────────────────────────────
         try:
@@ -267,20 +268,26 @@ def _do_refresh() -> None:
             logger.warning(f"⚠️  [cache] World Cup sync failed: {e}")
 
         # ── Step 2: Refresh La Liga odds ──────────────────────────────────
-        try:
-            from scripts.flush_odds import flush_and_reload
-            flush_and_reload()
-            logger.info("✅ [cache] LaLiga odds refreshed.")
-        except Exception as e:
-            logger.warning(f"⚠️  [cache] LaLiga odds refresh failed: {e}")
+        if settings.enable_club_leagues:
+            try:
+                from scripts.flush_odds import flush_and_reload
+                flush_and_reload()
+                logger.info("✅ [cache] LaLiga odds refreshed.")
+            except Exception as e:
+                logger.warning(f"⚠️  [cache] LaLiga odds refresh failed: {e}")
+        else:
+            logger.info("⏸  [cache] Skipping LaLiga odds (ENABLE_CLUB_LEAGUES=False)")
 
         # ── Step 3: Sync Premier League and Champions League ──────────────
-        try:
-            from etl.multi_sport_etl import sync_all_sports
-            sync_results = sync_all_sports()
-            logger.info(f"✅ [cache] Multi-sport sync: {sync_results}")
-        except Exception as e:
-            logger.warning(f"⚠️  [cache] Multi-sport sync failed: {e}")
+        if settings.enable_club_leagues:
+            try:
+                from etl.multi_sport_etl import sync_all_sports
+                sync_results = sync_all_sports()
+                logger.info(f"✅ [cache] Multi-sport sync: {sync_results}")
+            except Exception as e:
+                logger.warning(f"⚠️  [cache] Multi-sport sync failed: {e}")
+        else:
+            logger.info("⏸  [cache] Skipping Multi-sport sync (ENABLE_CLUB_LEAGUES=False)")
 
         # ── Step 4: Evaluate all upcoming matches ─────────────────────────
         # Build everything into a NEW local cache dict.

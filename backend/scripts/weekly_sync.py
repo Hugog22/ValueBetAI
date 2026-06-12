@@ -146,6 +146,10 @@ def trigger_ai_retraining():
 
 if __name__ == "__main__":
     logger.info("=== INICIO WEEKLY SYNC ===")
+    if not settings.enable_club_leagues:
+        logger.info("⏸  [weekly_sync] Saltando ejecución porque ENABLE_CLUB_LEAGUES=False")
+        sys.exit(0)
+        
     sync_results_and_bankroll()
     trigger_ai_retraining()
     logger.info("=== FIN WEEKLY SYNC ===")
