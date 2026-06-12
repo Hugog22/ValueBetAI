@@ -161,6 +161,21 @@ def _fractional_kelly(prob: float, odds: float, fraction: float = 0.20) -> int:
     return max(1, min(10, int((kelly_pct * fraction) * 200)))
 
 
+def _dynamic_ev_threshold(odds_val: float) -> float:
+    """
+    Dynamic Value Bet Threshold: 
+    Require a higher EV edge (margin of safety) for higher odds 
+    to compensate for increased variance.
+    """
+    if odds_val > 5.0:
+        return 8.0   # 8% edge required
+    elif odds_val > 3.0:
+        return 5.0   # 5% edge required
+    elif odds_val > 2.0:
+        return 2.0   # 2% edge required
+    return 0.0       # Any positive EV is fine
+
+
 # ---------------------------------------------------------------------------
 # Club football evaluator
 # ---------------------------------------------------------------------------
@@ -188,6 +203,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
         book = float(odds[outcome])
         fair = float(pred["fair_odds_1x2"][outcome])
         ev   = (book / (fair + eps) - 1) * 100
+        min_ev = _dynamic_ev_threshold(book)
         candidates.append({
             "market":                 "1x2",
             "outcome":                outcome,
@@ -196,7 +212,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
             "bookmaker_odds":         book,
             "fair_odds":              round(fair, 2),
             "ev":                     round(ev, 2),
-            "is_value":               ev > 0,
+            "is_value":               ev > min_ev,
             "bookmaker_implied_prob": round(1.0 / book, 4) if book > 0 else 0,
         })
 
@@ -209,6 +225,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
         book = float(odds[key])
         fair = float(pred["fair_odds_ou25"][side])
         ev   = (book / (fair + eps) - 1) * 100
+        min_ev = _dynamic_ev_threshold(book)
         candidates.append({
             "market":                 "ou25",
             "outcome":                side,
@@ -217,7 +234,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
             "bookmaker_odds":         book,
             "fair_odds":              round(fair, 2),
             "ev":                     round(ev, 2),
-            "is_value":               ev > 0,
+            "is_value":               ev > min_ev,
             "bookmaker_implied_prob": round(1.0 / book, 4) if book > 0 else 0,
         })
 
@@ -290,6 +307,7 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
         fair = float(pred["fair_odds_1x2"][outcome])
         ev   = (book / (fair + eps) - 1) * 100
         prob = float(pred["probabilities"][outcome])
+        min_ev = _dynamic_ev_threshold(book)
         candidates.append({
             "market":                 "1x2",
             "outcome":                outcome,
@@ -298,7 +316,7 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
             "bookmaker_odds":         book,
             "fair_odds":              round(fair, 2),
             "ev":                     round(ev, 2),
-            "is_value":               ev > 0,
+            "is_value":               ev > min_ev,
             "bookmaker_implied_prob": round(1.0 / book, 4) if book > 0 else 0,
         })
 
@@ -311,6 +329,7 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
         book = float(odds[key])
         fair = float(pred["fair_odds_ou25"][side])
         ev   = (book / (fair + eps) - 1) * 100
+        min_ev = _dynamic_ev_threshold(book)
         candidates.append({
             "market":                 "ou25",
             "outcome":                side,
@@ -319,7 +338,7 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
             "bookmaker_odds":         book,
             "fair_odds":              round(fair, 2),
             "ev":                     round(ev, 2),
-            "is_value":               ev > 0,
+            "is_value":               ev > min_ev,
             "bookmaker_implied_prob": round(1.0 / book, 4) if book > 0 else 0,
         })
 

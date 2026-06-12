@@ -223,6 +223,8 @@ FEATURES = [
 def train():
     """Run full training pipeline for World Cup models."""
     import xgboost as xgb
+    import lightgbm as lgb
+    from sklearn.ensemble import RandomForestClassifier, VotingClassifier
     from sklearn.calibration import CalibratedClassifierCV
     from sklearn.model_selection import TimeSeriesSplit, cross_val_score
     from sklearn.metrics import accuracy_score, log_loss
@@ -257,35 +259,41 @@ def train():
         [0, 1], default=2
     )
 
-    clf_1x2 = xgb.XGBClassifier(
+    # ── ENSEMBLE DEFINITION 1X2 ───────────────────────────────────────────────
+    xgb_1x2 = xgb.XGBClassifier(
         objective="multi:softprob", num_class=3,
-        n_estimators=500, max_depth=4, learning_rate=0.05,
+        n_estimators=300, max_depth=4, learning_rate=0.05,
         subsample=0.8, colsample_bytree=0.8,
-        reg_alpha=0.5, reg_lambda=1.0,
-        use_label_encoder=False, random_state=42,
-        eval_metric="mlogloss",
+        use_label_encoder=False, random_state=42, eval_metric="mlogloss",
+    )
+    lgb_1x2 = lgb.LGBMClassifier(
+        objective="multiclass", num_class=3,
+        n_estimators=300, max_depth=4, learning_rate=0.05,
+        subsample=0.8, colsample_bytree=0.8, random_state=42, verbose=-1,
+    )
+    rf_1x2 = RandomForestClassifier(
+        n_estimators=300, max_depth=6, min_samples_split=5, random_state=42,
+    )
+    
+    ensemble_1x2 = VotingClassifier(
+        estimators=[('xgb', xgb_1x2), ('lgb', lgb_1x2), ('rf', rf_1x2)],
+        voting='soft'
     )
 
     # Cross-validation
     cv_scores = []
     for tr, va in tscv.split(X):
-        clf_1x2.fit(X.iloc[tr], y_1x2[tr], sample_weight=weights[tr])
-        preds = clf_1x2.predict(X.iloc[va])
+        ensemble_1x2.fit(X.iloc[tr], y_1x2[tr])
+        preds = ensemble_1x2.predict(X.iloc[va])
         cv_scores.append(accuracy_score(y_1x2[va], preds))
-    logger.info(f"1X2 CV accuracy: {np.mean(cv_scores):.4f}")
+    logger.info(f"1X2 Ensemble CV accuracy: {np.mean(cv_scores):.4f}")
 
     # Final model on all data + calibration
     split_idx = max(1, int(len(X) * 0.80))
     cal_1x2 = CalibratedClassifierCV(
-        xgb.XGBClassifier(
-            objective="multi:softprob", num_class=3,
-            n_estimators=500, max_depth=4, learning_rate=0.05,
-            subsample=0.8, colsample_bytree=0.8,
-            use_label_encoder=False, random_state=42, eval_metric="mlogloss",
-        ),
-        cv=3, method="isotonic"
+        ensemble_1x2, cv=3, method="isotonic"
     )
-    cal_1x2.fit(X.iloc[:split_idx], y_1x2[:split_idx], sample_weight=weights[:split_idx])
+    cal_1x2.fit(X.iloc[:split_idx], y_1x2[:split_idx])
     joblib.dump(cal_1x2, os.path.join(MODELS_DIR, "wc_1x2_xgb.pkl"))
     logger.info("✅  wc_1x2_xgb.pkl saved")
 
@@ -293,29 +301,38 @@ def train():
     logger.info("Training O/U 2.5 model…")
     y_ou25 = ((feat_df["_home_goals"] + feat_df["_away_goals"]) > 2.5).astype(int).values
 
-    cv_ou25 = []
-    clf_ou25 = xgb.XGBClassifier(
-        objective="binary:logistic", n_estimators=500,
+    # ── ENSEMBLE DEFINITION O/U 2.5 ──────────────────────────────────────────
+    xgb_ou = xgb.XGBClassifier(
+        objective="binary:logistic", n_estimators=300,
         max_depth=4, learning_rate=0.05, subsample=0.8,
         colsample_bytree=0.8, use_label_encoder=False,
         random_state=42, eval_metric="logloss",
     )
+    lgb_ou = lgb.LGBMClassifier(
+        objective="binary", n_estimators=300,
+        max_depth=4, learning_rate=0.05, subsample=0.8,
+        colsample_bytree=0.8, random_state=42, verbose=-1,
+    )
+    rf_ou = RandomForestClassifier(
+        n_estimators=300, max_depth=6, min_samples_split=5, random_state=42,
+    )
+    
+    ensemble_ou25 = VotingClassifier(
+        estimators=[('xgb', xgb_ou), ('lgb', lgb_ou), ('rf', rf_ou)],
+        voting='soft'
+    )
+
+    cv_ou25 = []
     for tr, va in tscv.split(X):
-        clf_ou25.fit(X.iloc[tr], y_ou25[tr], sample_weight=weights[tr])
-        probs = clf_ou25.predict_proba(X.iloc[va])[:, 1]
+        ensemble_ou25.fit(X.iloc[tr], y_ou25[tr])
+        probs = ensemble_ou25.predict_proba(X.iloc[va])[:, 1]
         cv_ou25.append(log_loss(y_ou25[va], probs))
-    logger.info(f"O/U 2.5 CV LogLoss: {np.mean(cv_ou25):.4f}")
+    logger.info(f"O/U 2.5 Ensemble CV LogLoss: {np.mean(cv_ou25):.4f}")
 
     cal_ou25 = CalibratedClassifierCV(
-        xgb.XGBClassifier(
-            objective="binary:logistic", n_estimators=500,
-            max_depth=4, learning_rate=0.05, subsample=0.8,
-            colsample_bytree=0.8, use_label_encoder=False,
-            random_state=42, eval_metric="logloss",
-        ),
-        cv=3, method="isotonic"
+        ensemble_ou25, cv=3, method="isotonic"
     )
-    cal_ou25.fit(X.iloc[:split_idx], y_ou25[:split_idx], sample_weight=weights[:split_idx])
+    cal_ou25.fit(X.iloc[:split_idx], y_ou25[:split_idx])
     joblib.dump(cal_ou25, os.path.join(MODELS_DIR, "wc_ou25_xgb.pkl"))
     logger.info("✅  wc_ou25_xgb.pkl saved")
 

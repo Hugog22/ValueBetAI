@@ -38,7 +38,7 @@ API_BASE = "https://api.football-data.org/v4"
 WC_CODE  = "WC"
 
 # Available World Cup seasons in football-data.org
-WC_SEASONS = [2022, 2018, 2014, 2010, 2006, 2002, 1998]
+WC_SEASONS = [2022, 2018, 2014]
 
 # Club quality score: top European clubs rated 1–100
 # Used to compute national team "player quality" aggregate
