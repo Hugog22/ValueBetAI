@@ -7,6 +7,7 @@ import FeaturedBet from '@/components/FeaturedBet';
 import BentoCard from '@/components/BentoCard';
 import BetModal from '@/components/BetModal';
 import BookmakersModal from '@/components/BookmakersModal';
+import AnalysisModal from '@/components/AnalysisModal';
 import WorldCupBanner from '@/components/WorldCupBanner';
 
 // Safelist for Tailwind JIT (backend-generated classes)
@@ -207,6 +208,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
     odds: number; probability: number; ev: number;
   } | null>(null);
   const [activeBookmakersMatch, setActiveBookmakersMatch] = useState<Match | null>(null);
+  const [activeAnalysisMatch, setActiveAnalysisMatch] = useState<Match | null>(null);
 
   // Fetch bankroll
   useEffect(() => {
@@ -647,6 +649,18 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                             {pick.label}
                           </div>
                           <div className="flex items-center gap-2">
+                            {match.justification && (
+                              <button
+                                onClick={() => setActiveAnalysisMatch(match)}
+                                className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors ${
+                                  isWorldCupActive 
+                                    ? 'border-white/20 text-white/70 hover:bg-white/10 hover:text-white' 
+                                    : 'border-[#E5E7EB] text-[#64748B] hover:bg-[#F1F3F5] hover:text-[#1A1C1E]'
+                                }`}
+                              >
+                                Análisis IA
+                              </button>
+                            )}
                             {match.all_bookmakers && match.all_bookmakers.length > 0 && (
                               <button
                                 onClick={() => setActiveBookmakersMatch(match)}
@@ -703,6 +717,16 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
           awayTeam={getEsName(activeBookmakersMatch.awayTeam)}
           bookmakers={activeBookmakersMatch.all_bookmakers || []}
           onClose={() => setActiveBookmakersMatch(null)}
+        />
+      )}
+
+      {/* ── ANALYSIS MODAL ───────────────────────────────────────────────── */}
+      {activeAnalysisMatch && (
+        <AnalysisModal
+          homeTeam={getEsName(activeAnalysisMatch.homeTeam)}
+          awayTeam={getEsName(activeAnalysisMatch.awayTeam)}
+          justification={activeAnalysisMatch.justification || ''}
+          onClose={() => setActiveAnalysisMatch(null)}
         />
       )}
     </>

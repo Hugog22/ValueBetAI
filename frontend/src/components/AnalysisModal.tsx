@@ -1,0 +1,77 @@
+'use client';
+
+import { useEffect } from 'react';
+
+interface AnalysisModalProps {
+  homeTeam: string;
+  awayTeam: string;
+  justification: string;
+  onClose: () => void;
+}
+
+export default function AnalysisModal({
+  homeTeam,
+  awayTeam,
+  justification,
+  onClose
+}: AnalysisModalProps) {
+  // Prevent background scroll
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-[#0A0F1E]/60 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="relative bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        
+        {/* Header */}
+        <div className="p-6 border-b border-[#E5E7EB] bg-[#F8FAFC]">
+          <div className="flex justify-between items-start">
+            <div>
+              <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">
+                Análisis de Inteligencia Artificial
+              </span>
+              <h2 className="text-xl font-editorial font-bold text-[#1A1C1E] leading-tight">
+                {homeTeam} <span className="text-[#64748B] italic font-normal text-lg">vs</span> {awayTeam}
+              </h2>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-2 text-[#94A3B8] hover:text-[#1A1C1E] hover:bg-[#F1F3F5] rounded-full transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-[#064E3B]/10 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-[#064E3B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-bold text-[#1A1C1E]">Fundamentos de la predicción</h3>
+          </div>
+          
+          <div className="bg-[#F8FAFC] rounded-xl p-5 border border-[#E5E7EB]">
+            <p className="text-[#475569] text-sm leading-relaxed">
+              {justification || "Nuestro modelo detecta una discrepancia significativa en la probabilidad real del mercado. Los datos sugieren una ventaja competitiva en esta selección específica."}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
