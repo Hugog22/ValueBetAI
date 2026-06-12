@@ -1,13 +1,15 @@
 """
 scheduler.py
 -------------
-Background APScheduler for ValueBetAI — running on HuggingFace (16 GB RAM, always-on).
+Background APScheduler para ValueBetAI — HuggingFace (16 GB RAM, always-on).
 
 Schedule:
-  - ETL diario:        04:00 AM Madrid — sincroniza partidos de Understat.
-  - Retrain IA:        04:30 AM Madrid — reentrena los modelos XGBoost.
-  - Cache refresh:     Cada 2 horas, los 7 días de la semana — cuotas siempre frescas.
-  - Bet settlement:    Cada hora (xx:05) — liquida apuestas pendientes en partidos finalizados.
+  - ETL diario:      04:00 AM Madrid — sincroniza partidos de Understat.
+  - Retrain IA:      04:30 AM Madrid — reentrena los modelos XGBoost.
+  - Cache refresh:   3 veces/día (08h, 14h, 20h) — presupuesto ~360 créditos/mes.
+                     Cada refresh cuesta 4 créditos (2 mercados × 2 regiones).
+                     3 × 4 × 30 días = 360 créditos/mes (límite: 500, margen 28%).
+  - Bet settlement:  Cada hora (xx:05) — liquida apuestas en partidos finalizados.
 
 All times are in Europe/Madrid timezone.
 """
@@ -217,15 +219,18 @@ def start_scheduler():
 
     # ── Task 2+3: Unified cache refresh every 2 hours, 7 days a week ─────────
     # HuggingFace is always-on (no sleep), so we refresh uniformly.
+    # ── Task 2: Cache refresh 3 veces al día ──────────────────────────────────────
+    # Coste API: 2 mercados × 2 regiones = 4 créditos/refresh.
+    # 3 refreshes/día × 4 créditos × 30 días = ~360 créditos/mes (límite: 500, margen 28%).
     scheduler.add_job(
         refresh_cache,
-        trigger=CronTrigger(minute=0, hour="*/2", timezone="Europe/Madrid"),
-        id="bihhourly_cache_refresh",
-        name="Every 2h: refresh predictions cache (all days)",
+        trigger=CronTrigger(hour="8,14,20", minute=0, timezone="Europe/Madrid"),
+        id="daily_cache_refresh",
+        name="3x/day cache refresh (08h, 14h, 20h Madrid)",
         replace_existing=True,
         misfire_grace_time=60,
     )
-    logger.info("  ✓ Task 2 → Cache refresh every 2 hours, all week (Europe/Madrid)")
+    logger.info("  ✓ Task 2 → Cache refresh 3x/día a las 08h, 14h y 20h Madrid (~360 créd/mes)")
 
     # ── Task 3: Hourly bet settlement + conditional cache refresh ────────────
     scheduler.add_job(
@@ -239,7 +244,7 @@ def start_scheduler():
     logger.info("  ✓ Task 3 → Hourly bet settlement + conditional cache refresh (xx:05 Madrid).")
 
     scheduler.start()
-    logger.info("✅ Scheduler started (HuggingFace 16GB — always-on, refresh every 2h).")
+    logger.info("✅ Scheduler iniciado (HuggingFace 16GB — refresh 3x/día, ~360 créd/mes de 500).")
 
 
 def stop_scheduler():

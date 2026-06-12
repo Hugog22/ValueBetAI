@@ -41,8 +41,8 @@ _SPORT_META = {
     "worldcup":  {"label": "Mundial 2026",     "flag": "⚽"},
 }
 
-# Off-season detection: only for La Liga/Premier (World Cup runs in summer).
-# With HuggingFace 16 GB RAM, we don't need to artificially limit this.
+# Months when European leagues are off-season (June–July).
+# World Cup runs in summer so it's never marked as off-season.
 _OFF_SEASON_MONTHS = {6, 7}
 
 
@@ -288,11 +288,11 @@ def _do_refresh() -> None:
 
         db = SessionLocal()
         try:
-            now         = datetime.utcnow()
-            fourteen_days = now + timedelta(days=14)  # 14-day horizon on HF 16GB
-            upcoming    = (
+            now        = datetime.utcnow()
+            seven_days = now + timedelta(days=7)  # 7-day horizon for stable odds
+            upcoming   = (
                 db.query(Match)
-                .filter(Match.date >= now, Match.date <= fourteen_days)
+                .filter(Match.date >= now, Match.date <= seven_days)
                 .order_by(Match.date.asc())
                 .all()  # No artificial row limit
             )

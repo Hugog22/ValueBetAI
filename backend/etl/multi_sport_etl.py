@@ -68,9 +68,9 @@ def sync_sport_matches(sport_key: str) -> int:
         params = {
             "apiKey":     settings.ODDS_API_KEY,
             "regions":    "eu,uk",
-            "markets":    "h2h,totals",
+            "markets":    "h2h",          # totals only via world_cup_etl to save credits
             "oddsFormat": "decimal",
-            "bookmakers": "pinnacle,bet365,williamhill,betway,unibet,betfair",
+            "bookmakers": "pinnacle,bet365,williamhill,betway",
         }
         resp = httpx.get(url, params=params, timeout=60)
 
