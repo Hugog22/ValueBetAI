@@ -68,11 +68,11 @@ def get_system_stats(
         .all()
     )
 
-    # Deduplicate legacy merged bets or multiple clicks
+    # Deduplicate legacy merged bets or multiple clicks across ALL users
     seen_signatures = set()
     unique_bets = []
     for bet, match in all_bets:
-        sig = (bet.user_id, bet.match_id, bet.market, bet.selection)
+        sig = (bet.match_id, bet.market, bet.selection)
         if sig not in seen_signatures:
             seen_signatures.add(sig)
             unique_bets.append((bet, match))
@@ -136,11 +136,11 @@ def get_predictions_detail(
         .all()
     )
 
-    # Deduplicate legacy merged bets or multiple clicks
+    # Deduplicate legacy merged bets or multiple clicks across ALL users
     seen_signatures = set()
     unique_rows = []
     for bet, match, user in rows:
-        sig = (bet.user_id, bet.match_id, bet.market, bet.selection)
+        sig = (bet.match_id, bet.market, bet.selection)
         if sig not in seen_signatures:
             seen_signatures.add(sig)
             unique_rows.append((bet, match, user))

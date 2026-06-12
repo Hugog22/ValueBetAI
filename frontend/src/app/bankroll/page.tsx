@@ -134,10 +134,46 @@ export default function BankrollPage() {
 
     const closeTrainingReport = () => setTrainingModal({ open: false, report: "", loading: false });
 
+    const getEsName = (teamName: string): string => {
+        const translations: Record<string, string> = {
+            'Spain': 'España',
+            'Germany': 'Alemania',
+            'England': 'Inglaterra',
+            'France': 'Francia',
+            'Italy': 'Italia',
+            'Netherlands': 'Países Bajos',
+            'Belgium': 'Bélgica',
+            'Switzerland': 'Suiza',
+            'Poland': 'Polonia',
+            'Turkey': 'Turquía',
+            'Croatia': 'Croacia',
+            'Denmark': 'Dinamarca',
+            'Sweden': 'Suecia',
+            'Norway': 'Noruega',
+            'Scotland': 'Escocia',
+            'Wales': 'Gales',
+            'Ireland': 'Irlanda',
+            'Greece': 'Grecia',
+            'Czech Republic': 'República Checa',
+            'Bosnia & Herzegovina': 'Bosnia y Herzegovina',
+            'Bosnia-Herzegovina': 'Bosnia y Herzegovina',
+            'United States': 'Estados Unidos',
+            'Brazil': 'Brasil',
+            'Argentina': 'Argentina',
+            'South Korea': 'Corea del Sur',
+            'Japan': 'Japón',
+            'Morocco': 'Marruecos',
+            'South Africa': 'Sudáfrica',
+            'Egypt': 'Egipto',
+            'Saudi Arabia': 'Arabia Saudí'
+        };
+        return translations[teamName] || teamName;
+    };
+
     const getSelectionLabel = (bet: BetRecord) => {
         const sel = bet.selection.toLowerCase();
-        if (sel === 'home') return bet.home_team;
-        if (sel === 'away') return bet.away_team;
+        if (sel === 'home') return getEsName(bet.home_team);
+        if (sel === 'away') return getEsName(bet.away_team);
         if (sel === 'draw') return 'Empate';
         if (sel === 'over' || sel === 'over25') return 'Más de 2.5';
         if (sel === 'under' || sel === 'under25') return 'Menos de 2.5';
@@ -324,7 +360,7 @@ export default function BankrollPage() {
                                                     </td>
                                                     <td className="px-8 py-6">
                                                         <div className="font-editorial text-lg font-bold text-[#1A1C1E] group-hover:text-[#064E3B] transition-colors line-clamp-1 mb-1">
-                                                            {bet.home_team} <span className="text-[#64748B] font-sans font-medium text-sm">vs</span> {bet.away_team}
+                                                            {getEsName(bet.home_team)} <span className="text-[#64748B] font-sans font-medium text-sm">vs</span> {getEsName(bet.away_team)}
                                                         </div>
                                                         <div className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest">
                                                             <span className="opacity-60">{bet.market}: </span> 
@@ -477,8 +513,8 @@ export default function BankrollPage() {
                                                             {new Date(pred.match_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            <div className="font-bold text-[#1A1C1E] text-xs">{pred.home_team}</div>
-                                                            <div className="text-[#64748B] text-[10px]">vs {pred.away_team}</div>
+                                                            <div className="font-bold text-[#1A1C1E] text-xs">{getEsName(pred.home_team)}</div>
+                                                            <div className="text-[#64748B] text-[10px]">vs {getEsName(pred.away_team)}</div>
                                                         </td>
                                                         <td className="px-6 py-4">
                                                             <div className="text-xs font-bold text-[#1A1C1E] capitalize">{pred.selection}</div>
