@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 days for convenience
 
+    # Feature Flags
+    ENABLE_CLUB_LEAGUES: bool = False
+    USE_ODDS_API: bool = False
+
     # ── Smart Scheduler ───────────────────────────────────────────────────────
     # Sport key sent to The Odds API on every call.
     # Keeping it pinned to La Liga means 1 request = 1 competition.

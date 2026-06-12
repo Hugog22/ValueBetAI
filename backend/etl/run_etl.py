@@ -98,6 +98,11 @@ def fetch_and_store_laliga_matches(season: str | None = None):
 
 
 def run_pipeline():
+    from core.config import settings
+    if not settings.ENABLE_CLUB_LEAGUES:
+        logger.info("Skipping La Liga ETL due to feature flag (ENABLE_CLUB_LEAGUES=False)")
+        return
+
     init_db()
     fetch_and_store_laliga_matches()
 

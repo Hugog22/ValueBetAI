@@ -199,6 +199,11 @@ def sync_sport_matches(sport_key: str) -> int:
 
 def sync_all_sports() -> dict:
     """Sync Premier League and Champions League from The Odds API. Returns {sport_key: new_matches}."""
+    from core.config import settings
+    if not settings.ENABLE_CLUB_LEAGUES:
+        logger.info("Skipping multi-sport ETL due to feature flag (ENABLE_CLUB_LEAGUES=False)")
+        return {}
+
     results = {}
     for sport_key in SPORT_ODDS_KEY:
         results[sport_key] = sync_sport_matches(sport_key)

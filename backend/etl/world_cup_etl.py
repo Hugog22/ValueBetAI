@@ -92,6 +92,10 @@ def sync_world_cup_odds() -> int:
     from core.config import settings
     from etl.odds_api import pick_best_bookmaker
 
+    if not settings.USE_ODDS_API:
+        logger.info("[world_cup_etl] USE_ODDS_API is False — redirecting to API-Football for odds")
+        return sync_world_cup_odds_api_football()
+
     db = SessionLocal()
     new_count = 0
 
@@ -388,3 +392,121 @@ def get_world_cup_team_names() -> set[str]:
     names = set(FIFA_POINTS.keys())
     names.update(TEAM_ALIASES.keys())
     return names
+
+def sync_world_cup_odds_api_football() -> int:
+    """
+    Fetch World Cup match odds from API-Football.
+    """
+    from db.session import SessionLocal
+    from db.models import Team, Match, Odds
+    from etl.football_api import get_worldcup_fixtures_api_football, get_worldcup_odds_api_football
+    
+    db = SessionLocal()
+    new_count = 0
+    try:
+        fixtures = get_worldcup_fixtures_api_football()
+        fixture_teams = {}
+        for fix in fixtures:
+            fix_id = fix["fixture"]["id"]
+            home = fix["teams"]["home"]["name"]
+            away = fix["teams"]["away"]["name"]
+            date_str = fix["fixture"]["date"]
+            fixture_teams[fix_id] = (home, away, date_str)
+            
+        odds_list = get_worldcup_odds_api_football()
+        logger.info(f"[world_cup_etl] {len(odds_list)} World Cup events from API-Football")
+        
+        for odds_item in odds_list:
+            fix_id = odds_item["fixture"]["id"]
+            if fix_id not in fixture_teams:
+                continue
+                
+            home_name, away_name, date_str = fixture_teams[fix_id]
+            try:
+                match_date = datetime.strptime(date_str[:19], "%Y-%m-%dT%H:%M:%S")
+            except (ValueError, TypeError):
+                match_date = datetime.utcnow() + timedelta(days=1)
+                
+            if match_date < datetime.utcnow():
+                continue
+                
+            canonical_home = TEAM_ALIASES.get(home_name, home_name)
+            canonical_away = TEAM_ALIASES.get(away_name, away_name)
+            home_team = _get_or_create_team(db, canonical_home)
+            away_team = _get_or_create_team(db, canonical_away)
+            
+            existing = (
+                db.query(Match)
+                .filter(
+                    Match.home_team_id == home_team.id,
+                    Match.away_team_id == away_team.id,
+                    Match.date >= match_date - timedelta(hours=3),
+                    Match.date <= match_date + timedelta(hours=3),
+                )
+                .first()
+            )
+            
+            if existing:
+                match = existing
+            else:
+                match = Match(
+                    date=match_date,
+                    home_team_id=home_team.id,
+                    away_team_id=away_team.id,
+                    status="Not Started",
+                )
+                db.add(match)
+                db.flush()
+                new_count += 1
+                
+            bookmakers = odds_item.get("bookmakers", [])
+            for bookmaker in bookmakers:
+                # API-Football ID 8 is Bet365
+                if bookmaker["id"] != 8:
+                    continue
+                    
+                bm_key = "bet365"
+                for mkt in bookmaker.get("bets", []):
+                    # Market 1 is "Match Winner"
+                    if mkt["id"] != 1:
+                        continue
+                        
+                    ho = dr = aw = 0.0
+                    for o in mkt.get("values", []):
+                        val = str(o["value"]).lower()
+                        if val == "home":
+                            ho = float(o["odd"])
+                        elif val == "draw":
+                            dr = float(o["odd"])
+                        elif val == "away":
+                            aw = float(o["odd"])
+                            
+                    if ho and aw:
+                        existing_odds = (
+                            db.query(Odds)
+                            .filter(Odds.match_id == match.id, Odds.market == "h2h",
+                                    Odds.bookmaker == bm_key)
+                            .first()
+                        )
+                        if existing_odds:
+                            existing_odds.home_odds = ho
+                            existing_odds.draw_odds = dr
+                            existing_odds.away_odds = aw
+                            existing_odds.timestamp = datetime.utcnow()
+                        else:
+                            db.add(Odds(
+                                match_id=match.id, bookmaker=bm_key,
+                                market="h2h",
+                                home_odds=ho, draw_odds=dr, away_odds=aw,
+                                timestamp=datetime.utcnow(),
+                            ))
+                            
+        db.commit()
+        logger.info(f"[world_cup_etl] API-Football odds sync completed. {new_count} new WC matches.")
+    except Exception as e:
+        logger.error(f"[world_cup_etl] API-Football odds fetch failed: {e}", exc_info=True)
+        db.rollback()
+    finally:
+        db.close()
+    
+    return new_count

@@ -30,7 +30,7 @@
       "Federico Viñas"
     ],
     "squad_size": 26,
-    "squad_quality_score": 73.27,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1678.0
   },
   "Germany": {
@@ -64,7 +64,7 @@
       "Maximilian Beier"
     ],
     "squad_size": 26,
-    "squad_quality_score": 75.17,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1728.0
   },
   "Spain": {
@@ -98,7 +98,7 @@
       "Víctor Muñoz"
     ],
     "squad_size": 26,
-    "squad_quality_score": 82.19,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1815.0
   },
   "Paraguay": {
@@ -132,7 +132,7 @@
       "Alex Arce"
     ],
     "squad_size": 26,
-    "squad_quality_score": 54.06,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1366.0
   },
   "Argentina": {
@@ -166,7 +166,7 @@
       "Giuliano Simeone"
     ],
     "squad_size": 26,
-    "squad_quality_score": 82.66,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1862.0
   },
   "Ghana": {
@@ -200,7 +200,7 @@
       "Prince Adu"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Brazil": {
@@ -234,7 +234,7 @@
       "Rayan"
     ],
     "squad_size": 26,
-    "squad_quality_score": 77.92,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1775.0
   },
   "Portugal": {
@@ -268,7 +268,7 @@
       "Francisco Conceição"
     ],
     "squad_size": 26,
-    "squad_quality_score": 78.39,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1767.0
   },
   "Japan": {
@@ -302,7 +302,7 @@
       "Keisuke Goto"
     ],
     "squad_size": 26,
-    "squad_quality_score": 65.78,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1614.0
   },
   "Mexico": {
@@ -336,7 +336,7 @@
       "Armando González"
     ],
     "squad_size": 26,
-    "squad_quality_score": 66.25,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1624.0
   },
   "England": {
@@ -370,7 +370,7 @@
       "Noni Madueke"
     ],
     "squad_size": 26,
-    "squad_quality_score": 78.1,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1790.0
   },
   "United States": {
@@ -404,7 +404,7 @@
       "Max Arfsten"
     ],
     "squad_size": 26,
-    "squad_quality_score": 66.54,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1630.0
   },
   "South Korea": {
@@ -438,7 +438,7 @@
       "Ji-sung Eom"
     ],
     "squad_size": 26,
-    "squad_quality_score": 64.93,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1596.0
   },
   "France": {
@@ -472,7 +472,7 @@
       "Bradley Barcola"
     ],
     "squad_size": 26,
-    "squad_quality_score": 81.21,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1840.0
   },
   "South Africa": {
@@ -506,7 +506,7 @@
       "Tshepang Moremi"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Algeria": {
@@ -540,7 +540,7 @@
       "Farés Ghedjemis"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Australia": {
@@ -574,7 +574,7 @@
       "Tete Yengi"
     ],
     "squad_size": 26,
-    "squad_quality_score": 64.18,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1580.0
   },
   "New Zealand": {
@@ -608,7 +608,7 @@
       "Jesse Randall"
     ],
     "squad_size": 26,
-    "squad_quality_score": 50.85,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1298.0
   },
   "Switzerland": {
@@ -642,7 +642,7 @@
       "Zeki Amdouni"
     ],
     "squad_size": 26,
-    "squad_quality_score": 64.86,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1570.0
   },
   "Ecuador": {
@@ -676,7 +676,7 @@
       "Jeremy"
     ],
     "squad_size": 26,
-    "squad_quality_score": 65.5,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1608.0
   },
   "Sweden": {
@@ -710,7 +710,7 @@
       "Anthony Elanga"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Czechia": {
@@ -719,7 +719,6 @@
       "Jindřich Staněk",
       "Matej Kovar",
       "Lukáš Horníček",
-      "Ladislav Krejčí",
       "Jaroslav Zelený",
       "Vladimir Coufal",
       "Tomáš Holeš",
@@ -727,6 +726,7 @@
       "David Jurásek",
       "Robin Hranac",
       "Štěpán Chaloupek",
+      "Ladislav Krejčí",
       "Vladimír Darida",
       "Tomáš Souček",
       "David Douděra",
@@ -744,7 +744,7 @@
       "Mojmír Chytil"
     ],
     "squad_size": 26,
-    "squad_quality_score": 58.51,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1460.0
   },
   "Croatia": {
@@ -778,7 +778,7 @@
       "Igor Matanovic"
     ],
     "squad_size": 26,
-    "squad_quality_score": 67.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1654.0
   },
   "Saudi Arabia": {
@@ -812,7 +812,7 @@
       "Firas Al Brikan"
     ],
     "squad_size": 26,
-    "squad_quality_score": 50.0,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1280.0
   },
   "Tunisia": {
@@ -846,7 +846,7 @@
       "Khalil Ayari"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Turkey": {
@@ -880,7 +880,7 @@
       "Can Uzun"
     ],
     "squad_size": 26,
-    "squad_quality_score": 61.53,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1524.0
   },
   "Senegal": {
@@ -915,7 +915,7 @@
       "Pape Thiaw"
     ],
     "squad_size": 27,
-    "squad_quality_score": 66.92,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1638.0
   },
   "Belgium": {
@@ -949,7 +949,7 @@
       "Matias Fernandez-Pardo"
     ],
     "squad_size": 26,
-    "squad_quality_score": 71.92,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1744.0
   },
   "Morocco": {
@@ -983,7 +983,7 @@
       "Ayoube Amaimouni-Echghouyab"
     ],
     "squad_size": 26,
-    "squad_quality_score": 68.38,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1669.0
   },
   "Austria": {
@@ -1017,7 +1017,7 @@
       "Saša Kalajdžić"
     ],
     "squad_size": 26,
-    "squad_quality_score": 61.06,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1514.0
   },
   "Colombia": {
@@ -1051,7 +1051,7 @@
       "Carlos Gómez"
     ],
     "squad_size": 26,
-    "squad_quality_score": 69.47,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1692.0
   },
   "Egypt": {
@@ -1085,7 +1085,7 @@
       "Hamza Abdelkarim"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Canada": {
@@ -1119,7 +1119,7 @@
       "Promise Akinpelu"
     ],
     "squad_size": 26,
-    "squad_quality_score": 64.55,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1588.0
   },
   "Haiti": {
@@ -1153,7 +1153,7 @@
       "Ruben Providence"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Iran": {
@@ -1187,7 +1187,7 @@
       "Amir Hosseinzadeh"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Bosnia-Herzegovina": {
@@ -1221,7 +1221,7 @@
       "Kerim Alajbegović"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Panama": {
@@ -1255,7 +1255,7 @@
       "Azarias Londoño"
     ],
     "squad_size": 26,
-    "squad_quality_score": 56.73,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1398.0
   },
   "Cape Verde Islands": {
@@ -1289,7 +1289,7 @@
       "Hélio Varela"
     ],
     "squad_size": 26,
-    "squad_quality_score": 56.83,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Congo DR": {
@@ -1323,7 +1323,7 @@
       "Fiston Mayele"
     ],
     "squad_size": 26,
-    "squad_quality_score": 56.64,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Ivory Coast": {
@@ -1357,7 +1357,7 @@
       "Yan Diomandé"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Qatar": {
@@ -1391,7 +1391,7 @@
       "Edmílson"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Jordan": {
@@ -1425,7 +1425,7 @@
       "Ali Azaizeh"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Iraq": {
@@ -1459,7 +1459,7 @@
       "Ali Yousif"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Uzbekistan": {
@@ -1493,7 +1493,7 @@
       "Azizbek Amonov"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Netherlands": {
@@ -1527,7 +1527,7 @@
       "Brian Brobbey"
     ],
     "squad_size": 26,
-    "squad_quality_score": 74.83,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1738.0
   },
   "Norway": {
@@ -1561,7 +1561,7 @@
       "Jørgen Strand Larsen"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   },
   "Scotland": {
@@ -1595,7 +1595,7 @@
       "Lawrence Shankland"
     ],
     "squad_size": 26,
-    "squad_quality_score": 57.94,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1448.0
   },
   "Curaçao": {
@@ -1629,7 +1629,7 @@
       "Brandley Kuwas"
     ],
     "squad_size": 26,
-    "squad_quality_score": 55.67,
+    "squad_quality_score": 40.0,
     "fifa_pts": 1400.0
   }
 }
