@@ -99,16 +99,15 @@ def start_scheduler():
     logger.info("🗓  Initializing Smart Background Scheduler (Europe/Madrid)…")
 
     # ── Task 1: Daily ETL (Understat match data) ──────────────────────────────
-    if settings.ENABLE_CLUB_LEAGUES:
-        scheduler.add_job(
-            run_pipeline,
-            trigger=CronTrigger(hour=4, minute=0, timezone="Europe/Madrid"),
-            id="daily_match_etl",
-            name="Daily: sync matches from Understat",
-            replace_existing=True,
-            misfire_grace_time=60,
-        )
-        logger.info("  ✓ Task 1 → Daily ETL at 04:00 Madrid time.")
+    scheduler.add_job(
+        run_pipeline,
+        trigger=CronTrigger(hour=4, minute=0, timezone="Europe/Madrid"),
+        id="daily_match_etl",
+        name="Daily: sync matches from Understat",
+        replace_existing=True,
+        misfire_grace_time=60,
+    )
+    logger.info("  ✓ Task 1 → Daily ETL at 04:00 Madrid time.")
 
     # ── Task 1.5: Auto-Retrain ML Models (After ETL) ──────────────────────────
     def _run_training():
@@ -126,52 +125,51 @@ def start_scheduler():
         logger.info(f"📝 Training reports will be written to: {REPORT_PATH}")
 
         # ── Model 1: LaLiga / Premier / Champions XGBoost ─────────────────
-        if settings.ENABLE_CLUB_LEAGUES:
-            t0 = time.time()
-            try:
-                # Import and run training directly (avoids subprocess overhead,
-                # lets us capture the metadata dict that train() produces)
-                import sys, os
-                scripts_dir = os.path.join(
-                    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                    "scripts"
-                )
-                if scripts_dir not in sys.path:
-                    sys.path.insert(0, scripts_dir)
-    
-                import importlib
-                train_mod = importlib.import_module("train_model")
-                importlib.reload(train_mod)          # reload in case already imported once
-    
-                # train_model.train() saves models + returns nothing; meta is in META_PATH
-                train_mod.train()
-                elapsed_1 = time.time() - t0
-    
-                # Read the metadata it just wrote
-                import json
-                meta_path = train_mod.META_PATH
-                meta = {}
-                if os.path.exists(meta_path):
-                    with open(meta_path) as f:
-                        meta = json.load(f)
-    
-                write_training_report(
-                    model_name="LaLiga / Premier / Champions — XGBoost",
-                    success=True,
-                    meta=meta,
-                    duration_seconds=elapsed_1,
-                )
-                logger.info(f"✅ [scheduler] LaLiga model retrained in {elapsed_1:.0f}s")
-    
-            except Exception as e:
-                elapsed_1 = time.time() - t0
-                logger.error(f"❌ [scheduler] LaLiga model retraining failed: {e}", exc_info=True)
-                write_training_report(
-                    model_name="LaLiga / Premier / Champions — XGBoost",
-                    success=False,
-                    error=str(e),
-                    duration_seconds=elapsed_1,
-                )
+        t0 = time.time()
+        try:
+            # Import and run training directly (avoids subprocess overhead,
+            # lets us capture the metadata dict that train() produces)
+            import sys, os
+            scripts_dir = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "scripts"
+            )
+            if scripts_dir not in sys.path:
+                sys.path.insert(0, scripts_dir)
+
+            import importlib
+            train_mod = importlib.import_module("train_model")
+            importlib.reload(train_mod)          # reload in case already imported once
+
+            # train_model.train() saves models + returns nothing; meta is in META_PATH
+            train_mod.train()
+            elapsed_1 = time.time() - t0
+
+            # Read the metadata it just wrote
+            import json
+            meta_path = train_mod.META_PATH
+            meta = {}
+            if os.path.exists(meta_path):
+                with open(meta_path) as f:
+                    meta = json.load(f)
+
+            write_training_report(
+                model_name="LaLiga / Premier / Champions — XGBoost",
+                success=True,
+                meta=meta,
+                duration_seconds=elapsed_1,
+            )
+            logger.info(f"✅ [scheduler] LaLiga model retrained in {elapsed_1:.0f}s")
+
+        except Exception as e:
+            elapsed_1 = time.time() - t0
+            logger.error(f"❌ [scheduler] LaLiga model retraining failed: {e}", exc_info=True)
+            write_training_report(
+                model_name="LaLiga / Premier / Champions — XGBoost",
+                success=False,
+                error=str(e),
+                duration_seconds=elapsed_1,
+            )
 
         # ── Model 2: World Cup XGBoost ────────────────────────────────────
         t0 = time.time()
@@ -224,40 +222,15 @@ def start_scheduler():
     # ── Task 2: Cache refresh 3 veces al día ──────────────────────────────────────
     # Coste API: 2 mercados × 2 regiones = 4 créditos/refresh.
     # 3 refreshes/día × 4 créditos × 30 días = ~360 créditos/mes (límite: 500, margen 28%).
-    if settings.USE_ODDS_API:
-        scheduler.add_job(
-            refresh_cache,
-            trigger=CronTrigger(hour="8,14,20", minute=0, timezone="Europe/Madrid"),
-            id="daily_cache_refresh",
-            name="3x/day cache refresh (08h, 14h, 20h Madrid)",
-            replace_existing=True,
-            misfire_grace_time=60,
-        )
-        logger.info("  ✓ Task 2 → Cache refresh 3x/día a las 08h, 14h y 20h Madrid (~360 créd/mes)")
-
-    # ── NEW TASK: API-Football WC odds every 15 mins ──────────────────────────
-    if not settings.USE_ODDS_API:
-        def wc_sync_job():
-            try:
-                from etl.world_cup_etl import sync_world_cup_odds_api_football
-                from core.cache_service import refresh_cache
-                logger.info("🔄 [scheduler] Fetching World Cup odds from API-Football...")
-                count = sync_world_cup_odds_api_football()
-                if count > 0:
-                    logger.info("🔄 [scheduler] WC odds updated. Refreshing cache.")
-                    refresh_cache()
-            except Exception as e:
-                logger.error(f"WC odds sync failed: {e}", exc_info=True)
-        
-        scheduler.add_job(
-            wc_sync_job,
-            trigger=CronTrigger(minute="*/15", timezone="Europe/Madrid"),
-            id="api_football_wc_odds",
-            name="World Cup Odds via API-Football (every 15 min)",
-            replace_existing=True,
-            misfire_grace_time=60,
-        )
-        logger.info("  ✓ Task 2.5 → World Cup Odds via API-Football exactly every 15 min")
+    scheduler.add_job(
+        refresh_cache,
+        trigger=CronTrigger(hour="8,14,20", minute=0, timezone="Europe/Madrid"),
+        id="daily_cache_refresh",
+        name="3x/day cache refresh (08h, 14h, 20h Madrid)",
+        replace_existing=True,
+        misfire_grace_time=60,
+    )
+    logger.info("  ✓ Task 2 → Cache refresh 3x/día a las 08h, 14h y 20h Madrid (~360 créd/mes)")
 
     # ── Task 3: Hourly bet settlement + conditional cache refresh ────────────
     scheduler.add_job(

@@ -30,36 +30,3 @@ def get_match_statistics(fixture_id: int):
         response = client.get(url, headers=HEADERS, params=params)
         response.raise_for_status()
         return response.json().get('response', [])
-
-def get_worldcup_odds_api_football(season: int | None = None):
-    """
-    Fetch odds for the World Cup using API-Football instead of The Odds API.
-    Uses league_id=1 which is World Cup in API-Football.
-    """
-    if season is None:
-        season = get_current_season()
-        
-    url = f"{API_SPORTS_BASE_URL}/odds"
-    params = {
-        "league": 1,
-        "season": season,
-        "bookmaker": 8 # Bet365
-    }
-    with httpx.Client() as client:
-        response = client.get(url, headers=HEADERS, params=params)
-        response.raise_for_status()
-        return response.json().get('response', [])
-
-def get_worldcup_fixtures_api_football(season: int | None = None):
-    """Fetch upcoming World Cup fixtures to get fixture IDs and team names."""
-    if season is None:
-        season = 2026 # Force 2026 since we only care about World Cup 2026
-    url = f"{API_SPORTS_BASE_URL}/fixtures"
-    params = {
-        "league": 1,
-        "season": season
-    }
-    with httpx.Client() as client:
-        response = client.get(url, headers=HEADERS, params=params)
-        response.raise_for_status()
-        return response.json().get('response', [])

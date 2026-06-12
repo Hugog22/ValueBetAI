@@ -145,10 +145,6 @@ def trigger_ai_retraining():
         logger.error(f"Fallo en la cadena de entrenamiento: {e}")
 
 if __name__ == "__main__":
-    if not settings.ENABLE_CLUB_LEAGUES:
-        logger.info("Skipping Weekly Sync due to feature flag (ENABLE_CLUB_LEAGUES=False)")
-        sys.exit(0)
-
     logger.info("=== INICIO WEEKLY SYNC ===")
     sync_results_and_bankroll()
     trigger_ai_retraining()

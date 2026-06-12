@@ -1,6 +1,6 @@
 {
-  "trained_at": "2026-06-12T15:01:18.719470",
-  "training_rows": 194,
+  "trained_at": "2026-06-12T14:55:36.449811",
+  "training_rows": 96,
   "features": [
     "home_fifa_pts",
     "away_fifa_pts",
@@ -19,6 +19,6 @@
     "home_conceded_avg5",
     "away_conceded_avg5"
   ],
-  "cv_1x2_acc": 0.9236,
-  "cv_ou25_logloss": 0.7778
+  "cv_1x2_acc": 0.4444,
+  "cv_ou25_logloss": 0.9105
 }
