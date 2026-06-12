@@ -130,7 +130,7 @@ def get_predictions_detail(
     rows = (
         db.query(Bet, Match, User)
         .join(Match, Bet.match_id == Match.id)
-        .join(User, Bet.user_id == User.id)
+        .outerjoin(User, Bet.user_id == User.id)
         .filter(Bet.placed_at >= since)
         .filter(Bet.status.in_(["Won", "Lost", "Void"]))
         .order_by(Bet.placed_at.desc())
