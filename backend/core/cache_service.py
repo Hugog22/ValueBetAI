@@ -253,7 +253,7 @@ def _do_refresh() -> None:
 
     try:
         from db.session import SessionLocal
-        from db.models import Match, Bet
+        from db.models import Match, Bet, Odds
         from core.shared_predictor import predictor, world_cup_predictor
         from core.match_evaluator import _evaluate_match, _evaluate_world_cup_match
 
@@ -292,8 +292,10 @@ def _do_refresh() -> None:
             seven_days = now + timedelta(days=7)  # 7-day horizon for stable odds
             upcoming   = (
                 db.query(Match)
+                .join(Odds, (Odds.match_id == Match.id) & (Odds.market == "h2h"))
                 .filter(Match.date >= now, Match.date <= seven_days)
                 .order_by(Match.date.asc())
+                .distinct()
                 .all()
             )
 
