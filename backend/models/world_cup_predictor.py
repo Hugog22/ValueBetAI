@@ -146,6 +146,7 @@ class H2HCache:
             return
         try:
             df = pd.read_csv(HIST_CSV_PATH)
+            df = df.dropna(subset=["home_goals", "away_goals"])
             for _, row in df.iterrows():
                 ht = str(row.get("home_team", ""))
                 at = str(row.get("away_team", ""))
