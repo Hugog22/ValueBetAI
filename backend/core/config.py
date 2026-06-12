@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     ODDS_API_KEY: str
     API_SPORTS_KEY: str
-    FOOTBALL_DATA_API_KEY: str = ""  # football-data.org — World Cup data
+    FOOTBALL_DATA_API_KEY: str = "b3f81510926b466d844b5ce0798ada8f"  # football-data.org — World Cup data
     SECRET_KEY: str = "supersecret_change_me_in_production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 days for convenience
