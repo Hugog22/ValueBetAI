@@ -243,9 +243,11 @@ export default function BankrollPage() {
                                                     </td>
                                                     <td className="px-8 py-6">
                                                         <span className={`px-4 py-1.5 text-[10px] font-black tracking-widest rounded-full uppercase ${
-                                                            bet.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
-                                                            bet.status === 'WON' ? 'bg-[#064E3B]/10 text-[#064E3B]' :
-                                                            'bg-red-50 text-red-600'
+                                                            bet.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
+                                                            bet.status === 'Won' ? 'bg-[#064E3B]/10 text-[#064E3B]' :
+                                                            bet.status === 'Lost' ? 'bg-red-50 text-red-600' :
+                                                            bet.status === 'Void' ? 'bg-gray-100 text-gray-500' :
+                                                            'bg-amber-100 text-amber-700'
                                                         }`}>
                                                             {bet.status}
                                                         </span>

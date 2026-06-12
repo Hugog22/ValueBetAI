@@ -228,7 +228,7 @@ export default function BetModal({
 
           <p className="text-center text-[10px] text-[#94a3b8] leading-relaxed">
             Esta es una simulación virtual. El stake se descuenta de tu bankroll inmediatamente.<br />
-            Los resultados se liquidan automáticamente cada martes.
+            Los resultados se liquidan automáticamente cada hora.
           </p>
         </div>
       </div>

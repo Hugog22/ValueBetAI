@@ -3,6 +3,12 @@ cache_service.py
 ----------------
 Centralized in-RAM cache for pre-computed football predictions.
 
+Architecture (v2 — Atomic Swap):
+    All data is built into a LOCAL dict during refresh, then swapped
+    atomically into the global `_cache` reference.  This eliminates the
+    "0 matches" window that occurred when the old cache was mutated
+    in-place during a long-running refresh.
+
 Structure:
     _cache["sports"][sport_key]["jornada"] → list of evaluated matches
     _cache["sports"][sport_key]["parlay"]  → dict (CombinAIA for that sport)
@@ -19,6 +25,7 @@ Supported sports: La Liga, Premier League, Champions League, World Cup 2026.
 
 import logging
 import time
+import threading
 from datetime import datetime, timedelta
 from functools import reduce
 
@@ -39,24 +46,32 @@ _OFF_SEASON_MONTHS = {6, 7}
 
 
 # ---------------------------------------------------------------------------
-# Global in-RAM cache
+# Global in-RAM cache + concurrency guard
 # ---------------------------------------------------------------------------
 
-_cache: dict = {
-    "sports": {
-        s: {"jornada": [], "parlay": {}, "is_off_season": False}
-        for s in SUPPORTED_SPORTS
-    },
-    "all_parlays":  [],
-    "boosts":       [],
-    "last_updated": 0.0,
-}
+def _empty_cache() -> dict:
+    """Return a fresh, empty cache structure."""
+    return {
+        "sports": {
+            s: {"jornada": [], "parlay": {}, "is_off_season": False}
+            for s in SUPPORTED_SPORTS
+        },
+        "all_parlays":  [],
+        "boosts":       [],
+        "jornada":      [],   # backward-compat alias (LaLiga)
+        "parlay":       {},   # backward-compat alias (LaLiga)
+        "last_updated": 0.0,
+    }
+
+_cache: dict = _empty_cache()
+
+# Prevent two refresh_cache() calls from running concurrently
+# (e.g. a scheduled peak refresh + the hourly settle_and_refresh overlap).
+_refresh_lock = threading.Lock()
 
 
 def get_cache() -> dict:
-    """Return the current cache snapshot with backward-compat aliases for LaLiga."""
-    _cache["jornada"] = _cache["sports"]["laliga"]["jornada"]
-    _cache["parlay"]  = _cache["sports"]["laliga"]["parlay"]
+    """Return the current cache snapshot (read-only reference)."""
     return _cache
 
 
@@ -191,13 +206,21 @@ def _is_off_season() -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Full cache refresh
+# Full cache refresh  — ATOMIC SWAP (double-buffer pattern)
 # ---------------------------------------------------------------------------
 
 def refresh_cache() -> None:
     """
     Run the full multi-sport football prediction pipeline and update the
     in-RAM cache.
+
+    Uses the double-buffer / atomic-swap pattern:
+      1. All new data is built into a LOCAL `new_cache` dict.
+      2. Only after ALL computation succeeds, the global `_cache` reference
+         is swapped to the new dict in a single assignment (atomic under
+         CPython's GIL).
+      3. If anything fails, the old cache is kept intact — users never
+         see 0 matches.
 
     Steps:
       1. Sync World Cup matches (The Odds API + football-data.org).
@@ -207,7 +230,23 @@ def refresh_cache() -> None:
       5. Tag matches per sport by team name heuristic.
       6. Mark European leagues as off-season when no upcoming matches found.
       7. Build CombinAIas (parlays) per sport and the all_parlays list.
+      8. Atomic swap: _cache = new_cache.
     """
+    # Prevent overlapping refreshes (scheduler can fire multiple jobs)
+    if not _refresh_lock.acquire(blocking=False):
+        logger.warning("⏳ [cache] Refresh already in progress — skipping this invocation.")
+        return
+
+    try:
+        _do_refresh()
+    finally:
+        _refresh_lock.release()
+
+
+def _do_refresh() -> None:
+    """Inner refresh logic — called only while holding _refresh_lock."""
+    global _cache
+
     logger.info("🔄 [cache_service] Starting multi-sport cache refresh…")
     t0 = time.time()
 
@@ -243,6 +282,9 @@ def refresh_cache() -> None:
             logger.warning(f"⚠️  [cache] Multi-sport sync failed: {e}")
 
         # ── Step 4: Evaluate all upcoming matches ─────────────────────────
+        # Build everything into a NEW local cache dict.
+        new_cache = _empty_cache()
+
         db = SessionLocal()
         try:
             now        = datetime.utcnow()
@@ -292,14 +334,14 @@ def refresh_cache() -> None:
                     else (jornada_all if sport_key == "laliga" else [])
                 )
                 is_off = len(sport_jornada) == 0 and off_season_now
-                _cache["sports"][sport_key]["jornada"]      = sport_jornada
-                _cache["sports"][sport_key]["parlay"]       = _build_parlay(sport_jornada)
-                _cache["sports"][sport_key]["is_off_season"] = is_off
+                new_cache["sports"][sport_key]["jornada"]      = sport_jornada
+                new_cache["sports"][sport_key]["parlay"]       = _build_parlay(sport_jornada)
+                new_cache["sports"][sport_key]["is_off_season"] = is_off
 
             # World Cup always gets its own bucket
-            _cache["sports"]["worldcup"]["jornada"]       = jornada_wc
-            _cache["sports"]["worldcup"]["parlay"]        = _build_parlay(jornada_wc)
-            _cache["sports"]["worldcup"]["is_off_season"] = False  # WC is never "off-season"
+            new_cache["sports"]["worldcup"]["jornada"]       = jornada_wc
+            new_cache["sports"]["worldcup"]["parlay"]        = _build_parlay(jornada_wc)
+            new_cache["sports"]["worldcup"]["is_off_season"] = False  # WC is never "off-season"
 
         finally:
             db.close()
@@ -307,7 +349,7 @@ def refresh_cache() -> None:
         # ── Step 6: Build the all_parlays list ────────────────────────────
         all_parlays = []
         for sk in SUPPORTED_SPORTS:
-            parlay = _cache["sports"][sk]["parlay"]
+            parlay = new_cache["sports"][sk]["parlay"]
             if parlay.get("legs"):
                 all_parlays.append({
                     "sport": sk,
@@ -315,12 +357,22 @@ def refresh_cache() -> None:
                     **parlay,
                 })
 
-        _cache["all_parlays"]  = all_parlays
-        _cache["boosts"]       = []
-        _cache["last_updated"] = time.time()
+        new_cache["all_parlays"]  = all_parlays
+        new_cache["boosts"]       = []
+        new_cache["last_updated"] = time.time()
+
+        # Backward-compat aliases baked into the dict (no mutation on read)
+        new_cache["jornada"] = new_cache["sports"]["laliga"]["jornada"]
+        new_cache["parlay"]  = new_cache["sports"]["laliga"]["parlay"]
+
+        # ── Step 7: ATOMIC SWAP ───────────────────────────────────────────
+        # Single reference assignment is atomic under CPython's GIL.
+        # Readers that already grabbed the old _cache keep a valid snapshot;
+        # new readers immediately see the fresh data.
+        _cache = new_cache
 
         elapsed       = round(time.time() - t0, 2)
-        total_matches = sum(len(_cache["sports"][s]["jornada"]) for s in SUPPORTED_SPORTS)
+        total_matches = sum(len(new_cache["sports"][s]["jornada"]) for s in SUPPORTED_SPORTS)
         logger.info(
             f"✅ [cache] Refresh complete in {elapsed}s — "
             f"{total_matches} total matches, {len(all_parlays)} CombinAIas."
@@ -328,3 +380,4 @@ def refresh_cache() -> None:
 
     except Exception as e:
         logger.error(f"❌ [cache] Refresh failed: {e}", exc_info=True)
+        # On failure, _cache is NOT touched — old data stays live.

@@ -49,10 +49,31 @@ def _parse_cron(expr: str) -> dict:
 
 def _settle_and_refresh():
     """
-    Composite job: settle pending bets then refresh the prediction cache.
-    Called hourly so that as soon as a match is marked Finished by the ETL,
-    bets get resolved and the AI cache reflects the latest data.
+    Composite job: sync match results → settle pending bets → conditional cache refresh.
+
+    Called hourly (xx:05) so that finished matches are detected promptly
+    and bets get resolved within ~1 hour of match completion.
+
+    Key insight: bet_settler requires Match.status == "Finished", but that
+    status is only set by the ETL sync.  We MUST sync results first.
     """
+    # ── Step 1: Sync match results from external sources ──────────────
+    # This marks recently-finished matches as "Finished" in the DB.
+    try:
+        from etl.world_cup_etl import sync_world_cup_schedule
+        sync_world_cup_schedule()
+        logger.info("🔄 [scheduler] World Cup results synced.")
+    except Exception as e:
+        logger.warning(f"⚠️  [scheduler] WC results sync failed: {e}")
+
+    try:
+        from etl.run_etl import run_pipeline
+        run_pipeline()
+        logger.info("🔄 [scheduler] La Liga ETL results synced.")
+    except Exception as e:
+        logger.warning(f"⚠️  [scheduler] La Liga ETL sync failed: {e}")
+
+    # ── Step 2: Settle bets on newly-finished matches ─────────────────
     from core.bet_settler import settle_pending_bets
     from core.cache_service import refresh_cache
     try:

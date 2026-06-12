@@ -281,22 +281,6 @@ def get_settle_status(
         )
     }
 
-@router.get("/admin/system-stats")
-def get_system_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.email != "hugodesax123@gmail.com":
-        raise HTTPException(status_code=403, detail="Forbidden")
-    
-    total_bets = db.query(func.count(Bet.id)).scalar() or 0
-    won_bets = db.query(func.count(Bet.id)).filter(Bet.status == "Won").scalar() or 0
-    lost_bets = db.query(func.count(Bet.id)).filter(Bet.status == "Lost").scalar() or 0
-    void_bets = db.query(func.count(Bet.id)).filter(Bet.status == "Void").scalar() or 0
-    pending_bets = db.query(func.count(Bet.id)).filter(Bet.status == "Pending").scalar() or 0
-
-    return {
-        "total_bets": total_bets,
-        "won": won_bets,
-        "lost": lost_bets,
-        "void": void_bets,
-        "pending": pending_bets,
-        "win_rate": round(won_bets / (won_bets + lost_bets) * 100, 1) if (won_bets + lost_bets) > 0 else 0.0
-    }
+# NOTE: /api/admin/system-stats is defined in routers/admin.py.
+# Do NOT duplicate it here — FastAPI first-match routing would shadow admin.py's
+# version, which returns the correct response schema for the frontend.
