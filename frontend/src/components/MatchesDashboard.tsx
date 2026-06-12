@@ -281,8 +281,8 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
       {featuredMatch && !activeSportConfig.isOffSeason && (
         <section className="mb-20">
           <FeaturedBet
-            homeTeam={featuredMatch.homeTeam}
-            awayTeam={featuredMatch.awayTeam}
+            homeTeam={getEsName(featuredMatch.homeTeam)}
+            awayTeam={getEsName(featuredMatch.awayTeam)}
             pick={featuredMatch.bestPick?.label || 'Sin selección'}
             odds={featuredMatch.bestPick?.bookmaker_odds || featuredMatch.bestPick?.bookmakerOdds || 1.0}
             aiProb={(featuredMatch.bestPick?.probability || 0) * 100}

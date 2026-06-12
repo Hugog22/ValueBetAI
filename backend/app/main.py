@@ -49,7 +49,18 @@ async def lifespan(app: FastAPI):
         logger.info("🔄 Triggering background prediction cache warm-up…")
         import threading
         def _warm_cache_bg():
-            # Step 1: Warm the prediction cache
+            # Step 1: Clean duplicates (Now safe because we have 16GB RAM)
+            try:
+                from scripts.fix_duplicate_teams import fix_duplicate_teams
+                from db.session import SessionLocal
+                with SessionLocal() as db:
+                    logger.info("🧹 Ejecutando limpieza de equipos duplicados en el arranque...")
+                    fix_duplicate_teams(db)
+                    logger.info("✅ Limpieza de duplicados completada.")
+            except Exception as e:
+                logger.error(f"⚠️ Failed to clean duplicates: {e}")
+
+            # Step 2: Warm the prediction cache
             try:
                 refresh_cache()
             except Exception as e:

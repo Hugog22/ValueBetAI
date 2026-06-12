@@ -137,7 +137,7 @@ def fix_duplicate_teams():
                         canonical_m.home_goals = m.home_goals
                         canonical_m.away_goals = m.away_goals
                         canonical_m.status = m.status
-                    # Reassign Odds, OddsHistory, Bets to canonical match
+                    # Reassign Odds, OddsHistory, Bets, MarketOdds, Prediction to canonical match
                     db.query(Odds).filter(Odds.match_id == m.id).update(
                         {"match_id": canonical_m.id}, synchronize_session=False
                     )
@@ -145,6 +145,13 @@ def fix_duplicate_teams():
                         {"match_id": canonical_m.id}, synchronize_session=False
                     )
                     db.query(Bet).filter(Bet.match_id == m.id).update(
+                        {"match_id": canonical_m.id}, synchronize_session=False
+                    )
+                    from db.models import MarketOdds, Prediction
+                    db.query(MarketOdds).filter(MarketOdds.match_id == m.id).update(
+                        {"match_id": canonical_m.id}, synchronize_session=False
+                    )
+                    db.query(Prediction).filter(Prediction.match_id == m.id).update(
                         {"match_id": canonical_m.id}, synchronize_session=False
                     )
                     duplicate_match_ids.append(m.id)

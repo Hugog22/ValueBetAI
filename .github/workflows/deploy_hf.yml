@@ -1,0 +1,39 @@
+name: Deploy Backend to Hugging Face Spaces
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'backend/**' # Solo se despliega si cambias algo dentro de la carpeta backend
+  workflow_dispatch: # Permite ejecutarlo manualmente desde la pestaña Actions
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+          fetch-depth: 0
+      
+      - name: Forzar subida del backend a Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cd backend
+          # Eliminamos cualquier .git para evitar conflictos de subrepositorios
+          rm -rf .git
+          git init
+          git branch -M main
+          git config user.name "GitHub Auto-Deploy"
+          git config user.email "deploy@valuebet.ai"
+          git lfs install
+          git lfs track "*.pkl"
+          git add .
+          git commit -m "Auto deploy desde GitHub: ${{ github.event.head_commit.message }}"
+          
+          # Subimos forzosamente la carpeta backend a la rama main de Hugging Face
+          git push -f https://hugog22:$HF_TOKEN@huggingface.co/spaces/hugog22/valuebet-api main
