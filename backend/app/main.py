@@ -1,14 +1,14 @@
 """
 main.py
 -------
-FastAPI application entry point.
+FastAPI application entry point — running on HuggingFace (16 GB RAM, always-on).
 
-Architecture after the keep-alive + background-cache refactor:
+Architecture:
   • All heavy computation lives in core/cache_service.py and is run by the
-    Smart Scheduler (core/scheduler.py).
+    Background Scheduler (core/scheduler.py).
   • Public endpoints (jornada, parlay, super-boosts) ONLY read the in-RAM
     cache → response time < 10 ms.
-  • /api/health is the UptimeRobot target — keeps Render awake every 10 min.
+  • /api/health is a standard liveness probe for monitoring.
 """
 
 import sys
@@ -44,12 +44,12 @@ async def lifespan(app: FastAPI):
         logger.info("🚀 Starting Value Betting API…")
         Base.metadata.create_all(bind=engine)
 
-        # Pre-warm the cache in the background so we don't block the port binding.
-        # Render has a strict 60s port bind timeout, and World Cup odds take ~70s to compute.
+        # Warm the cache in a daemon thread so the server binds quickly
+        # while still loading predictions in the background.
         logger.info("🔄 Triggering background prediction cache warm-up…")
         import threading
         def _warm_cache_bg():
-            # Step 1: Clean duplicates (Now safe because we have 16GB RAM)
+            # Step 1: Clean duplicate teams/matches in the DB
             try:
                 from scripts.fix_duplicate_teams import fix_duplicate_teams
                 from db.session import SessionLocal
@@ -108,9 +108,7 @@ app.include_router(admin_router)
 @app.get("/api/health")
 def health_check():
     """
-    Lightweight liveness probe.
-    UptimeRobot / external monitors should call this every 10 minutes to
-    prevent Render's free tier from suspending the instance.
+    Lightweight liveness probe for monitoring.
     """
     cache = get_cache()
     last_updated = cache.get("last_updated", 0.0)

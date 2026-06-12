@@ -41,7 +41,8 @@ _SPORT_META = {
     "worldcup":  {"label": "Mundial 2026",     "flag": "⚽"},
 }
 
-# Months when European leagues are typically off (June–July)
+# Off-season detection: only for La Liga/Premier (World Cup runs in summer).
+# With HuggingFace 16 GB RAM, we don't need to artificially limit this.
 _OFF_SEASON_MONTHS = {6, 7}
 
 
@@ -162,7 +163,7 @@ def _build_parlay(jornada: list[dict]) -> dict:
 def _get_laliga_team_names(db) -> set[str]:
     """Return team names seeded from Understat (La Liga source)."""
     from db.models import Team
-    teams = db.query(Team).order_by(Team.id.asc()).limit(40).all()
+    teams = db.query(Team).order_by(Team.id.asc()).all()
     return {t.name for t in teams}
 
 
@@ -287,14 +288,13 @@ def _do_refresh() -> None:
 
         db = SessionLocal()
         try:
-            now        = datetime.utcnow()
-            seven_days = now + timedelta(days=7)
-            upcoming   = (
+            now         = datetime.utcnow()
+            fourteen_days = now + timedelta(days=14)  # 14-day horizon on HF 16GB
+            upcoming    = (
                 db.query(Match)
-                .filter(Match.date >= now, Match.date <= seven_days)
+                .filter(Match.date >= now, Match.date <= fourteen_days)
                 .order_by(Match.date.asc())
-                .limit(80)
-                .all()
+                .all()  # No artificial row limit
             )
 
             wc_teams       = _get_worldcup_team_names()

@@ -216,7 +216,7 @@ def get_bankroll_stats(
         won_bets=won_bets,
         lost_bets=lost_bets,
         current_bankroll=current_user.bankroll or 1000.0,
-        recent_bets=recent_bets[:20]  # Return last 20 for UI
+        recent_bets=recent_bets[:100]  # Return last 100 for UI (HF 16GB server)
     )
 
 

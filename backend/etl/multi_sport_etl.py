@@ -68,11 +68,11 @@ def sync_sport_matches(sport_key: str) -> int:
         params = {
             "apiKey":     settings.ODDS_API_KEY,
             "regions":    "eu,uk",
-            "markets":    "h2h",
+            "markets":    "h2h,totals",
             "oddsFormat": "decimal",
-            "bookmakers": "pinnacle,bet365,williamhill,betway",
+            "bookmakers": "pinnacle,bet365,williamhill,betway,unibet,betfair",
         }
-        resp = httpx.get(url, params=params, timeout=30)
+        resp = httpx.get(url, params=params, timeout=60)
 
         if resp.status_code == 422:
             logger.warning(f"[multi_sport_etl] {sport_key}: 422 from Odds API (market not available on free tier)")

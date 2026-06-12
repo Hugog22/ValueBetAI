@@ -1,19 +1,13 @@
 """
 scheduler.py
 -------------
-Background APScheduler with a *Smart Schedule* for The Odds API quota protection.
+Background APScheduler for ValueBetAI — running on HuggingFace (16 GB RAM, always-on).
 
-                 QUOTA BUDGET  (soccer_spain_la_liga free tier ≈ 500 req/month)
-                 ───────────────────────────────────────────────────────────────
-  Valley days  Mon–Thu  3 calls/day × 4 days = 12 calls/week
-  Peak days    Fri–Sun  11 calls/day × 3 days = 33 calls/week
-                                                ─────────────
-  Weekly total  ≈ 45 calls/week  →  ~180 calls/month  (well under the 500 limit)
-
-The CRON expressions are loaded from environment variables so they can be
-adjusted in the Render dashboard without touching source code:
-  CRON_WEEKDAY   default: "0 10,16,22 * * 1-4"   (Mon–Thu at 10h, 16h, 22h)
-  CRON_WEEKEND   default: "0 12-22 * * 5,6,0"    (Fri–Sun every hour 12h–22h)
+Schedule:
+  - ETL diario:        04:00 AM Madrid — sincroniza partidos de Understat.
+  - Retrain IA:        04:30 AM Madrid — reentrena los modelos XGBoost.
+  - Cache refresh:     Cada 2 horas, los 7 días de la semana — cuotas siempre frescas.
+  - Bet settlement:    Cada hora (xx:05) — liquida apuestas pendientes en partidos finalizados.
 
 All times are in Europe/Madrid timezone.
 """
@@ -93,9 +87,8 @@ def start_scheduler():
 
     Registers:
       1. Daily ETL — match data from Understat (04:00 AM Madrid).
-      2. Smart cache refresh (valley) — Mon–Thu: 10h, 16h, 22h Madrid.
-      3. Smart cache refresh (peak)   — Fri–Sun: every hour 12h–22h Madrid.
-      4. Hourly bet settlement + cache refresh (every hour, all days).
+      2. Smart cache refresh (every 2 hours).
+      3. Hourly bet settlement + cache refresh (every hour, all days).
     """
     from core.config import settings
     from core.cache_service import refresh_cache
@@ -110,7 +103,7 @@ def start_scheduler():
         id="daily_match_etl",
         name="Daily: sync matches from Understat",
         replace_existing=True,
-        misfire_grace_time=600,
+        misfire_grace_time=60,
     )
     logger.info("  ✓ Task 1 → Daily ETL at 04:00 Madrid time.")
 
@@ -217,62 +210,36 @@ def start_scheduler():
         id="daily_model_retrain",
         name="Daily: Retrain XGBoost Models + write training report",
         replace_existing=True,
-        misfire_grace_time=600,
+        misfire_grace_time=60,
     )
     logger.info("  ✓ Task 1.5 → Daily Auto-Retrain at 04:30 Madrid time (report → logs/training_report.log).")
 
 
-    # ── Task 2: Valley days cache refresh (Mon–Thu) ───────────────────────────
-    try:
-        weekday_kwargs = _parse_cron(settings.CRON_WEEKDAY)
-    except ValueError as e:
-        logger.error(f"  ✗ Invalid CRON_WEEKDAY: {e}. Using default.")
-        weekday_kwargs = _parse_cron("0 10,16,22 * * 1-4")
-
+    # ── Task 2+3: Unified cache refresh every 2 hours, 7 days a week ─────────
+    # HuggingFace is always-on (no sleep), so we refresh uniformly.
     scheduler.add_job(
         refresh_cache,
-        trigger=CronTrigger(**weekday_kwargs, timezone="Europe/Madrid"),
-        id="valley_cache_refresh",
-        name="Valley (Mon–Thu): refresh predictions cache",
+        trigger=CronTrigger(minute=0, hour="*/2", timezone="Europe/Madrid"),
+        id="bihhourly_cache_refresh",
+        name="Every 2h: refresh predictions cache (all days)",
         replace_existing=True,
-        misfire_grace_time=300,
+        misfire_grace_time=60,
     )
-    logger.info(
-        f"  ✓ Task 2 → Valley refresh | cron: \"{settings.CRON_WEEKDAY}\" (Europe/Madrid)"
-    )
+    logger.info("  ✓ Task 2 → Cache refresh every 2 hours, all week (Europe/Madrid)")
 
-    # ── Task 3: Peak days cache refresh (Fri–Sun, hourly 12h–22h) ────────────
-    try:
-        weekend_kwargs = _parse_cron(settings.CRON_WEEKEND)
-    except ValueError as e:
-        logger.error(f"  ✗ Invalid CRON_WEEKEND: {e}. Using default.")
-        weekend_kwargs = _parse_cron("0 12-22 * * 5,6,0")
-
-    scheduler.add_job(
-        refresh_cache,
-        trigger=CronTrigger(**weekend_kwargs, timezone="Europe/Madrid"),
-        id="peak_cache_refresh",
-        name="Peak (Fri–Sun): refresh predictions cache hourly",
-        replace_existing=True,
-        misfire_grace_time=300,
-    )
-    logger.info(
-        f"  ✓ Task 3 → Peak refresh   | cron: \"{settings.CRON_WEEKEND}\" (Europe/Madrid)"
-    )
-
-    # ── Task 4: Hourly bet settlement + conditional cache refresh ────────────
+    # ── Task 3: Hourly bet settlement + conditional cache refresh ────────────
     scheduler.add_job(
         _settle_and_refresh,
-        trigger=CronTrigger(minute=5, timezone="Europe/Madrid"),  # xx:05 every hour
+        trigger=CronTrigger(minute=5, timezone="Europe/Madrid"),
         id="hourly_settle_and_refresh",
         name="Hourly: settle pending bets + refresh AI cache if needed",
         replace_existing=True,
-        misfire_grace_time=300,
+        misfire_grace_time=60,
     )
-    logger.info("  ✓ Task 4 → Hourly bet settlement + conditional cache refresh (xx:05 Madrid).")
+    logger.info("  ✓ Task 3 → Hourly bet settlement + conditional cache refresh (xx:05 Madrid).")
 
     scheduler.start()
-    logger.info("✅ Smart Scheduler started. Quota budget: ~180 Odds API calls/month.")
+    logger.info("✅ Scheduler started (HuggingFace 16GB — always-on, refresh every 2h).")
 
 
 def stop_scheduler():
