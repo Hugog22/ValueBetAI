@@ -51,20 +51,52 @@ _WC_ODDS_POOL = [
 # ---------------------------------------------------------------------------
 
 def _get_odds(match: Match, db: Session | None = None) -> dict | None:
-    """Return live odds from DB. Returns None if no real odds exist."""
+    """Return average live odds from DB across all bookmakers."""
     if db is not None:
-        h2h  = db.query(Odds).filter(Odds.match_id == match.id, Odds.market == "h2h").order_by(Odds.timestamp.desc()).first()
-        ou25 = db.query(Odds).filter(Odds.match_id == match.id, Odds.market == "totals_2.5").order_by(Odds.timestamp.desc()).first()
-        if h2h:
+        h2h_records = db.query(Odds).filter(Odds.match_id == match.id, Odds.market == "h2h").all()
+        ou25_records = db.query(Odds).filter(Odds.match_id == match.id, Odds.market == "totals_2.5").all()
+        
+        if h2h_records:
+            ho_sum = dr_sum = aw_sum = 0.0
+            all_bookmakers_h2h = []
+            
+            for r in h2h_records:
+                ho_sum += float(r.home_odds)
+                dr_sum += float(r.draw_odds)
+                aw_sum += float(r.away_odds)
+                all_bookmakers_h2h.append({
+                    "title": r.bookmaker.title(),
+                    "home_odds": float(r.home_odds),
+                    "draw_odds": float(r.draw_odds),
+                    "away_odds": float(r.away_odds)
+                })
+            
+            n = len(h2h_records)
+            avg_ho = ho_sum / n
+            avg_dr = dr_sum / n
+            avg_aw = aw_sum / n
+            
+            avg_o25 = 1.90
+            avg_u25 = 1.90
+            if ou25_records:
+                o25_sum = u25_sum = 0.0
+                for r in ou25_records:
+                    o25_sum += float(r.home_odds)
+                    u25_sum += float(r.away_odds)
+                m = len(ou25_records)
+                avg_o25 = o25_sum / m
+                avg_u25 = u25_sum / m
+
             return {
-                "home":     float(h2h.home_odds),
-                "draw":     float(h2h.draw_odds),
-                "away":     float(h2h.away_odds),
-                "over25":   float(ou25.home_odds) if ou25 else 1.90,
-                "under25":  float(ou25.away_odds) if ou25 else 1.90,
+                "home":     avg_ho,
+                "draw":     avg_dr,
+                "away":     avg_aw,
+                "over25":   avg_o25,
+                "under25":  avg_u25,
                 "over_corners":  1.90,
                 "under_corners": 1.90,
-                "_source":  f"{h2h.bookmaker}_live",
+                "_source":  "average",
+                "all_bookmakers_h2h": all_bookmakers_h2h
             }
     return None
 
@@ -189,6 +221,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
     if odds is None:
         return None
     source     = odds.pop("_source", "mock")
+    all_bookmakers_h2h = odds.pop("all_bookmakers_h2h", [])
 
     predict_features = {k: v for k, v in features.items() if not k.startswith("_")}
     pred             = predictor.predict_match(predict_features)
@@ -268,6 +301,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
         "allCandidates": candidates,
         "topPicks":      candidates[:3],
         "justification": f"{home} vs {away} — evaluación de fútbol.",
+        "all_bookmakers": all_bookmakers_h2h,
     }
 
 
@@ -298,6 +332,7 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
         return None
         
     source = odds.pop("_source", "mock")
+    all_bookmakers_h2h = odds.pop("all_bookmakers_h2h", [])
 
     eps        = 1e-6
     candidates = []
@@ -393,4 +428,5 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
         "allCandidates": candidates,
         "topPicks":      candidates[:3],
         "justification": justification,
+        "all_bookmakers": all_bookmakers_h2h,
     }

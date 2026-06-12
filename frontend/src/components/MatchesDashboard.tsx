@@ -69,12 +69,20 @@ interface PickData {
   risk?: Risk; bookmaker_implied_prob?: number;
 }
 
+interface BookmakerOdds {
+  title: string;
+  home_odds: number;
+  draw_odds: number;
+  away_odds: number;
+}
+
 interface Match {
   id: number; date: string;
   homeTeam: string; awayTeam: string;
   sport?: string;
   bestPick?: PickData; topPicks?: PickData[];
   isSteam?: boolean; justification?: string;
+  all_bookmakers?: BookmakerOdds[];
   // World Cup specific
   homeFifaPts?: number; awayFifaPts?: number;
   homeSquadQuality?: number; awaySquadQuality?: number;
@@ -293,6 +301,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
               hour: '2-digit', minute: '2-digit',
             })}
             justification={featuredMatch.justification || ''}
+            allBookmakers={featuredMatch.all_bookmakers}
             onAction={() => handleSimulateBet(featuredMatch.id, featuredMatch.bestPick!, featuredMatch.homeTeam, featuredMatch.awayTeam)}
           />
         </section>
@@ -625,7 +634,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                             isWorldCupActive ? 'text-amber-400/80' : 'text-[#64748B]'
                           }`}>{pick.market}</span>
                           <span className={`text-xs font-bold ${isWorldCupActive ? 'text-amber-300' : 'text-[#064E3B]'}`}>
-                            AI {((pick.probability ?? 0) * 100).toFixed(0)}% vs Casa {((pick.bookmaker_implied_prob ?? 0) * 100).toFixed(0)}%
+                            AI {((pick.probability ?? 0) * 100).toFixed(0)}% vs Media {((pick.bookmaker_implied_prob ?? 0) * 100).toFixed(0)}%
                           </span>
                         </div>
                         <div className="flex items-center justify-between gap-4">
