@@ -69,6 +69,13 @@ export default function BankrollPage() {
         loading: boolean;
         days: number;
     }>({ open: false, data: null, loading: false, days: 7 });
+    
+    const [trainingModal, setTrainingModal] = useState<{
+        open: boolean;
+        report: string;
+        loading: boolean;
+    }>({ open: false, report: "", loading: false });
+
     const { token, user, logout } = useAuth();
 
     useEffect(() => {
@@ -108,6 +115,24 @@ export default function BankrollPage() {
 
     const closePredictionsModal = () =>
         setPredictionModal({ open: false, data: null, loading: false, days: 7 });
+
+    const openTrainingReport = async () => {
+        if (!token) return;
+        setTrainingModal({ open: true, report: "", loading: true });
+        try {
+            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+            const res = await fetch(`${API}/api/admin/training-report`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const text = await res.text();
+            setTrainingModal({ open: true, report: text, loading: false });
+        } catch (err) {
+            console.error('Error fetching training report', err);
+            setTrainingModal({ open: true, report: "Error cargando el informe.", loading: false });
+        }
+    };
+
+    const closeTrainingReport = () => setTrainingModal({ open: false, report: "", loading: false });
 
     const getSelectionLabel = (bet: BetRecord) => {
         const sel = bet.selection.toLowerCase();
@@ -207,11 +232,24 @@ export default function BankrollPage() {
                             {/* ADMIN SYSTEM STATS */}
                             {user?.email === 'hugodesax123@gmail.com' && adminStats && (
                                 <div className="mb-20">
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <span className="h-px w-8 bg-[#0A0F1E]"></span>
-                                        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#0A0F1E]">Acceso Administrador</span>
+                                    <div className="flex items-center justify-between mb-8">
+                                        <div>
+                                            <div className="flex items-center gap-3 mb-6">
+                                                <span className="h-px w-8 bg-[#0A0F1E]"></span>
+                                                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#0A0F1E]">Acceso Administrador</span>
+                                            </div>
+                                            <h2 className="text-4xl font-editorial font-bold text-[#1A1C1E]">
+                                                Rendimiento <span className="italic font-light">Global del Sistema</span>
+                                            </h2>
+                                        </div>
+                                        <button
+                                            onClick={openTrainingReport}
+                                            className="px-6 py-3 bg-[#0A0F1E] text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-[#1A2240] transition-colors flex items-center gap-2"
+                                        >
+                                            <span className="text-lg">⚙️</span>
+                                            Informe de Entrenamiento
+                                        </button>
                                     </div>
-                                    <h2 className="text-4xl font-editorial font-bold text-[#1A1C1E] mb-8">Rendimiento <span className="italic font-light">Global del Sistema</span></h2>
                                     
                                     {adminStats.detail || adminStats.total_predictions === undefined ? (
                                         <div className="bg-red-50 p-6 rounded-[2rem] border border-red-100 text-red-600 text-sm font-bold">
@@ -480,6 +518,52 @@ export default function BankrollPage() {
                         ) : (
                             <div className="text-center py-16 text-[#64748B]">
                                 <p className="font-bold">Error cargando datos. Inténtalo de nuevo.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* TRAINING REPORT MODAL */}
+        {trainingModal.open && (
+            <div
+                className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                onClick={(e) => { if (e.target === e.currentTarget) closeTrainingReport(); }}
+            >
+                <div className="bg-[#1A1C1E] rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-white/10">
+
+                    {/* Modal Header */}
+                    <div className="flex items-center justify-between px-10 py-6 border-b border-white/10 flex-shrink-0 bg-[#0A0F1E]">
+                        <div className="flex items-center gap-4">
+                            <span className="text-3xl">🤖</span>
+                            <div>
+                                <h2 className="text-xl font-editorial font-bold text-white">
+                                    Registro de <span className="italic font-light">Autoentrenamiento IA</span>
+                                </h2>
+                                <div className="text-[10px] text-white/50 uppercase tracking-[0.2em] mt-1">Terminal de logs de Optuna & XGBoost</div>
+                            </div>
+                        </div>
+                        <button
+                            onClick={closeTrainingReport}
+                            className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-all text-xl"
+                        >
+                            ×
+                        </button>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div className="flex-1 overflow-hidden p-6 bg-[#05080F]">
+                        {trainingModal.loading ? (
+                            <div className="flex flex-col items-center justify-center h-full gap-4">
+                                <div className="w-8 h-8 border-2 border-white/20 border-t-[#00FF00] rounded-full animate-spin" />
+                                <p className="text-[#00FF00] font-mono text-xs">Descargando informe del servidor...</p>
+                            </div>
+                        ) : (
+                            <div className="h-full w-full bg-black/50 rounded-xl border border-white/5 p-6 overflow-y-auto">
+                                <pre className="text-[#00FF00] font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+                                    {trainingModal.report}
+                                </pre>
                             </div>
                         )}
                     </div>
