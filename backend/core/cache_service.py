@@ -288,13 +288,13 @@ def _do_refresh() -> None:
 
         db = SessionLocal()
         try:
-            now        = datetime.utcnow()
-            seven_days = now + timedelta(days=7)  # 7-day horizon for stable odds
-            upcoming   = (
+            now         = datetime.utcnow()
+            thirty_days = now + timedelta(days=30)  # 30-day horizon for World Cup
+            upcoming    = (
                 db.query(Match)
-                .filter(Match.date >= now, Match.date <= seven_days)
+                .filter(Match.date >= now, Match.date <= thirty_days)
                 .order_by(Match.date.asc())
-                .all()  # No artificial row limit
+                .all()
             )
 
             wc_teams       = _get_worldcup_team_names()
