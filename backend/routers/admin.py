@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timedelta
+import os, json
 
 from db.session import get_db
 from db.models import Bet, Match, Prediction, User
@@ -183,3 +185,30 @@ def get_predictions_detail(
         yield_percent=yield_pct,
         predictions=predictions,
     )
+
+
+@router.get("/training-report")
+def get_training_report(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Returns the latest training report log as plain text.
+    Only accessible to the admin.
+    """
+    if current_user.email != "hugodesax123@gmail.com":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para ver esta página."
+        )
+
+    log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs", "training_report.log")
+    if not os.path.exists(log_path):
+        return PlainTextResponse("No hay informes de entrenamiento aún.\nEl primer informe se generará esta madrugada a las 04:30.", status_code=200)
+
+    try:
+        # Return the last 500 lines to avoid massive payloads if the file grows
+        with open(log_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            return PlainTextResponse("".join(lines[-500:]), status_code=200)
+    except Exception as e:
+        return PlainTextResponse(f"Error leyendo el informe: {e}", status_code=500)

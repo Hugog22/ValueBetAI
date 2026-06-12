@@ -49,11 +49,26 @@ async def lifespan(app: FastAPI):
         logger.info("🔄 Triggering background prediction cache warm-up…")
         import threading
         def _warm_cache_bg():
+            # Step 0: One-time DB cleanup — merge duplicate Team/Match records
+            # that arose from different API name variants (e.g. 'Bosnia-Herzegovina'
+            # vs 'Bosnia and Herzegovina'). Safe to run on every startup (idempotent).
+            try:
+                import sys as _sys, os as _os
+                scripts_dir = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "scripts")
+                if scripts_dir not in _sys.path:
+                    _sys.path.insert(0, scripts_dir)
+                from scripts.fix_duplicate_teams import fix_duplicate_teams
+                fix_duplicate_teams()
+                logger.info("✅ Startup: duplicate team/match cleanup complete.")
+            except Exception as e:
+                logger.warning(f"⚠️  Startup: duplicate cleanup failed (non-critical): {e}")
+
+            # Step 1: Warm the prediction cache
             try:
                 refresh_cache()
             except Exception as e:
                 logger.warning(f"⚠️  Startup cache warm-up failed: {e}")
-                
+
         threading.Thread(target=_warm_cache_bg, daemon=True).start()
 
         start_scheduler()

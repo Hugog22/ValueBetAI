@@ -115,25 +115,112 @@ def start_scheduler():
     logger.info("  ✓ Task 1 → Daily ETL at 04:00 Madrid time.")
 
     # ── Task 1.5: Auto-Retrain ML Models (After ETL) ──────────────────────────
-    import subprocess
     def _run_training():
-        logger.info("🤖 Starting automated ML retraining...")
+        """
+        Daily AI retraining job (04:30 Madrid).
+
+        Trains both the LaLiga/Premier/Champions XGBoost model and the
+        World Cup model, then writes a detailed report to
+        backend/logs/training_report.log showing what changed and why.
+        """
+        import time
+        from core.training_reporter import write_training_report, REPORT_PATH
+
+        logger.info("🤖 [scheduler] Starting automated AI retraining...")
+        logger.info(f"📝 Training reports will be written to: {REPORT_PATH}")
+
+        # ── Model 1: LaLiga / Premier / Champions XGBoost ─────────────────
+        t0 = time.time()
         try:
-            subprocess.run(["python", "scripts/train_model.py"], check=True)
-            subprocess.run(["python", "scripts/train_model_worldcup.py"], check=True)
-            logger.info("✅ ML retraining complete. Models updated.")
+            # Import and run training directly (avoids subprocess overhead,
+            # lets us capture the metadata dict that train() produces)
+            import sys, os
+            scripts_dir = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "scripts"
+            )
+            if scripts_dir not in sys.path:
+                sys.path.insert(0, scripts_dir)
+
+            import importlib
+            train_mod = importlib.import_module("train_model")
+            importlib.reload(train_mod)          # reload in case already imported once
+
+            # train_model.train() saves models + returns nothing; meta is in META_PATH
+            train_mod.train()
+            elapsed_1 = time.time() - t0
+
+            # Read the metadata it just wrote
+            import json
+            meta_path = train_mod.META_PATH
+            meta = {}
+            if os.path.exists(meta_path):
+                with open(meta_path) as f:
+                    meta = json.load(f)
+
+            write_training_report(
+                model_name="LaLiga / Premier / Champions — XGBoost",
+                success=True,
+                meta=meta,
+                duration_seconds=elapsed_1,
+            )
+            logger.info(f"✅ [scheduler] LaLiga model retrained in {elapsed_1:.0f}s")
+
         except Exception as e:
-            logger.error(f"❌ ML retraining failed: {e}")
+            elapsed_1 = time.time() - t0
+            logger.error(f"❌ [scheduler] LaLiga model retraining failed: {e}", exc_info=True)
+            write_training_report(
+                model_name="LaLiga / Premier / Champions — XGBoost",
+                success=False,
+                error=str(e),
+                duration_seconds=elapsed_1,
+            )
+
+        # ── Model 2: World Cup XGBoost ────────────────────────────────────
+        t0 = time.time()
+        try:
+            wc_mod = importlib.import_module("train_model_worldcup")
+            importlib.reload(wc_mod)
+
+            wc_mod.train()
+            elapsed_2 = time.time() - t0
+
+            meta_path_wc = wc_mod.META_PATH
+            meta_wc = {}
+            if os.path.exists(meta_path_wc):
+                with open(meta_path_wc) as f:
+                    meta_wc = json.load(f)
+
+            write_training_report(
+                model_name="Mundial 2026 — XGBoost",
+                success=True,
+                meta=meta_wc,
+                duration_seconds=elapsed_2,
+            )
+            logger.info(f"✅ [scheduler] World Cup model retrained in {elapsed_2:.0f}s")
+
+        except Exception as e:
+            elapsed_2 = time.time() - t0
+            logger.error(f"❌ [scheduler] World Cup model retraining failed: {e}", exc_info=True)
+            write_training_report(
+                model_name="Mundial 2026 — XGBoost",
+                success=False,
+                error=str(e),
+                duration_seconds=elapsed_2,
+            )
+
+        logger.info("🤖 [scheduler] AI retraining cycle complete.")
 
     scheduler.add_job(
         _run_training,
         trigger=CronTrigger(hour=4, minute=30, timezone="Europe/Madrid"),
         id="daily_model_retrain",
-        name="Daily: Retrain XGBoost Models",
+        name="Daily: Retrain XGBoost Models + write training report",
         replace_existing=True,
         misfire_grace_time=600,
     )
-    logger.info("  ✓ Task 1.5 → Daily Auto-Retrain at 04:30 Madrid time.")
+    logger.info("  ✓ Task 1.5 → Daily Auto-Retrain at 04:30 Madrid time (report → logs/training_report.log).")
+
 
     # ── Task 2: Valley days cache refresh (Mon–Thu) ───────────────────────────
     try:
