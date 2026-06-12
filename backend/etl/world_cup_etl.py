@@ -90,7 +90,7 @@ def sync_world_cup_odds() -> int:
     from db.session import SessionLocal
     from db.models import Team, Match, Odds
     from core.config import settings
-    from etl.odds_api import pick_best_bookmaker
+    from etl.odds_api import pick_best_bookmaker, fetch_with_rotation
 
     db = SessionLocal()
     new_count = 0
@@ -98,19 +98,19 @@ def sync_world_cup_odds() -> int:
     try:
         url = f"https://api.the-odds-api.com/v4/sports/{WC_ODDS_KEY}/odds"
         params = {
-            "apiKey":     settings.ODDS_API_KEY,
+            "apiKey":     "",
             "regions":    "eu,uk",
             "markets":    "h2h,totals",
             "oddsFormat": "decimal",
-            "bookmakers": "pinnacle,bet365,williamhill,betway",
+            "bookmakers": "bet365",
         }
 
-        resp = httpx.get(url, params=params, timeout=30)
+        resp = fetch_with_rotation(url, params=params, timeout=30)
         if resp.status_code == 422:
             logger.warning(f"[world_cup_etl] 422 from Odds API — {WC_ODDS_KEY} may not be available yet")
             return 0
         if resp.status_code == 401:
-            logger.warning("[world_cup_etl] Odds API auth error — check ODDS_API_KEY")
+            logger.warning("[world_cup_etl] Odds API auth error — check ODDS_API_KEYS")
             return 0
         resp.raise_for_status()
         events = resp.json()

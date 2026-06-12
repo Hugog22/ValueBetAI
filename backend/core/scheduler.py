@@ -221,18 +221,20 @@ def start_scheduler():
 
     # ── Task 2+3: Unified cache refresh every 2 hours, 7 days a week ─────────
     # HuggingFace is always-on (no sleep), so we refresh uniformly.
-    # ── Task 2: Cache refresh 8 veces al día (solo Mundial) ──────────────────────
-    # Coste API Mundial: 2 créditos/refresh.
-    # 8 refreshes/día × 2 créditos × 30 días = ~480 créditos/mes (límite: 500).
+    # ── Task 2: Cache refresh 144 veces al día (Mundial) ──────────────────────
+    # Al estar desactivadas las ligas de clubes (ENABLE_CLUB_LEAGUES=false),
+    # el coste es de solo 1 petición por refresco (Mundial).
+    # Refrescando cada 10 min, 24 horas al día = 144 refrescos/día.
+    # 144 peticiones × 30 días = 4320 peticiones/mes (presupuesto 4500 con 9 keys).
     scheduler.add_job(
         refresh_cache,
-        trigger=CronTrigger(hour="0,3,6,9,12,15,18,21", minute=0, timezone="Europe/Madrid"),
+        trigger=CronTrigger(minute="0,10,20,30,40,50", timezone="Europe/Madrid"),
         id="daily_cache_refresh",
-        name="8x/day cache refresh for World Cup",
+        name="144x/day cache refresh (WC only)",
         replace_existing=True,
         misfire_grace_time=60,
     )
-    logger.info("  ✓ Task 2 → Cache refresh 8x/día cada 3 horas (~480 créd/mes de 500)")
+    logger.info("  ✓ Task 2 → Cache refresh cada 10 minutos 24/7 (~4320 créd/mes)")
 
     # ── Task 3: Hourly bet settlement + conditional cache refresh ────────────
     scheduler.add_job(
@@ -246,7 +248,7 @@ def start_scheduler():
     logger.info("  ✓ Task 3 → Hourly bet settlement + conditional cache refresh (xx:05 Madrid).")
 
     scheduler.start()
-    logger.info("✅ Scheduler iniciado (HuggingFace 16GB — refresh 3x/día, ~360 créd/mes de 500).")
+    logger.info("✅ Scheduler iniciado (HuggingFace 16GB — refresh 16x/día, ~1920 créd/mes de 2500).")
 
 
 def stop_scheduler():

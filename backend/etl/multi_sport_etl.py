@@ -56,8 +56,7 @@ def sync_sport_matches(sport_key: str) -> int:
 
     from db.session import SessionLocal
     from db.models import Team, Match, Odds
-    from core.config import settings
-    import httpx
+    from etl.odds_api import fetch_with_rotation
 
     db = SessionLocal()
     new_count = 0
@@ -66,16 +65,19 @@ def sync_sport_matches(sport_key: str) -> int:
         # ── Fetch from The Odds API ────────────────────────────────────────
         url = f"https://api.the-odds-api.com/v4/sports/{odds_key}/odds"
         params = {
-            "apiKey":     settings.ODDS_API_KEY,
+            "apiKey":     "",
             "regions":    "eu,uk",
             "markets":    "h2h",          # totals only via world_cup_etl to save credits
             "oddsFormat": "decimal",
-            "bookmakers": "pinnacle,bet365,williamhill,betway",
+            "bookmakers": "bet365",
         }
-        resp = httpx.get(url, params=params, timeout=60)
+        resp = fetch_with_rotation(url, params=params, timeout=60)
 
         if resp.status_code == 422:
             logger.warning(f"[multi_sport_etl] {sport_key}: 422 from Odds API (market not available on free tier)")
+            return 0
+        if resp.status_code == 401:
+            logger.warning(f"[multi_sport_etl] {sport_key}: 401 from Odds API (auth error)")
             return 0
         resp.raise_for_status()
         events = resp.json()
