@@ -61,7 +61,6 @@ def get_laliga_odds_all_markets(markets: list[str] | None = None) -> list[dict]:
         "apiKey":     "",  # Injected by fetch_with_rotation
         "regions":    "eu,uk",
         "markets":    ",".join(markets),
-        "bookmakers": "bet365",
         "oddsFormat": "decimal",
     }
     response = fetch_with_rotation(url, params=params)
@@ -69,16 +68,6 @@ def get_laliga_odds_all_markets(markets: list[str] | None = None) -> list[dict]:
     return response.json()
 
 
-def pick_best_bookmaker(bookmakers: list[dict]) -> tuple[str, dict] | tuple[None, None]:
-    """
-    Strictly returns bet365 if available in the bookmakers list.
-    We no longer fallback to other bookmakers to ensure consistency.
-    """
-    for bm in bookmakers:
-        if bm.get("key") == "bet365":
-            return "bet365", bm
-
-    return None, None
 
 
 def detect_super_boosts(odds_data: list[dict]) -> list[dict]:

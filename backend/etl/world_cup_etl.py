@@ -90,7 +90,7 @@ def sync_world_cup_odds() -> int:
     from db.session import SessionLocal
     from db.models import Team, Match, Odds
     from core.config import settings
-    from etl.odds_api import pick_best_bookmaker, fetch_with_rotation
+    from etl.odds_api import fetch_with_rotation
 
     db = SessionLocal()
     new_count = 0
@@ -102,7 +102,6 @@ def sync_world_cup_odds() -> int:
             "regions":    "eu,uk",
             "markets":    "h2h,totals",
             "oddsFormat": "decimal",
-            "bookmakers": "bet365",
         }
 
         resp = fetch_with_rotation(url, params=params, timeout=30)
@@ -164,10 +163,12 @@ def sync_world_cup_odds() -> int:
                 db.flush()
                 new_count += 1
 
-            # Store h2h odds
+            # Store h2h odds for all bookmakers
             bookmakers = event.get("bookmakers", [])
-            bm_key, bookmaker = pick_best_bookmaker(bookmakers)
-            if bookmaker:
+            for bookmaker in bookmakers:
+                bm_key = bookmaker.get("key")
+                if not bm_key:
+                    continue
                 for mkt in bookmaker.get("markets", []):
                     if mkt["key"] != "h2h":
                         continue

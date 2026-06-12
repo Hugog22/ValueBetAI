@@ -111,7 +111,7 @@ def flush_and_reload():
         logger.info(f"Skipping stale odds deletion to build OddsHistory.")
 
         # Step 2: Fetch odds (all bookmakers, eu+uk regions)
-        from etl.odds_api import get_laliga_odds_all_markets, pick_best_bookmaker
+        from etl.odds_api import get_laliga_odds_all_markets
         logger.info("Fetching odds from The Odds API (regions=eu,uk, all bookmakers)…")
         odds_data = get_laliga_odds_all_markets()
         logger.info(f"Received data for {len(odds_data)} events from the API.")
@@ -170,111 +170,111 @@ def flush_and_reload():
             db_home = db.query(Team).filter(Team.id == match.home_team_id).first()
             db_away = db.query(Team).filter(Team.id == match.away_team_id).first()
 
-            # ---- Bookmaker priority fallback ----
-            bm_key, bookmaker = pick_best_bookmaker(event.get("bookmakers", []))
-            if not bookmaker:
-                logger.warning(f"  ⚠ No bookmakers for: {home_name} vs {away_name} — skipping")
-                skipped += 1
-                continue
+            # ---- Loop over all bookmakers ----
+            bookmakers = event.get("bookmakers", [])
+            for bookmaker in bookmakers:
+                bm_key = bookmaker.get("key")
+                if not bm_key:
+                    continue
 
-            odds_label = f"{bm_key}_live"
-            logger.info(
-                f"  ✓  [{bm_key}] {home_name} / {away_name} "
-                f"→ {db_home.name} vs {db_away.name}"
-            )
+                odds_label = f"{bm_key}_live"
+                logger.info(
+                    f"  ✓  [{bm_key}] {home_name} / {away_name} "
+                    f"→ {db_home.name} vs {db_away.name}"
+                )
 
-            for market in bookmaker.get("markets", []):
-                mkey = market["key"]
-                all_outcomes = market.get("outcomes", [])
-                
-                # Dynamic insert for ALL markets into MarketOdds table
-                from db.models import MarketOdds
-                for outcome in all_outcomes:
-                    db.add(MarketOdds(
-                        match_id=match.id,
-                        bookmaker=bm_key,
-                        market_key=mkey,
-                        outcome_name=outcome.get("name", "Unknown"),
-                        price=float(outcome.get("price", 0)),
-                        point=outcome.get("point"),
-                        timestamp=datetime.utcnow(),
-                    ))
-
-                if mkey == "h2h":
-                    # ---- EXPLICIT name-based mapping (never rely on index order) ----
-                    ho, dr, aw = 0.0, 0.0, 0.0
+                for market in bookmaker.get("markets", []):
+                    mkey = market["key"]
+                    all_outcomes = market.get("outcomes", [])
+                    
+                    # Dynamic insert for ALL markets into MarketOdds table
+                    from db.models import MarketOdds
                     for outcome in all_outcomes:
-                        oname  = outcome["name"]
-                        oprice = float(outcome["price"])
-                        if oname.strip().lower() == "draw":
-                            dr = oprice
-                        elif _name_matches(oname, db_home.name):
-                            ho = oprice
-                        elif _name_matches(oname, db_away.name):
-                            aw = oprice
-                        else:
+                        db.add(MarketOdds(
+                            match_id=match.id,
+                            bookmaker=bm_key,
+                            market_key=mkey,
+                            outcome_name=outcome.get("name", "Unknown"),
+                            price=float(outcome.get("price", 0)),
+                            point=outcome.get("point"),
+                            timestamp=datetime.utcnow(),
+                        ))
+
+                    if mkey == "h2h":
+                        # ---- EXPLICIT name-based mapping (never rely on index order) ----
+                        ho, dr, aw = 0.0, 0.0, 0.0
+                        for outcome in all_outcomes:
+                            oname  = outcome["name"]
+                            oprice = float(outcome["price"])
+                            if oname.strip().lower() == "draw":
+                                dr = oprice
+                            elif _name_matches(oname, db_home.name):
+                                ho = oprice
+                            elif _name_matches(oname, db_away.name):
+                                aw = oprice
+                            else:
+                                logger.warning(
+                                    f"    ⚠ Unmatched outcome: {oname!r} "
+                                    f"(home={db_home.name!r}, away={db_away.name!r})"
+                                )
+
+                        if not ho or not aw:
                             logger.warning(
-                                f"    ⚠ Unmatched outcome: {oname!r} "
-                                f"(home={db_home.name!r}, away={db_away.name!r})"
+                                f"    ⚠ Could not assign home/away for "
+                                f"{db_home.name} vs {db_away.name} — "
+                                f"outcomes: {[o['name'] for o in all_outcomes]}"
+                            )
+                            continue
+
+                        from core.steam_detector import detect_steam
+                        is_steam = detect_steam(db, match.id, bm_key, ho, aw, market="h2h")
+
+                        if is_steam:
+                            logger.warning(
+                                f"    🔥 STEAM DETECTED for {db_home.name} vs {db_away.name} on {bm_key}!"
                             )
 
-                    if not ho or not aw:
-                        logger.warning(
-                            f"    ⚠ Could not assign home/away for "
-                            f"{db_home.name} vs {db_away.name} — "
-                            f"outcomes: {[o['name'] for o in all_outcomes]}"
-                        )
-                        continue
-
-                    from core.steam_detector import detect_steam
-                    is_steam = detect_steam(db, match.id, bm_key, ho, aw, market="h2h")
-
-                    if is_steam:
-                        logger.warning(
-                            f"    🔥 STEAM DETECTED for {db_home.name} vs {db_away.name} on {bm_key}!"
-                        )
-
-                    logger.info(
-                        f"    h2h [{bm_key}] → home={ho:.2f}, draw={dr:.2f}, away={aw:.2f}"
-                    )
-                    
-                    # Instead of overwriting Odds, we add to OddsHistory for Line Shopping
-                    db.add(OddsHistory(
-                        match_id=match.id,
-                        bookmaker=bm_key,
-                        market="h2h",
-                        home_odds=ho,
-                        draw_odds=dr,
-                        away_odds=aw,
-                        timestamp=datetime.utcnow(),
-                    ))
-                    stored += 1
-
-                elif mkey == "totals":
-                    over  = next(
-                        (float(o["price"]) for o in all_outcomes
-                         if o["name"] == "Over"  and abs(o.get("point", 0) - 2.5) < 0.01),
-                        None
-                    )
-                    under = next(
-                        (float(o["price"]) for o in all_outcomes
-                         if o["name"] == "Under" and abs(o.get("point", 0) - 2.5) < 0.01),
-                        None
-                    )
-                    if over and under:
                         logger.info(
-                            f"    totals [{bm_key}] O/U 2.5 → over={over:.2f}, under={under:.2f}"
+                            f"    h2h [{bm_key}] → home={ho:.2f}, draw={dr:.2f}, away={aw:.2f}"
                         )
+                        
+                        # Instead of overwriting Odds, we add to OddsHistory for Line Shopping
                         db.add(OddsHistory(
                             match_id=match.id,
                             bookmaker=bm_key,
-                            market="totals_2.5",
-                            home_odds=over,
-                            draw_odds=0.0,
-                            away_odds=under,
+                            market="h2h",
+                            home_odds=ho,
+                            draw_odds=dr,
+                            away_odds=aw,
                             timestamp=datetime.utcnow(),
                         ))
                         stored += 1
+
+                    elif mkey == "totals":
+                        over  = next(
+                            (float(o["price"]) for o in all_outcomes
+                             if o["name"] == "Over"  and abs(o.get("point", 0) - 2.5) < 0.01),
+                            None
+                        )
+                        under = next(
+                            (float(o["price"]) for o in all_outcomes
+                             if o["name"] == "Under" and abs(o.get("point", 0) - 2.5) < 0.01),
+                            None
+                        )
+                        if over and under:
+                            logger.info(
+                                f"    totals [{bm_key}] O/U 2.5 → over={over:.2f}, under={under:.2f}"
+                            )
+                            db.add(OddsHistory(
+                                match_id=match.id,
+                                bookmaker=bm_key,
+                                market="totals_2.5",
+                                home_odds=over,
+                                draw_odds=0.0,
+                                away_odds=under,
+                                timestamp=datetime.utcnow(),
+                            ))
+                            stored += 1
 
         db.commit()
         logger.info(f"✅  Stored {stored} odds records. Skipped {skipped} events.")

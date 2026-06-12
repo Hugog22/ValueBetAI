@@ -62,16 +62,16 @@ def sync_sport_matches(sport_key: str) -> int:
     new_count = 0
 
     try:
-        # ── Fetch from The Odds API ────────────────────────────────────────
-        url = f"https://api.the-odds-api.com/v4/sports/{odds_key}/odds"
+        # ── Fetch from The Odds API ──────────────────────────────────────
+        url = f"https://api.the-odds-api.com/v4/sports/{api_sport_key}/odds"
         params = {
             "apiKey":     "",
             "regions":    "eu,uk",
-            "markets":    "h2h",          # totals only via world_cup_etl to save credits
+            "markets":    "h2h",
             "oddsFormat": "decimal",
-            "bookmakers": "bet365",
         }
-        resp = fetch_with_rotation(url, params=params, timeout=60)
+        
+        resp = fetch_with_rotation(url, params=params, timeout=30)
 
         if resp.status_code == 422:
             logger.warning(f"[multi_sport_etl] {sport_key}: 422 from Odds API (market not available on free tier)")
@@ -147,11 +147,12 @@ def sync_sport_matches(sport_key: str) -> int:
                 db.flush()
                 new_count += 1
 
-            # ── Store h2h odds ─────────────────────────────────────────────
+            # ── Store h2h odds for all bookmakers ─────────────────────────
             bookmakers = event.get("bookmakers", [])
-            from etl.odds_api import pick_best_bookmaker
-            bm_key, bookmaker = pick_best_bookmaker(bookmakers)
-            if bookmaker:
+            for bookmaker in bookmakers:
+                bm_key = bookmaker.get("key")
+                if not bm_key:
+                    continue
                 for mkt in bookmaker.get("markets", []):
                     if mkt["key"] != "h2h":
                         continue
