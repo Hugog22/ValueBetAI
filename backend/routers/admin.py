@@ -212,3 +212,30 @@ def get_training_report(
             return PlainTextResponse("".join(lines[-500:]), status_code=200)
     except Exception as e:
         return PlainTextResponse(f"Error leyendo el informe: {e}", status_code=500)
+
+@router.post("/clean-duplicates")
+def trigger_duplicate_cleanup(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Triggers the one-time duplicate team/match cleanup script.
+    Moved from startup background task to manual trigger to prevent
+    OOM memory spikes on Render free tier.
+    """
+    if current_user.email != "hugodesax123@gmail.com":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para ver esta página."
+        )
+    
+    import sys, os
+    scripts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts")
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+        
+    try:
+        from scripts.fix_duplicate_teams import fix_duplicate_teams
+        fix_duplicate_teams()
+        return {"status": "ok", "message": "Limpieza de duplicados ejecutada con éxito."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error durante limpieza: {str(e)}")
