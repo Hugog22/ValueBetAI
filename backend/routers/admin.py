@@ -223,16 +223,37 @@ def get_training_report(
         )
 
     log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs", "training_report.log")
-    if not os.path.exists(log_path):
+    wc_meta_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models", "wc_training_meta.json")
+    
+    report_text = ""
+    
+    # 1. World Cup AI Meta
+    if os.path.exists(wc_meta_path):
+        try:
+            with open(wc_meta_path, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+                report_text += "=== WORLD CUP AI ENSEMBLE ===\n"
+                report_text += f"Último entrenamiento: {meta.get('trained_at')}\n"
+                report_text += f"Partidos históricos analizados: {meta.get('training_rows')}\n"
+                report_text += f"Precisión (1X2): {meta.get('cv_1x2_acc') * 100:.2f}%\n"
+                report_text += f"LogLoss (O/U 2.5): {meta.get('cv_ou25_logloss'):.4f}\n\n"
+        except Exception as e:
+            report_text += f"Error leyendo meta del Mundial: {e}\n\n"
+
+    # 2. Clubs AI Log
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+                report_text += "=== CLUBS AI LOG ===\n"
+                report_text += "".join(lines[-500:])
+        except Exception as e:
+            report_text += f"Error leyendo log de Clubes: {e}\n"
+
+    if not report_text:
         return PlainTextResponse("No hay informes de entrenamiento aún.\nEl primer informe se generará esta madrugada a las 04:30.", status_code=200)
 
-    try:
-        # Return the last 500 lines to avoid massive payloads if the file grows
-        with open(log_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            return PlainTextResponse("".join(lines[-500:]), status_code=200)
-    except Exception as e:
-        return PlainTextResponse(f"Error leyendo el informe: {e}", status_code=500)
+    return PlainTextResponse(report_text, status_code=200)
 
 @router.post("/clean-duplicates")
 def trigger_duplicate_cleanup(

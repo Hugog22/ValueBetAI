@@ -44,29 +44,27 @@ async def lifespan(app: FastAPI):
         logger.info("🚀 Starting Value Betting API…")
         Base.metadata.create_all(bind=engine)
 
-        # Warm the cache in a daemon thread so the server binds quickly
-        # while still loading predictions in the background.
-        logger.info("🔄 Triggering background prediction cache warm-up…")
-        import threading
-        def _warm_cache_bg():
-            # Step 1: Clean duplicate teams/matches in the DB
-            try:
-                from scripts.fix_duplicate_teams import fix_duplicate_teams
-                from db.session import SessionLocal
-                with SessionLocal() as db:
-                    logger.info("🧹 Ejecutando limpieza de equipos duplicados en el arranque...")
-                    fix_duplicate_teams(db)
-                    logger.info("✅ Limpieza de duplicados completada.")
-            except Exception as e:
-                logger.error(f"⚠️ Failed to clean duplicates: {e}")
+        # Warm the cache synchronously before the server accepts requests.
+        # This ensures that when the API is available, all matches are already loaded.
+        logger.info("🔄 Running prediction cache warm-up synchronously…")
+        
+        # Step 1: Clean duplicate teams/matches in the DB
+        try:
+            from scripts.fix_duplicate_teams import fix_duplicate_teams
+            from db.session import SessionLocal
+            with SessionLocal() as db:
+                logger.info("🧹 Ejecutando limpieza de equipos duplicados en el arranque...")
+                fix_duplicate_teams(db)
+                logger.info("✅ Limpieza de duplicados completada.")
+        except Exception as e:
+            logger.error(f"⚠️ Failed to clean duplicates: {e}")
 
-            # Step 2: Warm the prediction cache
-            try:
-                refresh_cache()
-            except Exception as e:
-                logger.warning(f"⚠️  Startup cache warm-up failed: {e}")
-
-        threading.Thread(target=_warm_cache_bg, daemon=True).start()
+        # Step 2: Warm the prediction cache
+        try:
+            refresh_cache()
+            logger.info("✅ Cache warm-up completada.")
+        except Exception as e:
+            logger.warning(f"⚠️  Startup cache warm-up failed: {e}")
 
         start_scheduler()
         yield
