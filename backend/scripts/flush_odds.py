@@ -122,6 +122,8 @@ def flush_and_reload():
         # Step 3: Match to DB records and store with bookmaker fallback
         stored = 0
         skipped = 0
+        # Track which match IDs have been cleaned this run (delete-then-insert pattern)
+        cleaned_match_ids: set[int] = set()
 
         for event in odds_data:
             home_name = event.get("home_team", "")
@@ -156,6 +158,13 @@ def flush_and_reload():
                 )
                 skipped += 1
                 continue
+
+            # ── Upsert: clear old MarketOdds for this match before inserting fresh data
+            # This prevents unbounded table growth across multiple refresh cycles.
+            if match.id not in cleaned_match_ids:
+                from db.models import MarketOdds
+                db.query(MarketOdds).filter(MarketOdds.match_id == match.id).delete()
+                cleaned_match_ids.add(match.id)
 
             # Resolve DB home/away from the match record (not from API field order)
             db_home = db.query(Team).filter(Team.id == match.home_team_id).first()

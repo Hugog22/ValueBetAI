@@ -33,9 +33,42 @@ interface BetRecord {
     risk_bg_class: string;
 }
 
+interface PredictionDetail {
+    bet_id: number;
+    match_date: string;
+    home_team: string;
+    away_team: string;
+    market: string;
+    selection: string;
+    odds_taken: number;
+    stake: number;
+    status: string;
+    pnl: number;
+    user_email: string;
+}
+
+interface PredictionsDetailData {
+    period_days: number;
+    total: number;
+    won: number;
+    lost: number;
+    pending: number;
+    hit_rate: number;
+    total_staked: number;
+    net_pnl: number;
+    yield_percent: number;
+    predictions: PredictionDetail[];
+}
+
 export default function BankrollPage() {
     const [stats, setStats] = useState<BankrollStats | null>(null);
     const [adminStats, setAdminStats] = useState<any>(null);
+    const [predictionModal, setPredictionModal] = useState<{
+        open: boolean;
+        data: PredictionsDetailData | null;
+        loading: boolean;
+        days: number;
+    }>({ open: false, data: null, loading: false, days: 7 });
     const { token, user, logout } = useAuth();
 
     useEffect(() => {
@@ -57,6 +90,25 @@ export default function BankrollPage() {
         }
     }, [token, user]);
 
+    const openPredictionsModal = async (days: number = 7) => {
+        if (!token) return;
+        setPredictionModal({ open: true, data: null, loading: true, days });
+        try {
+            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+            const res = await fetch(`${API}/api/admin/predictions-detail?days=${days}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            setPredictionModal(prev => ({ ...prev, data, loading: false }));
+        } catch (err) {
+            console.error('Error fetching predictions detail', err);
+            setPredictionModal(prev => ({ ...prev, loading: false }));
+        }
+    };
+
+    const closePredictionsModal = () =>
+        setPredictionModal({ open: false, data: null, loading: false, days: 7 });
+
     const getSelectionLabel = (bet: BetRecord) => {
         const sel = bet.selection.toLowerCase();
         if (sel === 'home') return bet.home_team;
@@ -68,6 +120,7 @@ export default function BankrollPage() {
     };
 
     return (
+        <>
         <ProtectedRoute>
             <div className="min-h-screen bg-[#FCF9F1] text-[#1A1C1E] font-sans selection:bg-[#064E3B]/10 overflow-x-hidden">
 
@@ -166,10 +219,18 @@ export default function BankrollPage() {
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                                            <div className="bg-[#0A0F1E] p-6 rounded-[2rem] shadow-xl">
-                                                <div className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-2">Total Predicciones</div>
-                                                <div className="text-3xl font-editorial font-bold text-white">{adminStats.total_predictions}</div>
-                                            </div>
+                                                <div
+                                                    className="bg-[#0A0F1E] p-6 rounded-[2rem] shadow-xl cursor-pointer hover:bg-[#1A2240] active:scale-95 transition-all group"
+                                                    onClick={() => openPredictionsModal(7)}
+                                                    title="Ver detalle de predicciones"
+                                                >
+                                                    <div className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                                        Total Predicciones
+                                                        <span className="text-white/30 group-hover:text-white/60 transition-colors">↗</span>
+                                                    </div>
+                                                    <div className="text-3xl font-editorial font-bold text-white">{adminStats.total_predictions}</div>
+                                                    <div className="text-[9px] text-white/30 mt-2 group-hover:text-white/50 transition-colors">Ver desglose semanal</div>
+                                                </div>
                                             <div className="bg-emerald-50/50 p-6 rounded-[2rem] border border-emerald-100">
                                                 <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest mb-2">Acertadas</div>
                                                 <div className="text-3xl font-editorial font-bold text-emerald-900">{adminStats.won_predictions}</div>
@@ -268,5 +329,163 @@ export default function BankrollPage() {
                 </main>
             </div>
         </ProtectedRoute>
+
+        {/* PREDICTIONS DETAIL MODAL */}
+        {predictionModal.open && (
+            <div
+                className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                onClick={(e) => { if (e.target === e.currentTarget) closePredictionsModal(); }}
+            >
+                <div className="bg-[#FCF9F1] rounded-[2.5rem] shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+
+                    {/* Modal Header */}
+                    <div className="flex items-center justify-between px-10 py-8 border-b border-[#E5E7EB] flex-shrink-0">
+                        <div>
+                            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#64748B] mb-1">Acceso Administrador</div>
+                            <h2 className="text-3xl font-editorial font-bold text-[#1A1C1E]">
+                                Detalle de <span className="italic font-light">Predicciones</span>
+                            </h2>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {/* Period selector */}
+                            {[7, 14, 30].map(d => (
+                                <button
+                                    key={d}
+                                    onClick={() => openPredictionsModal(d)}
+                                    className={`px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all ${
+                                        predictionModal.days === d
+                                            ? 'bg-[#0A0F1E] text-white'
+                                            : 'bg-white border border-[#E5E7EB] text-[#64748B] hover:border-[#0A0F1E]'
+                                    }`}
+                                >
+                                    {d}d
+                                </button>
+                            ))}
+                            <button
+                                onClick={closePredictionsModal}
+                                className="ml-4 w-10 h-10 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#64748B] hover:bg-red-50 hover:text-red-600 transition-all text-xl font-bold"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div className="overflow-y-auto flex-1 px-10 py-8">
+                        {predictionModal.loading ? (
+                            <div className="flex flex-col items-center justify-center py-24 gap-4">
+                                <div className="w-10 h-10 border-4 border-[#0A0F1E]/20 border-t-[#0A0F1E] rounded-full animate-spin" />
+                                <p className="text-[#64748B] font-bold text-sm">Cargando predicciones…</p>
+                            </div>
+                        ) : predictionModal.data ? (
+                            <>
+                                {/* Summary strip */}
+                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-10">
+                                    <div className="bg-[#0A0F1E] p-5 rounded-2xl">
+                                        <div className="text-[9px] font-bold text-white/50 uppercase tracking-widest mb-1">Total</div>
+                                        <div className="text-2xl font-editorial font-bold text-white">{predictionModal.data.total}</div>
+                                    </div>
+                                    <div className="bg-emerald-50 border border-emerald-100 p-5 rounded-2xl">
+                                        <div className="text-[9px] font-bold text-emerald-800 uppercase tracking-widest mb-1">Acertadas</div>
+                                        <div className="text-2xl font-editorial font-bold text-emerald-900">{predictionModal.data.won}</div>
+                                    </div>
+                                    <div className="bg-rose-50 border border-rose-100 p-5 rounded-2xl">
+                                        <div className="text-[9px] font-bold text-rose-800 uppercase tracking-widest mb-1">Falladas</div>
+                                        <div className="text-2xl font-editorial font-bold text-rose-900">{predictionModal.data.lost}</div>
+                                    </div>
+                                    <div className="bg-amber-50 border border-amber-100 p-5 rounded-2xl">
+                                        <div className="text-[9px] font-bold text-amber-700 uppercase tracking-widest mb-1">Efectividad</div>
+                                        <div className="text-2xl font-editorial font-bold text-amber-900">{predictionModal.data.hit_rate}%</div>
+                                    </div>
+                                    <div className={`p-5 rounded-2xl border ${
+                                        predictionModal.data.net_pnl >= 0
+                                            ? 'bg-emerald-50 border-emerald-100'
+                                            : 'bg-rose-50 border-rose-100'
+                                    }`}>
+                                        <div className={`text-[9px] font-bold uppercase tracking-widest mb-1 ${
+                                            predictionModal.data.net_pnl >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                                        }`}>PnL Neto</div>
+                                        <div className={`text-2xl font-editorial font-bold ${
+                                            predictionModal.data.net_pnl >= 0 ? 'text-emerald-900' : 'text-rose-900'
+                                        }`}>
+                                            {predictionModal.data.net_pnl >= 0 ? '+' : ''}{predictionModal.data.net_pnl.toFixed(2)}€
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Predictions table */}
+                                {predictionModal.data.predictions.length === 0 ? (
+                                    <div className="text-center py-16 text-[#64748B]">
+                                        <div className="text-5xl mb-4">📭</div>
+                                        <p className="font-bold">No hay predicciones en los últimos {predictionModal.data.period_days} días</p>
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto rounded-2xl border border-[#E5E7EB]">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="bg-[#F8F9FB] border-b border-[#E5E7EB]">
+                                                    <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Fecha</th>
+                                                    <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Partido</th>
+                                                    <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Selección</th>
+                                                    <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Cuota</th>
+                                                    <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Estado</th>
+                                                    <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-[#64748B]">PnL</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-[#F1F5F9]">
+                                                {predictionModal.data.predictions.map(pred => (
+                                                    <tr key={pred.bet_id} className="bg-white hover:bg-[#F8F9FB] transition-colors">
+                                                        <td className="px-6 py-4 text-[#64748B] text-xs whitespace-nowrap">
+                                                            {new Date(pred.match_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="font-bold text-[#1A1C1E] text-xs">{pred.home_team}</div>
+                                                            <div className="text-[#64748B] text-[10px]">vs {pred.away_team}</div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="text-xs font-bold text-[#1A1C1E] capitalize">{pred.selection}</div>
+                                                            <div className="text-[10px] text-[#64748B]">{pred.market}</div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <span className="font-bold text-sm text-[#1A1C1E]">{pred.odds_taken.toFixed(2)}</span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            <span className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                                                pred.status === 'Won' ? 'bg-emerald-100 text-emerald-700' :
+                                                                pred.status === 'Lost' ? 'bg-rose-100 text-rose-700' :
+                                                                pred.status === 'Void' ? 'bg-gray-100 text-gray-500' :
+                                                                'bg-amber-100 text-amber-700'
+                                                            }`}>
+                                                                {pred.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            {pred.status === 'Pending' || pred.status === 'Void' ? (
+                                                                <span className="text-[#64748B] text-xs">—</span>
+                                                            ) : (
+                                                                <span className={`font-bold text-sm ${
+                                                                    pred.pnl >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                                                                }`}>
+                                                                    {pred.pnl >= 0 ? '+' : ''}{pred.pnl.toFixed(2)}€
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="text-center py-16 text-[#64748B]">
+                                <p className="font-bold">Error cargando datos. Inténtalo de nuevo.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 }

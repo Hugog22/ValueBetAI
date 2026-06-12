@@ -30,23 +30,42 @@ FD_WC_CODE   = "WC"
 # Internal sport key
 SPORT_KEY = "worldcup"
 
-# Team name aliases (various APIs use different names)
+# Team name aliases (various APIs use different names for the same team)
+# IMPORTANT: both source name AND all variants must map to the SAME canonical name
 TEAM_ALIASES: dict[str, str] = {
-    "USA":                      "United States",
-    "Korea Republic":           "South Korea",
-    "Republic of Korea":        "South Korea",
-    "Türkiye":                  "Turkey",
-    "Czech Republic":           "Czechia",
-    "IR Iran":                  "Iran",
-    "Côte d'Ivoire":            "Ivory Coast",
+    # API-Sports / Odds API variants
+    "USA":                          "United States",
+    "Korea Republic":               "South Korea",
+    "Republic of Korea":            "South Korea",
+    "Türkiye":                      "Turkey",
+    "Czech Republic":               "Czechia",
+    "IR Iran":                      "Iran",
+    "Côte d'Ivoire":                "Ivory Coast",
+    # Bosnia variants — the most common source of duplicates
+    "Bosnia-Herzegovina":           "Bosnia and Herzegovina",
+    "Bosnia & Herzegovina":         "Bosnia and Herzegovina",
+    # Other hyphenated variants
+    "Guinea-Bissau":                "Guinea Bissau",
+    "Equatorial-Guinea":            "Equatorial Guinea",
+    # Football-data.org variants
+    "North Macedonia":              "North Macedonia",
+    "DR Congo":                     "Democratic Republic of Congo",
+    "Congo DR":                     "Democratic Republic of Congo",
+    "Cape Verde Islands":           "Cape Verde",
+    "New Zealand":                  "New Zealand",
 }
 
 
 def _normalize_name(name: str) -> str:
-    """Normalize team name: strip accents, lower, apply aliases."""
-    name  = TEAM_ALIASES.get(name, name)
+    """Normalize team name: apply aliases, strip accents, lower, normalize separators."""
+    # Apply alias first (catches 'Bosnia-Herzegovina' → 'Bosnia and Herzegovina')
+    name = TEAM_ALIASES.get(name, name)
+    # Normalize hyphenated country names to space-separated
+    # so 'Bosnia-Herzegovina' == 'Bosnia and Herzegovina' after alias is applied
     nfkd  = unicodedata.normalize("NFKD", name)
     ascii_name = "".join(c for c in nfkd if not unicodedata.combining(c))
+    # Replace hyphens used as conjunctions with a space for comparison purposes
+    ascii_name = ascii_name.replace("-", " ")
     return ascii_name.lower().strip()
 
 
@@ -113,8 +132,12 @@ def sync_world_cup_odds() -> int:
             if match_date < datetime.utcnow():
                 continue
 
-            home_team = _get_or_create_team(db, home_name)
-            away_team = _get_or_create_team(db, away_name)
+            # Apply TEAM_ALIASES before lookup so both API sources use the
+            # same canonical team name, preventing duplicate Team rows.
+            canonical_home = TEAM_ALIASES.get(home_name, home_name)
+            canonical_away = TEAM_ALIASES.get(away_name, away_name)
+            home_team = _get_or_create_team(db, canonical_home)
+            away_team = _get_or_create_team(db, canonical_away)
 
             # Upsert match
             existing = (
