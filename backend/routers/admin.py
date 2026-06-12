@@ -68,13 +68,22 @@ def get_system_stats(
         .all()
     )
 
-    total_bets = len(all_bets)
+    # Deduplicate legacy merged bets or multiple clicks
+    seen_signatures = set()
+    unique_bets = []
+    for bet, match in all_bets:
+        sig = (bet.user_id, bet.match_id, bet.market, bet.selection)
+        if sig not in seen_signatures:
+            seen_signatures.add(sig)
+            unique_bets.append((bet, match))
+
+    total_bets = len(unique_bets)
     won_bets = 0
     lost_bets = 0
     total_invested = 0.0
     total_returned = 0.0
 
-    for bet, match in all_bets:
+    for bet, match in unique_bets:
         unit_stake = 1.0
         total_invested += unit_stake
         
@@ -127,7 +136,16 @@ def get_predictions_detail(
         .all()
     )
 
-    total = len(rows)
+    # Deduplicate legacy merged bets or multiple clicks
+    seen_signatures = set()
+    unique_rows = []
+    for bet, match, user in rows:
+        sig = (bet.user_id, bet.match_id, bet.market, bet.selection)
+        if sig not in seen_signatures:
+            seen_signatures.add(sig)
+            unique_rows.append((bet, match, user))
+
+    total = len(unique_rows)
     won = 0
     lost = 0
     pending = 0
@@ -135,7 +153,7 @@ def get_predictions_detail(
     net_pnl = 0.0
     predictions: List[PredictionDetail] = []
 
-    for bet, match, user in rows:
+    for bet, match, user in unique_rows:
         if bet.status == "Won":
             won += 1
             pnl = round((bet.stake * bet.odds_taken) - bet.stake, 2)
