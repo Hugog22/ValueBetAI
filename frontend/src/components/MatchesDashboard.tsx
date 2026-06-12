@@ -6,6 +6,7 @@ import Link from 'next/link';
 import FeaturedBet from '@/components/FeaturedBet';
 import BentoCard from '@/components/BentoCard';
 import BetModal from '@/components/BetModal';
+import BookmakersModal from '@/components/BookmakersModal';
 import WorldCupBanner from '@/components/WorldCupBanner';
 
 // Safelist for Tailwind JIT (backend-generated classes)
@@ -198,11 +199,14 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
   const [filterRisk, setFilterRisk] = useState<string>('all');
   const [minEV,      setMinEV]      = useState<number>(0);
   const [bankroll,   setBankroll]   = useState<number>(1000);
-  const [activeBet,  setActiveBet]  = useState<{
+
+  // Modals state
+  const [activeBet, setActiveBet] = useState<{
     matchId: number; homeTeam: string; awayTeam: string;
     market: string; outcome: string; label: string;
     odds: number; probability: number; ev: number;
   } | null>(null);
+  const [activeBookmakersMatch, setActiveBookmakersMatch] = useState<Match | null>(null);
 
   // Fetch bankroll
   useEffect(() => {
@@ -302,6 +306,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
             })}
             justification={featuredMatch.justification || ''}
             allBookmakers={featuredMatch.all_bookmakers}
+            onViewBookmakers={() => setActiveBookmakersMatch(featuredMatch)}
             onAction={() => handleSimulateBet(featuredMatch.id, featuredMatch.bestPick!, featuredMatch.homeTeam, featuredMatch.awayTeam)}
           />
         </section>
@@ -641,9 +646,22 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                           <div className={`text-lg font-editorial font-bold ${isWorldCupActive ? 'text-white' : 'text-[#1A1C1E]'}`}>
                             {pick.label}
                           </div>
-                          <button
-                            onClick={() => handleSimulateBet(match.id, pick, match.homeTeam, match.awayTeam)}
-                            className={`font-black px-4 py-2 rounded-xl transition-all active:scale-95 min-w-[60px] text-sm ${
+                          <div className="flex items-center gap-2">
+                            {match.all_bookmakers && match.all_bookmakers.length > 0 && (
+                              <button
+                                onClick={() => setActiveBookmakersMatch(match)}
+                                className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors ${
+                                  isWorldCupActive 
+                                    ? 'border-white/20 text-white/70 hover:bg-white/10 hover:text-white' 
+                                    : 'border-[#E5E7EB] text-[#64748B] hover:bg-[#F1F3F5] hover:text-[#1A1C1E]'
+                                }`}
+                              >
+                                Ver casas
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleSimulateBet(match.id, pick, match.homeTeam, match.awayTeam)}
+                              className={`font-black px-4 py-2 rounded-xl transition-all active:scale-95 min-w-[60px] text-sm ${
                               isWorldCupActive
                                 ? 'bg-white/10 hover:bg-amber-400 hover:text-[#0A0F1E] text-white border border-white/20'
                                 : 'bg-[#F1F3F5] hover:bg-[#064E3B] hover:text-white text-[#1A1C1E]'
@@ -651,6 +669,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                           >
                             {(pick.bookmaker_odds || pick.bookmakerOdds || 1.0).toFixed(2)}
                           </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -674,6 +693,16 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
             setActiveBet(null);
             alert(`✅ Apuesta registrada. Bankroll actualizado: ${newBankroll.toFixed(2)} €`);
           }}
+        />
+      )}
+
+      {/* ── BOOKMAKERS MODAL ───────────────────────────────────────────────── */}
+      {activeBookmakersMatch && (
+        <BookmakersModal
+          homeTeam={getEsName(activeBookmakersMatch.homeTeam)}
+          awayTeam={getEsName(activeBookmakersMatch.awayTeam)}
+          bookmakers={activeBookmakersMatch.all_bookmakers || []}
+          onClose={() => setActiveBookmakersMatch(null)}
         />
       )}
     </>

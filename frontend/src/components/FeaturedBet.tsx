@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Image from 'next/image';
 
 interface FeaturedBetProps {
@@ -20,6 +19,7 @@ interface FeaturedBetProps {
     bgClass: string;
   };
   allBookmakers?: { title: string; home_odds: number; draw_odds: number; away_odds: number }[];
+  onViewBookmakers?: () => void;
 }
 
 export default function FeaturedBet({
@@ -34,9 +34,9 @@ export default function FeaturedBet({
   aiProb = 0,
   bookieProb = 0,
   imagePath = '/featured_bet_placeholder.png',
-  allBookmakers = []
+  allBookmakers = [],
+  onViewBookmakers
 }: FeaturedBetProps) {
-  const [showBookies, setShowBookies] = useState(false);
   return (
     <div className="bento-card grid grid-cols-1 lg:grid-cols-2 min-h-[500px]">
       {/* Image Side */}
@@ -85,7 +85,7 @@ export default function FeaturedBet({
             <span className="text-2xl font-editorial font-bold text-[#1A1C1E]">{pick}</span>
           </div>
           
-          <div className="relative">
+          <div className="flex gap-4">
             <button 
               onClick={onAction}
               className="btn-premium group"
@@ -95,37 +95,13 @@ export default function FeaturedBet({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
             </button>
-            {allBookmakers && allBookmakers.length > 0 && (
+            {allBookmakers && allBookmakers.length > 0 && onViewBookmakers && (
               <button 
-                onClick={() => setShowBookies(!showBookies)}
-                className="absolute -bottom-8 right-0 text-[10px] font-bold text-[#64748B] uppercase hover:text-[#064E3B] transition-colors flex items-center gap-1"
+                onClick={onViewBookmakers}
+                className="px-6 py-4 rounded-full border border-[#E5E7EB] text-sm font-bold text-[#64748B] hover:text-[#064E3B] hover:border-[#064E3B] hover:bg-[#F8FAFC] transition-all"
               >
-                Ver cuotas detalladas 
-                <svg className={`w-3 h-3 transition-transform ${showBookies ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
+                Ver todas las casas
               </button>
-            )}
-            
-            {showBookies && allBookmakers && allBookmakers.length > 0 && (
-              <div className="absolute top-full right-0 mt-4 bg-white border border-[#E5E7EB] rounded-xl shadow-xl z-10 w-64 overflow-hidden">
-                <div className="bg-[#F8FAFC] px-4 py-2 border-b border-[#E5E7EB] flex justify-between items-center text-[10px] font-bold text-[#64748B] uppercase tracking-widest">
-                  <span>Casa de apuestas</span>
-                  <span>Cuota H2H</span>
-                </div>
-                <div className="max-h-60 overflow-y-auto">
-                  {allBookmakers.map((b, i) => (
-                    <div key={i} className="px-4 py-3 border-b border-[#E5E7EB] last:border-0 hover:bg-[#F8FAFC] transition-colors flex justify-between items-center">
-                      <span className="text-sm font-bold text-[#1A1C1E]">{b.title}</span>
-                      <div className="flex gap-2 text-xs">
-                        <span className="bg-[#E2E8F0] px-2 py-0.5 rounded font-bold text-[#475569]">{b.home_odds.toFixed(2)}</span>
-                        <span className="bg-[#E2E8F0] px-2 py-0.5 rounded font-bold text-[#475569]">{b.draw_odds.toFixed(2)}</span>
-                        <span className="bg-[#E2E8F0] px-2 py-0.5 rounded font-bold text-[#475569]">{b.away_odds.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             )}
           </div>
         </div>
