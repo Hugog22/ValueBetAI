@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     WIN_PROBABILITY_THRESHOLD: float = 0.60
     
     # Feature Flags
-    enable_club_leagues: bool = True
+    enable_club_leagues: bool = False
 
     # Sport key sent to The Odds API on every call.
     # Keeping it pinned to La Liga means 1 request = 1 competition.

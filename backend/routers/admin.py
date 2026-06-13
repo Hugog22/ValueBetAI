@@ -10,7 +10,6 @@ import os, json
 from db.session import get_db
 from db.models import Bet, Match, User, Team, WorldCupTeamStats, Player
 from routers.auth import get_current_user
-from core.training_reporter import get_training_reports
 
 ADMIN_EMAIL = "hugodesax123@gmail.com"
 
