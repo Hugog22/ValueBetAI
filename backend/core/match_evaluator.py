@@ -394,8 +394,12 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     h2h_n       = pred.get("h2h_matches", 0)
     h2h_note    = f"H2H: {h2h_n} partidos históricos." if h2h_n > 0 else "Primer enfrentamiento en un Mundial."
 
-    # Fetch DB info
-    db = SessionLocal()
+    # Fetch DB info using provided session or create local
+    local_db_created = False
+    if db is None:
+        db = SessionLocal()
+        local_db_created = True
+        
     h_team = db.query(Team).filter(Team.name == home).first()
     a_team = db.query(Team).filter(Team.name == away).first()
     
@@ -429,7 +433,8 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     else:
         player_note = " (Estadísticas individuales en pausa por límites de API, 0 jugadores evaluados)."
         
-    db.close()
+    if local_db_created:
+        db.close()
 
     justification = (
         f"FIFA Rankings: {home} ({home_pts:.0f} pts) vs {away} ({away_pts:.0f} pts). "
