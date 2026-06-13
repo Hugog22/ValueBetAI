@@ -62,10 +62,11 @@ def sync_sport_matches(sport_key: str) -> int:
     new_count = 0
 
     try:
+        from core.config import settings
         # ── Fetch from The Odds API ──────────────────────────────────────
-        url = f"https://api.the-odds-api.com/v4/sports/{api_sport_key}/odds"
+        url = f"https://api.the-odds-api.com/v4/sports/{odds_key}/odds"
         params = {
-            "apiKey":     "",
+            "apiKey":     settings.ODDS_API_KEY,
             "regions":    "eu,uk",
             "markets":    "h2h",
             "oddsFormat": "decimal",

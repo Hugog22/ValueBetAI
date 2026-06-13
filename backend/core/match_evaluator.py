@@ -13,7 +13,7 @@ The correct evaluator is selected by cache_service based on sport key.
 import random
 from datetime import datetime
 from sqlalchemy.orm import Session
-from db.models import Match, Odds, MarketOdds, OddsHistory
+from db.models import Match, Odds, MarketOdds, OddsHistory, Team, WorldCupTeamStats, Player
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +106,19 @@ def _get_odds(match: Match, db: Session | None = None) -> dict | None:
 # ---------------------------------------------------------------------------
 
 def _build_match_features(match: Match) -> dict:
-    """Build ELO-based proxy features for club football matches."""
+    """
+    Build features for club football matches.
+
+    Produces the same FEATURES_CORE set expected by the ensemble models:
+      home_xg_for_avg5, home_xg_ag_avg5, home_goals_avg5, home_pts_avg5,
+      away_xg_for_avg5, away_xg_ag_avg5, away_goals_avg5, away_pts_avg5,
+      home_opp_pts_avg5, home_opp_xgag_avg5, away_opp_pts_avg5, away_opp_xgag_avg5,
+      home_xg_adj, away_xg_adj, xg_diff, form_diff, opp_diff, xg_adj_diff,
+      rest_days_home, rest_days_away, home_elo, away_elo, elo_diff, league_encoded
+
+    All computed from ELO proxies so the model has meaningful signals even
+    without live Understat data for non-La Liga matches.
+    """
     home, away = match.home_team.name, match.away_team.name
 
     def get_elo(team_name: str) -> int:
@@ -125,24 +137,57 @@ def _build_match_features(match: Match) -> dict:
     a_pow    = away_elo / 1500.0
     rng      = random.Random(match.id)
 
+    # ELO-derived rolling averages (avg5 names to match FEATURES_CORE)
+    home_xg_for  = round(1.2 * h_pow, 2)
+    away_xg_for  = round(1.1 * a_pow, 2)
+    home_xg_ag   = round(1.1 * a_pow, 2)   # proxy: what the opponent scores
+    away_xg_ag   = round(1.2 * h_pow, 2)
+    home_goals   = round(1.5 * h_pow, 2)
+    away_goals   = round(1.2 * a_pow, 2)
+    home_pts     = round(1.8 * h_pow, 2)
+    away_pts     = round(1.4 * a_pow, 2)
+
+    # Opponent quality proxies
+    home_opp_pts  = round(1.4 * a_pow, 2)
+    away_opp_pts  = round(1.8 * h_pow, 2)
+    home_opp_xgag = round(1.1 * a_pow, 2)
+    away_opp_xgag = round(1.2 * h_pow, 2)
+
+    home_xg_adj = round(home_xg_for - home_opp_xgag, 3)
+    away_xg_adj = round(away_xg_for - away_opp_xgag, 3)
+
     return {
-        "home_elo":          home_elo,
-        "away_elo":          away_elo,
-        "elo_diff":          home_elo - away_elo,
-        "home_xg_for_avg10": round(1.2 * h_pow, 2),
-        "away_xg_for_avg10": round(1.1 * a_pow, 2),
-        "xg_diff":           round((1.2 * h_pow) - (1.1 * a_pow), 2),
-        "home_possession_avg10":   round(50 * h_pow, 1),
-        "away_possession_avg10":   round(50 * a_pow, 1),
-        "possession_diff":         round((50 * h_pow) - (50 * a_pow), 1),
-        "home_shots_target_avg10": round(4.5 * h_pow, 1),
-        "away_shots_target_avg10": round(4.0 * a_pow, 1),
-        "shots_diff":              round((4.5 * h_pow) - (4.0 * a_pow), 1),
-        "home_absences":     rng.randint(0, 3),
-        "away_absences":     rng.randint(0, 3),
-        "absence_severity":  rng.randint(0, 1),
-        "rest_days_home":    rng.randint(4, 7),
-        "rest_days_away":    rng.randint(4, 7),
+        # Own form (avg5)
+        "home_xg_for_avg5":   home_xg_for,
+        "home_xg_ag_avg5":    home_xg_ag,
+        "home_goals_avg5":    home_goals,
+        "home_pts_avg5":      home_pts,
+        "away_xg_for_avg5":   away_xg_for,
+        "away_xg_ag_avg5":    away_xg_ag,
+        "away_goals_avg5":    away_goals,
+        "away_pts_avg5":      away_pts,
+        # Opponent quality
+        "home_opp_pts_avg5":  home_opp_pts,
+        "home_opp_xgag_avg5": home_opp_xgag,
+        "away_opp_pts_avg5":  away_opp_pts,
+        "away_opp_xgag_avg5": away_opp_xgag,
+        # Adjusted xG
+        "home_xg_adj":        home_xg_adj,
+        "away_xg_adj":        away_xg_adj,
+        # Differentials
+        "xg_diff":            round(home_xg_for - away_xg_for, 2),
+        "form_diff":          round(home_pts    - away_pts,    2),
+        "opp_diff":           round(home_opp_pts - away_opp_pts, 2),
+        "xg_adj_diff":        round(home_xg_adj  - away_xg_adj,  3),
+        # Rest / fatigue
+        "rest_days_home":     rng.randint(4, 7),
+        "rest_days_away":     rng.randint(4, 7),
+        # ELO
+        "home_elo":           home_elo,
+        "away_elo":           away_elo,
+        "elo_diff":           home_elo - away_elo,
+        # League encoding (0 = La Liga default; Premier=1, Champions=2)
+        "league_encoded":     0,
     }
 
 
@@ -319,12 +364,37 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
 
     home, away = match.home_team.name, match.away_team.name
 
-    # Detect knockout stage (heuristic: if odds are very skewed it may be knockout)
-    # The ETL doesn't store stage info in the DB currently; default to group stage
+    # Detect knockout stage
     is_knockout = False
+    
+    local_db_created = False
+    if db is None:
+        from db.session import SessionLocal
+        db = SessionLocal()
+        local_db_created = True
+        
+    from db.models import WorldCupTeamStats, Player
+    h_team = db.query(Team).filter(Team.name == home).first()
+    a_team = db.query(Team).filter(Team.name == away).first()
+    
+    h_stat = db.query(WorldCupTeamStats).filter(WorldCupTeamStats.team_id == h_team.id).first() if h_team else None
+    a_stat = db.query(WorldCupTeamStats).filter(WorldCupTeamStats.team_id == a_team.id).first() if a_team else None
+    
+    from sqlalchemy.sql import func
+    avg_h = db.query(func.avg(Player.rating)).filter(Player.team_id == h_team.id).scalar() if h_team else None
+    avg_a = db.query(func.avg(Player.rating)).filter(Player.team_id == a_team.id).scalar() if a_team else None
+    
+    extra_features = {
+        "home_wc_matches": h_stat.matches_played if h_stat else 0,
+        "away_wc_matches": a_stat.matches_played if a_stat else 0,
+        "home_wc_goals": (h_stat.goals_for + h_stat.goals_against) if h_stat else 0,
+        "away_wc_goals": (a_stat.goals_for + a_stat.goals_against) if a_stat else 0,
+    }
+    if avg_h: extra_features["home_avg_player_rating"] = float(avg_h)
+    if avg_a: extra_features["away_avg_player_rating"] = float(avg_a)
 
     # Get prediction from World Cup specialist model
-    pred = wc_predictor.predict_match(home, away, is_knockout=is_knockout)
+    pred = wc_predictor.predict_match(home, away, is_knockout=is_knockout, extra_features=extra_features)
 
     # Get odds (real only)
     odds   = _get_odds(match, db)
@@ -394,14 +464,7 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     h2h_n       = pred.get("h2h_matches", 0)
     h2h_note    = f"H2H: {h2h_n} partidos históricos." if h2h_n > 0 else "Primer enfrentamiento en un Mundial."
 
-    # Fetch DB info using provided session or create local
-    local_db_created = False
-    if db is None:
-        db = SessionLocal()
-        local_db_created = True
-        
-    h_team = db.query(Team).filter(Team.name == home).first()
-    a_team = db.query(Team).filter(Team.name == away).first()
+    # DB info already fetched above
     
     h_stats_str = ""
     a_stats_str = ""

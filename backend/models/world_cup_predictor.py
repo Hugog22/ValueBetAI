@@ -124,6 +124,11 @@ DEFAULTS: dict[str, float] = {
     "away_conceded_avg5": 1.3,
     "home_avg_player_rating": 6.5,
     "away_avg_player_rating": 6.5,
+    # Dynamic WC match stats (injected via extra_features; default to 0 cold-start)
+    "home_wc_matches":        0.0,
+    "away_wc_matches":        0.0,
+    "home_wc_goals":          0.0,
+    "away_wc_goals":          0.0,
 }
 
 
@@ -357,27 +362,9 @@ class WorldCupPredictor:
 
         h2h_home   = _h2h.get_stats(home_n, away_n)
         h2h_away   = _h2h.get_stats(away_n, home_n)
-
-        # Try to fetch real-time player ratings from database
+        # Player ratings are now injected via extra_features, otherwise fallback to squad quality
         home_rating = home_qual / 10.0
         away_rating = away_qual / 10.0
-        try:
-            from db.session import SessionLocal
-            from db.models import Team, Player
-            from sqlalchemy.sql import func
-            db = SessionLocal()
-            ht_db = db.query(Team).filter(Team.name == home_n).first()
-            at_db = db.query(Team).filter(Team.name == away_n).first()
-            
-            if ht_db:
-                avg_h = db.query(func.avg(Player.rating)).filter(Player.team_id == ht_db.id).scalar()
-                if avg_h: home_rating = float(avg_h)
-            if at_db:
-                avg_a = db.query(func.avg(Player.rating)).filter(Player.team_id == at_db.id).scalar()
-                if avg_a: away_rating = float(avg_a)
-            db.close()
-        except Exception as e:
-            logger.warning(f"Could not load live player ratings: {e}")
 
         return {
             "home_fifa_pts":      home_pts,
@@ -419,7 +406,7 @@ class WorldCupPredictor:
         if not self._ready:
             self.load_model()
 
-        fv = self._build_feature_vector(home, away, is_knockout)
+        fv = {**DEFAULTS, **self._build_feature_vector(home, away, is_knockout)}
         if extra_features:
             fv.update(extra_features)
 
