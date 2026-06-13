@@ -10,6 +10,8 @@ httpx
 pandas
 scikit-learn
 xgboost
+lightgbm
+optuna
 python-dotenv
 
 understatapi
