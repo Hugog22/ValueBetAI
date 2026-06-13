@@ -217,9 +217,22 @@ def sync_world_cup_odds() -> int:
 def update_world_cup_team_stats(db: Session):
     from db.models import Match, Team, WorldCupTeamStats
     from sqlalchemy import or_, and_
+    import json
+    import os
     
-    # Get all teams
-    teams = db.query(Team).all()
+    # Get only WC teams
+    squads_file = os.path.join(os.path.dirname(__file__), "..", "data", "world_cup_squads.json")
+    wc_team_names = []
+    if os.path.exists(squads_file):
+        with open(squads_file, "r") as f:
+            squads_data = json.load(f)
+            wc_team_names = list(squads_data.keys())
+            
+    if not wc_team_names:
+        logger.warning("[world_cup_etl] world_cup_squads.json not found, skipping stats update")
+        return
+        
+    teams = db.query(Team).filter(Team.name.in_(wc_team_names)).all()
     
     for team in teams:
         # Get all finished matches for this team

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
@@ -65,6 +65,7 @@ export default function BankrollPage() {
     const [adminStats, setAdminStats] = useState<any>(null);
     const [wcTeamStats, setWcTeamStats] = useState<any[]>([]);
     const [wcPlayers, setWcPlayers] = useState<any[]>([]);
+    const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
     const [predictionModal, setPredictionModal] = useState<{
         open: boolean;
         data: PredictionsDetailData | null;
@@ -369,11 +370,47 @@ export default function BankrollPage() {
                                                         <tbody className="divide-y divide-[#E5E7EB]">
                                                             {wcTeamStats.length === 0 && <tr><td colSpan={3} className="p-6 text-center text-[#64748B]">No hay datos de equipos</td></tr>}
                                                             {wcTeamStats.map((t, idx) => (
-                                                                <tr key={idx} className="hover:bg-slate-50">
-                                                                    <td className="px-6 py-4 font-bold text-[#1A1C1E]">{getEsName(t.team_name)}</td>
-                                                                    <td className="px-6 py-4 text-[#64748B]">{t.matches_played} PJ <span className="text-emerald-600 font-medium">({t.goals_for} GF)</span></td>
-                                                                    <td className="px-6 py-4 text-[10px] font-mono text-[#94A3B8]">{t.last_updated.substring(0,16).replace('T', ' ')}</td>
-                                                                </tr>
+                                                                <React.Fragment key={idx}>
+                                                                    <tr 
+                                                                        className="hover:bg-slate-50 cursor-pointer transition-colors"
+                                                                        onClick={() => setExpandedTeam(expandedTeam === t.team_name ? null : t.team_name)}
+                                                                    >
+                                                                        <td className="px-6 py-4 font-bold text-[#1A1C1E] flex justify-between items-center">
+                                                                            <span>{getEsName(t.team_name)}</span>
+                                                                            <span className={`text-[10px] text-gray-400 transition-transform ${expandedTeam === t.team_name ? 'rotate-180' : ''}`}>▼</span>
+                                                                        </td>
+                                                                        <td className="px-6 py-4 text-[#64748B]">{t.matches_played} PJ <span className="text-emerald-600 font-medium">({t.goals_for} GF)</span></td>
+                                                                        <td className="px-6 py-4 text-[10px] font-mono text-[#94A3B8]">{t.last_updated.substring(0,16).replace('T', ' ')}</td>
+                                                                    </tr>
+                                                                    {expandedTeam === t.team_name && (
+                                                                        <tr className="bg-slate-50/50">
+                                                                            <td colSpan={3} className="px-6 py-4 border-b border-[#E5E7EB]">
+                                                                                <div className="grid grid-cols-5 gap-4 text-xs">
+                                                                                    <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-sm">
+                                                                                        <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest mb-1">Victorias</div>
+                                                                                        <div className="font-editorial text-xl font-bold text-emerald-900">{t.wins}</div>
+                                                                                    </div>
+                                                                                    <div className="bg-white p-3 rounded-xl border border-[#E5E7EB] shadow-sm">
+                                                                                        <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-1">Empates</div>
+                                                                                        <div className="font-editorial text-xl font-bold text-[#1A1C1E]">{t.draws}</div>
+                                                                                    </div>
+                                                                                    <div className="bg-white p-3 rounded-xl border border-rose-100 shadow-sm">
+                                                                                        <div className="text-[10px] font-bold text-rose-800 uppercase tracking-widest mb-1">Derrotas</div>
+                                                                                        <div className="font-editorial text-xl font-bold text-rose-900">{t.losses}</div>
+                                                                                    </div>
+                                                                                    <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-sm">
+                                                                                        <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest mb-1">Goles Favor</div>
+                                                                                        <div className="font-editorial text-xl font-bold text-emerald-900">{t.goals_for}</div>
+                                                                                    </div>
+                                                                                    <div className="bg-white p-3 rounded-xl border border-rose-100 shadow-sm">
+                                                                                        <div className="text-[10px] font-bold text-rose-800 uppercase tracking-widest mb-1">Goles Contra</div>
+                                                                                        <div className="font-editorial text-xl font-bold text-rose-900">{t.goals_against}</div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    )}
+                                                                </React.Fragment>
                                                             ))}
                                                         </tbody>
                                                     </table>
