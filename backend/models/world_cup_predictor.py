@@ -61,6 +61,12 @@ FIFA_POINTS: dict[str, float] = {
     "Panama": 1398.0, "Venezuela": 1388.0, "Chile": 1378.0,
     "Paraguay": 1366.0, "Bolivia": 1348.0, "Honduras": 1336.0,
     "El Salvador": 1320.0, "New Zealand": 1298.0, "Saudi Arabia": 1280.0,
+    "Haiti": 1260.0, "Curaçao": 1250.0, "Ivory Coast": 1530.0,
+    "Sweden": 1530.0, "Tunisia": 1520.0, "Cape Verde": 1300.0,
+    "Egypt": 1500.0, "Iran": 1610.0, "Iraq": 1420.0,
+    "Norway": 1460.0, "Algeria": 1480.0, "Jordan": 1380.0,
+    "DR Congo": 1380.0, "Ghana": 1450.0, "Uzbekistan": 1380.0,
+    "South Africa": 1410.0, "Bosnia & Herzegovina": 1330.0, "Qatar": 1440.0,
     # Aliases
     "USA": 1630.0, "Korea Republic": 1596.0, "Türkiye": 1524.0,
     "Czech Republic": 1460.0,
