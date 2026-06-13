@@ -27,10 +27,20 @@ def get_headers():
 
 def fetch_team_api_football_id(team_name: str) -> int:
     """Finds the API-Football team ID for a given team name."""
+    import time
     try:
+        # Try exact name match
         resp = httpx.get(f"{API_URL}/teams", headers=get_headers(), params={"name": team_name})
         resp.raise_for_status()
         data = resp.json()
+        
+        # If no exact match, try search
+        if not data.get("response"):
+            time.sleep(6) # Respect rate limits
+            resp = httpx.get(f"{API_URL}/teams", headers=get_headers(), params={"search": team_name})
+            resp.raise_for_status()
+            data = resp.json()
+            
         if data.get("response"):
             # National teams often have national=True
             for t in data["response"]:
