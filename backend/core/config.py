@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     API_SPORTS_KEY: str
     FOOTBALL_DATA_API_KEY: str = ""  # football-data.org — World Cup data (set via HF Secret)
     SECRET_KEY: str = "supersecret_change_me_in_production"
-    enable_club_leagues: bool = False
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 days for convenience
 

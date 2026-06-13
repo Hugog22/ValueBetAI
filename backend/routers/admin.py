@@ -10,6 +10,9 @@ import os, json
 from db.session import get_db
 from db.models import Bet, Match, User, Team, WorldCupTeamStats, Player
 from routers.auth import get_current_user
+from core.training_reporter import get_training_reports
+
+ADMIN_EMAIL = "hugodesax123@gmail.com"
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -55,7 +58,7 @@ def get_system_stats(
     Returns global system performance based on the AI's predictions
     vs actual finished match results. Only accessible to the admin.
     """
-    if current_user.email != "hugodesax123@gmail.com":
+    if current_user.email != ADMIN_EMAIL:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permisos para ver esta página."
@@ -120,7 +123,7 @@ def get_predictions_detail(
     (default: 7). Shows won/lost/pending per prediction with PnL.
     Only accessible to the admin.
     """
-    if current_user.email != "hugodesax123@gmail.com":
+    if current_user.email != ADMIN_EMAIL:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permisos para ver esta página."
@@ -216,7 +219,7 @@ def get_training_report(
     Returns the latest training report log as plain text.
     Only accessible to the admin.
     """
-    if current_user.email != "hugodesax123@gmail.com":
+    if current_user.email != ADMIN_EMAIL:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permisos para ver esta página."
@@ -271,7 +274,7 @@ def trigger_duplicate_cleanup(
     Moved from startup background task to manual trigger to prevent
     OOM memory spikes on Render free tier.
     """
-    if current_user.email != "hugodesax123@gmail.com":
+    if current_user.email != ADMIN_EMAIL:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permisos para ver esta página."
@@ -317,7 +320,7 @@ def get_wc_team_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.email != "hugodesax123@gmail.com":
+    if current_user.email != ADMIN_EMAIL:
         raise HTTPException(status_code=403, detail="Forbidden")
         
     stats = db.query(WorldCupTeamStats, Team).join(Team, WorldCupTeamStats.team_id == Team.id).all()
@@ -340,7 +343,7 @@ def get_wc_players(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.email != "hugodesax123@gmail.com":
+    if current_user.email != ADMIN_EMAIL:
         raise HTTPException(status_code=403, detail="Forbidden")
         
     players = db.query(Player, Team).join(Team, Player.team_id == Team.id).all()

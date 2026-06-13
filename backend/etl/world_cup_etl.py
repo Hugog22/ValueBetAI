@@ -98,7 +98,7 @@ def sync_world_cup_odds() -> int:
     try:
         url = f"https://api.the-odds-api.com/v4/sports/{WC_ODDS_KEY}/odds"
         params = {
-            "apiKey":     "",
+            "apiKey":     settings.ODDS_API_KEY,
             "regions":    "eu,uk",
             "markets":    "h2h,totals",
             "oddsFormat": "decimal",

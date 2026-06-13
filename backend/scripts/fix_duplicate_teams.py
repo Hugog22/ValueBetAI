@@ -125,6 +125,7 @@ def fix_duplicate_teams():
             for canonical_m in seen:
                 if (canonical_m.home_team_id == m.home_team_id
                         and canonical_m.away_team_id == m.away_team_id
+                        and canonical_m.date is not None and m.date is not None
                         and abs((canonical_m.date - m.date).total_seconds()) <= 10800):  # 3h
                     # This is a duplicate — merge into the canonical match
                     logger.info(
@@ -151,9 +152,7 @@ def fix_duplicate_teams():
                     db.query(MarketOdds).filter(MarketOdds.match_id == m.id).update(
                         {"match_id": canonical_m.id}, synchronize_session=False
                     )
-                    db.query(Prediction).filter(Prediction.match_id == m.id).update(
-                        {"match_id": canonical_m.id}, synchronize_session=False
-                    )
+                    # No Prediction model exists, skipping.
                     duplicate_match_ids.append(m.id)
                     is_dup = True
                     break

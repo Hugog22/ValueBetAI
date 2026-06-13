@@ -70,6 +70,14 @@ def get_laliga_odds_all_markets(markets: list[str] | None = None) -> list[dict]:
 
 
 
+def pick_best_bookmaker(bookmakers: list[dict]) -> tuple[str, dict]:
+    if not bookmakers:
+        return "", {}
+    for b in bookmakers:
+        if b.get("key") == "pinnacle":
+            return "pinnacle", b
+    return bookmakers[0].get("key", ""), bookmakers[0]
+
 def detect_super_boosts(odds_data: list[dict]) -> list[dict]:
     """
     Detect value boosts: events where the best bookmaker's h2h implied
@@ -83,9 +91,9 @@ def detect_super_boosts(odds_data: list[dict]) -> list[dict]:
         for market in bookmaker.get("markets", []):
             if market["key"] == "h2h":
                 implied_prob = sum(
-                    1.0 / outcome["price"]
+                    1.0 / float(outcome["price"])
                     for outcome in market["outcomes"]
-                    if outcome["price"] > 0
+                    if float(outcome["price"]) > 0
                 )
                 if implied_prob < 1.0:
                     boosts.append({

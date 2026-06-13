@@ -11,13 +11,14 @@ if DATABASE_URL.startswith("postgres://"):
 if "amazonaws.com" in DATABASE_URL or "supabase.com" in DATABASE_URL:
     if ":6543" in DATABASE_URL:
         DATABASE_URL = DATABASE_URL.replace(":6543", ":5432")
-    
-    if "sslmode=" not in DATABASE_URL:
-        DATABASE_URL += "&sslmode=require" if "?" in DATABASE_URL else "?sslmode=require"
 
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 else:
+    connect_args = {}
+    if "amazonaws.com" in DATABASE_URL or "supabase.com" in DATABASE_URL:
+        connect_args["sslmode"] = "require"
+
     # Use standard Pooling with pre-ping for Direct Port 5432
     engine = create_engine(
         DATABASE_URL,
@@ -26,7 +27,7 @@ else:
         pool_timeout=30,
         pool_recycle=1800,
         pool_pre_ping=True,
-        connect_args={"sslmode": "require"}
+        connect_args=connect_args
     )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -32,21 +32,12 @@ PATH_OU25_RF  = os.path.join(MODELS_DIR, "ensemble_ou2.5_rf.pkl")
 PATH_CORNERS  = os.path.join(MODELS_DIR, "xgb_corners.json")
 
 FEATURES_CORE = [
-    # Own form
-    "home_xg_for_avg5", "home_xg_ag_avg5", "home_goals_avg5", "home_pts_avg5",
-    "away_xg_for_avg5", "away_xg_ag_avg5", "away_goals_avg5", "away_pts_avg5",
-    # Opponent-adjusted
-    "home_opp_pts_avg5", "home_opp_xgag_avg5",
-    "away_opp_pts_avg5", "away_opp_xgag_avg5",
-    "home_xg_adj", "away_xg_adj",
-    # Differential signals
-    "xg_diff", "form_diff", "opp_diff", "xg_adj_diff",
-    # Fatigue
-    "rest_days_home", "rest_days_away",
-    # ELO — absolute team strength
     "home_elo", "away_elo", "elo_diff",
-    # League encoding — model learns league-specific patterns
-    "league_encoded",
+    "home_xg_for_avg10", "away_xg_for_avg10", "xg_diff",
+    "home_possession_avg10", "away_possession_avg10", "possession_diff",
+    "home_shots_target_avg10", "away_shots_target_avg10", "shots_diff",
+    "home_absences", "away_absences", "absence_severity",
+    "rest_days_home", "rest_days_away",
 ]
 
 FEATURES_CORNERS = FEATURES_CORE + [
@@ -56,36 +47,23 @@ FEATURES_CORNERS = FEATURES_CORE + [
 
 # Historical La Liga averages — used as cold-start defaults
 DEFAULTS: dict[str, float] = {
-    # Own form
-    "home_xg_for_avg5":  1.45,
-    "home_xg_ag_avg5":   1.05,
-    "home_goals_avg5":   1.50,
-    "home_pts_avg5":     1.60,
-    "away_xg_for_avg5":  1.10,
-    "away_xg_ag_avg5":   1.40,
-    "away_goals_avg5":   1.10,
-    "away_pts_avg5":     1.20,
-    # Opponent quality (average La Liga opponent)
-    "home_opp_pts_avg5":  1.20,
-    "home_opp_xgag_avg5": 1.25,
-    "away_opp_pts_avg5":  1.60,
-    "away_opp_xgag_avg5": 1.05,
-    "home_xg_adj":       1.16,
-    "away_xg_adj":       0.88,
-    # Differentials
-    "xg_diff":           0.35,
-    "form_diff":         0.40,
-    "opp_diff":         -0.40,
-    "xg_adj_diff":       0.28,
-    # Fatigue
-    "rest_days_home":    7.0,
-    "rest_days_away":    7.0,
-    # ELO (neutral average team)
     "home_elo":          1500.0,
     "away_elo":          1500.0,
     "elo_diff":          0.0,
-    # League encoding fallback
-    "league_encoded":    0,
+    "home_xg_for_avg10": 1.45,
+    "away_xg_for_avg10": 1.10,
+    "xg_diff":           0.35,
+    "home_possession_avg10": 50.0,
+    "away_possession_avg10": 50.0,
+    "possession_diff":       0.0,
+    "home_shots_target_avg10": 4.5,
+    "away_shots_target_avg10": 4.0,
+    "shots_diff":              0.5,
+    "home_absences":     0.0,
+    "away_absences":     0.0,
+    "absence_severity":  0.0,
+    "rest_days_home":    7.0,
+    "rest_days_away":    7.0,
     # Corners (model C)
     "home_corners_avg5": 5.2,
     "away_corners_avg5": 4.3,

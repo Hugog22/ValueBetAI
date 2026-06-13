@@ -187,7 +187,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
   });
 
   // Track which sports have been fetched (even if empty) to avoid repeated requests
-  const fetchedSports = useRef<Set<SportKey>>(new Set<SportKey>(['worldcup', 'laliga']));
+  const fetchedSports = useRef<Set<SportKey>>(new Set<SportKey>());
 
   // Parlays — seeded from ISR, refreshed from API
   const [allParlays, setAllParlays] = useState<ParlayData[]>(
