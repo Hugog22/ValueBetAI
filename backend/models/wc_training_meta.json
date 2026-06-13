@@ -1,6 +1,6 @@
 {
-  "trained_at": "2026-06-13T10:27:18.745235",
-  "training_rows": 2448,
+  "trained_at": "2026-06-13T14:03:12.593972",
+  "training_rows": 2452,
   "features": [
     "home_fifa_pts",
     "away_fifa_pts",
@@ -19,10 +19,14 @@
     "home_conceded_avg5",
     "away_conceded_avg5",
     "home_avg_player_rating",
-    "away_avg_player_rating"
+    "away_avg_player_rating",
+    "home_wc_matches",
+    "away_wc_matches",
+    "home_wc_goals",
+    "away_wc_goals"
   ],
-  "cv_1x2_acc": 0.7353,
-  "cv_ou25_logloss": 0.6766,
+  "cv_1x2_acc": 0.7423,
+  "cv_ou25_logloss": 0.6727,
   "best_xgb_1x2": {
     "max_depth": 3,
     "learning_rate": 0.05856336159516834,
@@ -31,8 +35,8 @@
   },
   "best_xgb_ou25": {
     "max_depth": 3,
-    "learning_rate": 0.023266985885261875,
-    "subsample": 0.6943778140679043,
-    "colsample_bytree": 0.8433849910545115
+    "learning_rate": 0.02434414678890834,
+    "subsample": 0.7363570033289742,
+    "colsample_bytree": 0.8283635061774562
   }
 }

@@ -31,6 +31,41 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from db.session import SessionLocal
+from db.models import Match, WorldCupTeamStats, Player, Team
+
+USE_PLAYER_STATS = False
+
+def get_db_stats():
+    db = SessionLocal()
+    stats = db.query(WorldCupTeamStats).all()
+    teams = db.query(Team).all()
+    team_map = {t.id: t.name for t in teams}
+    
+    wc_stats = {}
+    for s in stats:
+        tname = team_map.get(s.team_id)
+        if tname:
+            wc_stats[tname] = {
+                "matches": s.matches_played,
+                "goals_scored": s.goals_for,
+                "goals_conceded": s.goals_against
+            }
+            
+    player_stats = {}
+    players = db.query(Player).all()
+    for p in players:
+        tname = team_map.get(p.team_id)
+        if tname:
+            if tname not in player_stats:
+                player_stats[tname] = []
+            if p.rating:
+                player_stats[tname].append(p.rating)
+                
+    db.close()
+    return wc_stats, player_stats
+
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -58,21 +93,25 @@ def _days_ago(date_str: str) -> float:
         return 365.0
 
 
-def compute_sample_weights(df: pd.DataFrame) -> np.ndarray:
-    """Exponential decay: recent WC finals matter more than 1998 groups. 2026 matches get huge boost."""
-    decay = 2.0  # stronger decay for WC — recency is more important
+def compute_sample_weights(df: pd.DataFrame, wc_stats: dict) -> np.ndarray:
+    decay = 2.0
     weights = []
     for _, row in df.iterrows():
         date_str = str(row.get("date", TODAY))
         days   = _days_ago(date_str)
         w      = max(0.05, math.exp(-decay * days / 365.0))
-        # Knockout games are more informative → double weight
+        
         if row.get("is_knockout", 0) == 1:
             w *= 2.0
             
-        # Dynamic Weights for current 2026 tournament
         if "2026" in date_str:
-            w *= 5.0
+            # DYNAMIC WEIGHTING based on matches played in World Cup 2026
+            ht = str(row["home_team"])
+            at = str(row["away_team"])
+            hm = wc_stats.get(ht, {}).get("matches", 0)
+            am = wc_stats.get(at, {}).get("matches", 0)
+            # The more matches they have played in this world cup, the more this 2026 form matters
+            w *= 5.0 * (1.0 + 0.5 * hm) * (1.0 + 0.5 * am)
             
         weights.append(w)
     return np.array(weights)
@@ -163,7 +202,7 @@ def load_squad_quality() -> dict[str, float]:
         return {}
 
 
-def build_features(df: pd.DataFrame) -> pd.DataFrame:
+def build_features(df: pd.DataFrame, wc_stats: dict, player_stats: dict) -> pd.DataFrame:
     """Construct all feature columns for training."""
     from models.world_cup_predictor import FIFA_POINTS, DEFAULT_FIFA_POINTS
     h2h      = build_h2h_stats(df)
@@ -183,9 +222,20 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
             continue
 
         home_pts = float(row.get("home_fifa_pts", FIFA_POINTS.get(ht, DEFAULT_FIFA_POINTS)))
+        
+
+
         away_pts = float(row.get("away_fifa_pts", FIFA_POINTS.get(at, DEFAULT_FIFA_POINTS)))
         home_q   = sq_qual.get(ht, 40.0 + (home_pts - 1280) / 580 * 55)
         away_q   = sq_qual.get(at, 40.0 + (away_pts - 1280) / 580 * 55)
+
+        h_wc = wc_stats.get(ht, {"matches": 0, "goals_scored": 0, "goals_conceded": 0})
+        a_wc = wc_stats.get(at, {"matches": 0, "goals_scored": 0, "goals_conceded": 0})
+        
+        h_pr = player_stats.get(ht, [])
+        a_pr = player_stats.get(at, [])
+        h_pr_avg = sum(h_pr)/len(h_pr) if USE_PLAYER_STATS and h_pr else home_q / 10.0
+        a_pr_avg = sum(a_pr)/len(a_pr) if USE_PLAYER_STATS and a_pr else away_q / 10.0
 
         h_form = form.get(ht, {"pts5": 7.5, "gf5": 1.5, "ga5": 1.2})
         a_form = form.get(at, {"pts5": 7.5, "gf5": 1.2, "ga5": 1.5})
@@ -207,8 +257,12 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
             "away_goals_avg5":    a_form["gf5"],
             "home_conceded_avg5": h_form["ga5"],
             "away_conceded_avg5": a_form["ga5"],
-            "home_avg_player_rating": home_q / 10.0, # Baseline approx for historic matches
-            "away_avg_player_rating": away_q / 10.0, # Baseline approx for historic matches
+            "home_avg_player_rating": h_pr_avg,
+            "away_avg_player_rating": a_pr_avg,
+            "home_wc_matches": h_wc["matches"],
+            "away_wc_matches": a_wc["matches"],
+            "home_wc_goals": h_wc["goals_scored"],
+            "away_wc_goals": a_wc["goals_scored"],
             # targets
             "_home_goals": hg,
             "_away_goals": ag,
@@ -225,6 +279,8 @@ FEATURES = [
     "home_goals_avg5", "away_goals_avg5",
     "home_conceded_avg5", "away_conceded_avg5",
     "home_avg_player_rating", "away_avg_player_rating",
+    "home_wc_matches", "away_wc_matches",
+    "home_wc_goals", "away_wc_goals"
 ]
 
 
@@ -289,8 +345,47 @@ def train():
 
     logger.info(f"Loading data from {DATA_PATH}")
     df = pd.read_csv(DATA_PATH)
+    wc_stats, player_stats = get_db_stats()
+    
+    # Merge finished matches from DB into df
+    db = SessionLocal()
+    db_matches = db.query(Match).filter(Match.status == 'Finished').all()
+    teams = db.query(Team).all()
+    team_map = {t.id: t.name for t in teams}
+    
+    # Load WC squads to filter out non-WC matches (like La Liga)
+    import json
+    squads_path = os.path.join(os.path.dirname(__file__), "..", "data", "world_cup_squads.json")
+    wc_teams = []
+    if os.path.exists(squads_path):
+        with open(squads_path, 'r') as f:
+            wc_teams = list(json.load(f).keys())
+
+    new_rows = []
+    for m in db_matches:
+        h_name = team_map.get(m.home_team_id, "")
+        a_name = team_map.get(m.away_team_id, "")
+        
+        # Only add if it's a World Cup team
+        if h_name in wc_teams and a_name in wc_teams:
+            if m.home_goals is not None and m.away_goals is not None:
+                new_rows.append({
+                    "date": m.date.strftime("%Y-%m-%d"),
+                    "home_team": h_name,
+                    "away_team": a_name,
+                    "home_goals": m.home_goals,
+                    "away_goals": m.away_goals,
+                    "is_knockout": 0 # We assume groups for now in early stage
+                })
+    db.close()
+    
+    if new_rows:
+        new_df = pd.DataFrame(new_rows)
+        df = pd.concat([df, new_df], ignore_index=True)
+        logger.info(f"Appended {len(new_rows)} finished 2026 matches from DB.")
+        
     logger.info("Building features…")
-    feat_df = build_features(df)
+    feat_df = build_features(df, wc_stats, player_stats)
     
     if len(feat_df) < 30:
         logger.error("Not enough data to train. Need at least 30 matches.")
@@ -326,14 +421,21 @@ def train():
 
     cv_scores = []
     for tr, va in tscv.split(X):
-        ensemble_1x2.fit(X.iloc[tr], y_1x2[tr])
+        w_tr = compute_sample_weights(df.iloc[tr], wc_stats)
+        ensemble_1x2.fit(X.iloc[tr], y_1x2[tr]) # VotingClassifier doesn't fully support sample_weight trivially, but XGB does.
+        # Actually VotingClassifier does support sample_weight!
+        ensemble_1x2.fit(X.iloc[tr], y_1x2[tr], sample_weight=w_tr)
         preds = ensemble_1x2.predict(X.iloc[va])
         cv_scores.append(accuracy_score(y_1x2[va], preds))
     logger.info(f"1X2 Ensemble CV accuracy: {np.mean(cv_scores):.4f}")
 
     split_idx = max(1, int(len(X) * 0.80))
     cal_1x2 = CalibratedClassifierCV(ensemble_1x2, cv=3, method="isotonic")
-    cal_1x2.fit(X.iloc[:split_idx], y_1x2[:split_idx])
+    w_full = compute_sample_weights(df.iloc[:split_idx], wc_stats)
+    try:
+        cal_1x2.fit(X.iloc[:split_idx], y_1x2[:split_idx], sample_weight=w_full)
+    except:
+        cal_1x2.fit(X.iloc[:split_idx], y_1x2[:split_idx])
     joblib.dump(cal_1x2, os.path.join(MODELS_DIR, "wc_1x2_xgb.pkl"))
 
     # ── MODEL B: O/U 2.5 ─────────────────────────────────────────────────────
@@ -359,13 +461,17 @@ def train():
 
     cv_ou25 = []
     for tr, va in tscv.split(X):
-        ensemble_ou25.fit(X.iloc[tr], y_ou25[tr])
+        w_tr = compute_sample_weights(df.iloc[tr], wc_stats)
+        ensemble_ou25.fit(X.iloc[tr], y_ou25[tr], sample_weight=w_tr)
         probs = ensemble_ou25.predict_proba(X.iloc[va])[:, 1]
         cv_ou25.append(log_loss(y_ou25[va], probs))
     logger.info(f"O/U 2.5 Ensemble CV LogLoss: {np.mean(cv_ou25):.4f}")
 
     cal_ou25 = CalibratedClassifierCV(ensemble_ou25, cv=3, method="isotonic")
-    cal_ou25.fit(X.iloc[:split_idx], y_ou25[:split_idx])
+    try:
+        cal_ou25.fit(X.iloc[:split_idx], y_ou25[:split_idx], sample_weight=w_full)
+    except:
+        cal_ou25.fit(X.iloc[:split_idx], y_ou25[:split_idx])
     joblib.dump(cal_ou25, os.path.join(MODELS_DIR, "wc_ou25_xgb.pkl"))
 
     # ── Save metadata ─────────────────────────────────────────────────────────
@@ -380,6 +486,21 @@ def train():
     }
     with open(META_PATH, "w") as f:
         json.dump(meta, f, indent=2)
+    
+    # Logging Training Report
+    logger.info(f"==== REPORTE DE ENTRENAMIENTO IA ====")
+    logger.info(f"Partidos del Mundial 2026 usados: {len(new_rows) if new_rows else 0}")
+    
+    players_used = sum(len(p) for p in player_stats.values()) if USE_PLAYER_STATS else 0
+    if USE_PLAYER_STATS:
+        logger.info(f"Estadísticas individuales de jugadores activadas. {players_used} jugadores usados.")
+    else:
+        logger.info(f"Estadísticas individuales de jugadores en pausa temporal. 0 jugadores evaluados.")
+        
+    cv_acc_percent = np.mean(cv_scores) * 100
+    logger.info(f"Precisión (Accuracy) alcanzada: {cv_acc_percent:.2f}%")
+    logger.info(f"=======================================")
+
     logger.info(f"✅  Metadata saved → {META_PATH}")
     logger.info("\nRestart the backend to load new models.")
 

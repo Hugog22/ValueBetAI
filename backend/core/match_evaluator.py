@@ -386,7 +386,7 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     candidates.sort(key=lambda x: x["ev"], reverse=True)
     best = candidates[0]
 
-    # Build rich justification with FIFA context
+    # Build rich justification with FIFA context and Live 2026 DB stats
     home_pts    = pred.get("home_fifa_pts", 0)
     away_pts    = pred.get("away_fifa_pts", 0)
     home_qual   = pred.get("home_squad_quality", 0)
@@ -394,9 +394,47 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     h2h_n       = pred.get("h2h_matches", 0)
     h2h_note    = f"H2H: {h2h_n} partidos históricos." if h2h_n > 0 else "Primer enfrentamiento en un Mundial."
 
+    # Fetch DB info
+    db = SessionLocal()
+    h_team = db.query(Team).filter(Team.name == home).first()
+    a_team = db.query(Team).filter(Team.name == away).first()
+    
+    h_stats_str = ""
+    a_stats_str = ""
+    
+    try:
+        import sys
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from scripts.train_model_worldcup import USE_PLAYER_STATS
+    except ImportError:
+        USE_PLAYER_STATS = False
+        
+    if h_team:
+        h_stat = db.query(WorldCupTeamStats).filter(WorldCupTeamStats.team_id == h_team.id).first()
+        if h_stat and h_stat.matches_played > 0:
+            h_stats_str = f" {home} lleva {h_stat.matches_played} partidos en el Mundial 2026 ({h_stat.goals_for} GF, {h_stat.goals_against} GC)."
+    
+    if a_team:
+        a_stat = db.query(WorldCupTeamStats).filter(WorldCupTeamStats.team_id == a_team.id).first()
+        if a_stat and a_stat.matches_played > 0:
+            a_stats_str = f" {away} lleva {a_stat.matches_played} partidos en el Mundial 2026 ({a_stat.goals_for} GF, {a_stat.goals_against} GC)."
+            
+    player_note = ""
+    if USE_PLAYER_STATS:
+        # Find best player
+        best_hp = db.query(Player).filter(Player.team_id == h_team.id).order_by(Player.rating.desc()).first() if h_team else None
+        if best_hp and best_hp.rating:
+            player_note = f" Jugador clave: {best_hp.name} (Nota: {best_hp.rating})."
+    else:
+        player_note = " (Estadísticas individuales en pausa por límites de API, 0 jugadores evaluados)."
+        
+    db.close()
+
     justification = (
         f"FIFA Rankings: {home} ({home_pts:.0f} pts) vs {away} ({away_pts:.0f} pts). "
         f"Calidad de plantilla: {home_qual:.0f} vs {away_qual:.0f}/100. {h2h_note}"
+        f"{h_stats_str}{a_stats_str}{player_note}"
     )
 
     return {
