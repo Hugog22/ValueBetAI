@@ -476,10 +476,15 @@ def train():
         cal_ou25.fit(X.iloc[:split_idx], y_ou25[:split_idx])
     joblib.dump(cal_ou25, os.path.join(MODELS_DIR, "wc_ou25_xgb.pkl"))
 
+    wc_matches_used = sum(s["matches"] for s in wc_stats.values()) // 2
+    players_used = sum(len(ratings) for ratings in player_stats.values())
+
     # ── Save metadata ─────────────────────────────────────────────────────────
     meta = {
         "trained_at":    datetime.utcnow().isoformat(),
         "training_rows": len(feat_df),
+        "wc_matches_used": wc_matches_used,
+        "players_used": players_used,
         "features":      FEATURES,
         "cv_1x2_acc":    round(float(np.mean(cv_scores)), 4),
         "cv_ou25_logloss": round(float(np.mean(cv_ou25)), 4),
