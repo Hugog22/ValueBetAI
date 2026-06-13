@@ -98,6 +98,10 @@ FEATURES = [
     "away_conceded_avg5",
     "home_avg_player_rating",  # dynamic player rating (or approx)
     "away_avg_player_rating",
+    "home_wc_matches",         # dynamic world cup match count
+    "away_wc_matches",
+    "home_wc_goals",           # dynamic world cup goals
+    "away_wc_goals",
 ]
 
 # Analytic defaults for cold-start (used as fallback when no historical data)
