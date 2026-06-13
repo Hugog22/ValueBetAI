@@ -176,6 +176,23 @@ def start_scheduler():
         # ── Model 2: World Cup XGBoost ────────────────────────────────────
         t0 = time.time()
         try:
+            import sys, os
+            scripts_dir = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "scripts"
+            )
+            if scripts_dir not in sys.path:
+                sys.path.insert(0, scripts_dir)
+                
+            import importlib
+            
+            # Fetch latest data from Github to include games played today
+            logger.info("📡 [scheduler] Fetching latest historical World Cup matches from GitHub...")
+            fetch_mod = importlib.import_module("fetch_world_cup_data")
+            importlib.reload(fetch_mod)
+            fetch_mod.main(force=True)
+
+            logger.info("🧠 [scheduler] Training World Cup model with latest matches...")
             wc_mod = importlib.import_module("train_model_worldcup")
             importlib.reload(wc_mod)
 

@@ -60,9 +60,9 @@ FIFA_RANKING_POINTS: dict[str, float] = {
     "El Salvador":   1320.0, "New Zealand":   1298.0, "Saudi Arabia":  1280.0,
 }
 
-def download_csv() -> pd.DataFrame:
+def download_csv(force=False) -> pd.DataFrame:
     local_path = os.path.join(DATA_DIR, "results.csv")
-    if os.path.exists(local_path):
+    if not force and os.path.exists(local_path):
         logger.info(f"Reading local {local_path}...")
         df = pd.read_csv(local_path)
         logger.info(f"Loaded {len(df)} total historical matches.")
@@ -130,9 +130,9 @@ def process_data(df: pd.DataFrame):
     out_df.to_csv(OUT_CSV, index=False)
     logger.info(f"Saved {len(out_df)} official international matches to {OUT_CSV}")
 
-def main():
+def main(force=False):
     os.makedirs(DATA_DIR, exist_ok=True)
-    df = download_csv()
+    df = download_csv(force=force)
     if not df.empty:
         process_data(df)
     
