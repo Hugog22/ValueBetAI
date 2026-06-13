@@ -358,11 +358,11 @@ def _do_refresh() -> None:
                     logger.warning(f"⚠️  [cache] Skipping match {m.id}: {e}")
 
             # ── Step 5: Tag club matches per sport ────────────────────────
-            laliga_teams    = _get_laliga_team_names(db)
-            premier_teams   = _get_premier_team_names()
-            champions_teams = _get_champions_team_names()
+            laliga_teams    = _get_laliga_team_names(db) if settings.enable_club_leagues else set()
+            premier_teams   = _get_premier_team_names() if settings.enable_club_leagues else set()
+            champions_teams = _get_champions_team_names() if settings.enable_club_leagues else set()
 
-            off_season_now  = _is_off_season()
+            off_season_now  = _is_off_season() or not settings.enable_club_leagues
 
             for sport_key, team_set in [
                 ("laliga",    laliga_teams),
@@ -372,7 +372,7 @@ def _do_refresh() -> None:
                 sport_jornada = (
                     [m for m in jornada_all if m["homeTeam"] in team_set or m["awayTeam"] in team_set]
                     if team_set
-                    else (jornada_all if sport_key == "laliga" else [])
+                    else []
                 )
                 is_off = len(sport_jornada) == 0 and off_season_now
                 new_cache["sports"][sport_key]["jornada"]      = sport_jornada
