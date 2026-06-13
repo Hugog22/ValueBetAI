@@ -57,10 +57,33 @@ def _settle_and_refresh():
     # This marks recently-finished matches as "Finished" in the DB.
     try:
         from etl.world_cup_etl import sync_world_cup_schedule
-        sync_world_cup_schedule()
-        logger.info("🔄 [scheduler] World Cup results synced.")
+        wc_updated = sync_world_cup_schedule()
+        logger.info(f"🔄 [scheduler] World Cup results synced. Changes detected: {wc_updated}")
+        
+        if wc_updated > 0:
+            logger.info("🔄 [scheduler] Match finished/updated. Fetching players and retraining...")
+            from etl.players_etl import sync_world_cup_players
+            sync_world_cup_players()
+            
+            import sys, os, importlib
+            scripts_dir = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "scripts"
+            )
+            if scripts_dir not in sys.path:
+                sys.path.insert(0, scripts_dir)
+                
+            fetch_mod = importlib.import_module("fetch_world_cup_data")
+            importlib.reload(fetch_mod)
+            fetch_mod.main(force=True)
+
+            wc_mod = importlib.import_module("train_model_worldcup")
+            importlib.reload(wc_mod)
+            wc_mod.train()
+            logger.info("✅ [scheduler] World Cup AI retrained successfully on new match data.")
+            
     except Exception as e:
-        logger.warning(f"⚠️  [scheduler] WC results sync failed: {e}")
+        logger.warning(f"⚠️  [scheduler] WC results sync/train failed: {e}")
 
     try:
         from etl.run_etl import run_pipeline
@@ -173,57 +196,7 @@ def start_scheduler():
                     duration_seconds=elapsed_1,
                 )
 
-        # ── Model 2: World Cup XGBoost ────────────────────────────────────
-        t0 = time.time()
-        try:
-            import sys, os
-            scripts_dir = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                "scripts"
-            )
-            if scripts_dir not in sys.path:
-                sys.path.insert(0, scripts_dir)
-                
-            import importlib
-            
-            # Fetch latest data from Github to include games played today
-            logger.info("📡 [scheduler] Fetching latest historical World Cup matches from GitHub...")
-            fetch_mod = importlib.import_module("fetch_world_cup_data")
-            importlib.reload(fetch_mod)
-            fetch_mod.main(force=True)
-
-            logger.info("🧠 [scheduler] Training World Cup model with latest matches...")
-            wc_mod = importlib.import_module("train_model_worldcup")
-            importlib.reload(wc_mod)
-
-            wc_mod.train()
-            elapsed_2 = time.time() - t0
-
-            meta_path_wc = wc_mod.META_PATH
-            meta_wc = {}
-            if os.path.exists(meta_path_wc):
-                with open(meta_path_wc) as f:
-                    meta_wc = json.load(f)
-
-            write_training_report(
-                model_name="Mundial 2026 — XGBoost",
-                success=True,
-                meta=meta_wc,
-                duration_seconds=elapsed_2,
-            )
-            logger.info(f"✅ [scheduler] World Cup model retrained in {elapsed_2:.0f}s")
-
-        except Exception as e:
-            elapsed_2 = time.time() - t0
-            logger.error(f"❌ [scheduler] World Cup model retraining failed: {e}", exc_info=True)
-            write_training_report(
-                model_name="Mundial 2026 — XGBoost",
-                success=False,
-                error=str(e),
-                duration_seconds=elapsed_2,
-            )
-
-        logger.info("🤖 [scheduler] AI retraining cycle complete.")
+        logger.info("🤖 [scheduler] AI retraining cycle complete (Club Leagues only).")
 
     scheduler.add_job(
         _run_training,

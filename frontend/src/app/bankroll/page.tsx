@@ -63,6 +63,8 @@ interface PredictionsDetailData {
 export default function BankrollPage() {
     const [stats, setStats] = useState<BankrollStats | null>(null);
     const [adminStats, setAdminStats] = useState<any>(null);
+    const [wcTeamStats, setWcTeamStats] = useState<any[]>([]);
+    const [wcPlayers, setWcPlayers] = useState<any[]>([]);
     const [predictionModal, setPredictionModal] = useState<{
         open: boolean;
         data: PredictionsDetailData | null;
@@ -88,12 +90,27 @@ export default function BankrollPage() {
             .catch(err => console.error("Error fetching bankroll", err));
             
         if (user?.email === 'hugodesax123@gmail.com') {
-            fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/admin/system-stats`, {
+            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+            fetch(`${API}/api/admin/system-stats`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
                 .then(res => res.json())
                 .then(data => setAdminStats(data))
                 .catch(err => console.error("Error fetching admin stats", err));
+                
+            fetch(`${API}/api/admin/wc-team-stats`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(res => res.json())
+                .then(data => setWcTeamStats(data))
+                .catch(err => console.error("Error fetching team stats", err));
+                
+            fetch(`${API}/api/admin/wc-players`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(res => res.json())
+                .then(data => setWcPlayers(data))
+                .catch(err => console.error("Error fetching players", err));
         }
     }, [token, user]);
 
@@ -325,6 +342,77 @@ export default function BankrollPage() {
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* SELECCIONES Y JUGADORES MUNDIAL */}
+                                    <div className="mt-16">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <span className="h-px w-8 bg-[#064E3B]"></span>
+                                            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#064E3B]">Base de Datos Mundial 2026</span>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            {/* SELECCIONES */}
+                                            <div className="bg-white rounded-[2rem] border border-[#E5E7EB] overflow-hidden shadow-sm">
+                                                <div className="p-6 border-b border-[#E5E7EB] bg-[#F8F9FA]">
+                                                    <h3 className="text-xl font-editorial font-bold text-[#1A1C1E]">Rendimiento de Selecciones</h3>
+                                                    <p className="text-xs text-[#64748B] mt-1">Sincronizado vía ETl ({wcTeamStats.length} selecciones)</p>
+                                                </div>
+                                                <div className="max-h-[400px] overflow-y-auto p-0">
+                                                    <table className="min-w-full text-sm text-left">
+                                                        <thead className="bg-[#FCF9F1] sticky top-0 border-b border-[#E5E7EB]">
+                                                            <tr>
+                                                                <th className="px-6 py-3 font-bold text-[10px] uppercase text-[#64748B]">Selección</th>
+                                                                <th className="px-6 py-3 font-bold text-[10px] uppercase text-[#64748B]">PJ / Goles</th>
+                                                                <th className="px-6 py-3 font-bold text-[10px] uppercase text-[#64748B]">Última Act.</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-[#E5E7EB]">
+                                                            {wcTeamStats.length === 0 && <tr><td colSpan={3} className="p-6 text-center text-[#64748B]">No hay datos de equipos</td></tr>}
+                                                            {wcTeamStats.map((t, idx) => (
+                                                                <tr key={idx} className="hover:bg-slate-50">
+                                                                    <td className="px-6 py-4 font-bold text-[#1A1C1E]">{getEsName(t.team_name)}</td>
+                                                                    <td className="px-6 py-4 text-[#64748B]">{t.matches_played} PJ <span className="text-emerald-600 font-medium">({t.goals_for} GF)</span></td>
+                                                                    <td className="px-6 py-4 text-[10px] font-mono text-[#94A3B8]">{t.last_updated.substring(0,16).replace('T', ' ')}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            {/* JUGADORES */}
+                                            <div className="bg-white rounded-[2rem] border border-[#E5E7EB] overflow-hidden shadow-sm">
+                                                <div className="p-6 border-b border-[#E5E7EB] bg-[#F8F9FA]">
+                                                    <h3 className="text-xl font-editorial font-bold text-[#1A1C1E]">Base de Datos Jugadores</h3>
+                                                    <p className="text-xs text-[#64748B] mt-1">API-Football ({wcPlayers.length} jugadores)</p>
+                                                </div>
+                                                <div className="max-h-[400px] overflow-y-auto p-0">
+                                                    <table className="min-w-full text-sm text-left">
+                                                        <thead className="bg-[#FCF9F1] sticky top-0 border-b border-[#E5E7EB]">
+                                                            <tr>
+                                                                <th className="px-6 py-3 font-bold text-[10px] uppercase text-[#64748B]">Jugador</th>
+                                                                <th className="px-6 py-3 font-bold text-[10px] uppercase text-[#64748B]">Rating</th>
+                                                                <th className="px-6 py-3 font-bold text-[10px] uppercase text-[#64748B]">G/A</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-[#E5E7EB]">
+                                                            {wcPlayers.length === 0 && <tr><td colSpan={3} className="p-6 text-center text-[#64748B]">No hay datos de jugadores</td></tr>}
+                                                            {wcPlayers.slice(0, 100).map((p, idx) => (
+                                                                <tr key={idx} className="hover:bg-slate-50">
+                                                                    <td className="px-6 py-4">
+                                                                        <div className="font-bold text-[#1A1C1E]">{p.name}</div>
+                                                                        <div className="text-[10px] text-[#64748B]">{getEsName(p.team_name)} • {p.position}</div>
+                                                                    </td>
+                                                                    <td className="px-6 py-4 font-bold text-[#064E3B]">{p.rating > 0 ? p.rating.toFixed(1) : '-'}</td>
+                                                                    <td className="px-6 py-4 text-[#64748B]">{p.goals}/{p.assists}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 

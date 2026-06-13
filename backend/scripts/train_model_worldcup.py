@@ -59,15 +59,21 @@ def _days_ago(date_str: str) -> float:
 
 
 def compute_sample_weights(df: pd.DataFrame) -> np.ndarray:
-    """Exponential decay: recent WC finals matter more than 1998 groups."""
+    """Exponential decay: recent WC finals matter more than 1998 groups. 2026 matches get huge boost."""
     decay = 2.0  # stronger decay for WC — recency is more important
     weights = []
     for _, row in df.iterrows():
-        days   = _days_ago(str(row.get("date", TODAY)))
+        date_str = str(row.get("date", TODAY))
+        days   = _days_ago(date_str)
         w      = max(0.05, math.exp(-decay * days / 365.0))
         # Knockout games are more informative → double weight
         if row.get("is_knockout", 0) == 1:
             w *= 2.0
+            
+        # Dynamic Weights for current 2026 tournament
+        if "2026" in date_str:
+            w *= 5.0
+            
         weights.append(w)
     return np.array(weights)
 
@@ -201,13 +207,14 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
             "away_goals_avg5":    a_form["gf5"],
             "home_conceded_avg5": h_form["ga5"],
             "away_conceded_avg5": a_form["ga5"],
+            "home_avg_player_rating": home_q / 10.0, # Baseline approx for historic matches
+            "away_avg_player_rating": away_q / 10.0, # Baseline approx for historic matches
             # targets
             "_home_goals": hg,
             "_away_goals": ag,
         })
 
     return pd.DataFrame(rows)
-
 
 FEATURES = [
     "home_fifa_pts", "away_fifa_pts", "fifa_pts_diff",
@@ -217,6 +224,7 @@ FEATURES = [
     "is_knockout",
     "home_goals_avg5", "away_goals_avg5",
     "home_conceded_avg5", "away_conceded_avg5",
+    "home_avg_player_rating", "away_avg_player_rating",
 ]
 
 

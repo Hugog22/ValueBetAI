@@ -96,6 +96,8 @@ FEATURES = [
     "away_goals_avg5",
     "home_conceded_avg5",      # avg goals conceded last 5
     "away_conceded_avg5",
+    "home_avg_player_rating",  # dynamic player rating (or approx)
+    "away_avg_player_rating",
 ]
 
 # Analytic defaults for cold-start (used as fallback when no historical data)
@@ -116,6 +118,8 @@ DEFAULTS: dict[str, float] = {
     "away_goals_avg5":   1.2,
     "home_conceded_avg5": 1.0,
     "away_conceded_avg5": 1.3,
+    "home_avg_player_rating": 6.5,
+    "away_avg_player_rating": 6.5,
 }
 
 
@@ -350,6 +354,27 @@ class WorldCupPredictor:
         h2h_home   = _h2h.get_stats(home_n, away_n)
         h2h_away   = _h2h.get_stats(away_n, home_n)
 
+        # Try to fetch real-time player ratings from database
+        home_rating = home_qual / 10.0
+        away_rating = away_qual / 10.0
+        try:
+            from db.session import SessionLocal
+            from db.models import Team, Player
+            from sqlalchemy.sql import func
+            db = SessionLocal()
+            ht_db = db.query(Team).filter(Team.name == home_n).first()
+            at_db = db.query(Team).filter(Team.name == away_n).first()
+            
+            if ht_db:
+                avg_h = db.query(func.avg(Player.rating)).filter(Player.team_id == ht_db.id).scalar()
+                if avg_h: home_rating = float(avg_h)
+            if at_db:
+                avg_a = db.query(func.avg(Player.rating)).filter(Player.team_id == at_db.id).scalar()
+                if avg_a: away_rating = float(avg_a)
+            db.close()
+        except Exception as e:
+            logger.warning(f"Could not load live player ratings: {e}")
+
         return {
             "home_fifa_pts":      home_pts,
             "away_fifa_pts":      away_pts,
@@ -367,6 +392,8 @@ class WorldCupPredictor:
             "away_goals_avg5":    h2h_away.get("goals_avg", 1.2),
             "home_conceded_avg5": h2h_home.get("conceded_avg", 1.2),
             "away_conceded_avg5": h2h_away.get("conceded_avg", 1.5),
+            "home_avg_player_rating": home_rating,
+            "away_avg_player_rating": away_rating,
         }
 
     def predict_match(self, home: str, away: str,

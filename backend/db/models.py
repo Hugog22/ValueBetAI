@@ -20,6 +20,46 @@ class Team(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     api_football_id = Column(Integer, unique=True, index=True)
+    
+    world_cup_stats = relationship("WorldCupTeamStats", back_populates="team", uselist=False)
+    players = relationship("Player", back_populates="team")
+
+class WorldCupTeamStats(Base):
+    __tablename__ = "world_cup_team_stats"
+
+    id = Column(Integer, primary_key=True, index=True)
+    team_id = Column(Integer, ForeignKey("teams.id"), unique=True)
+    matches_played = Column(Integer, default=0)
+    goals_for = Column(Integer, default=0)
+    goals_against = Column(Integer, default=0)
+    wins = Column(Integer, default=0)
+    draws = Column(Integer, default=0)
+    losses = Column(Integer, default=0)
+    last_updated = Column(DateTime, default=datetime.utcnow)
+
+    team = relationship("Team", back_populates="world_cup_stats")
+
+class Player(Base):
+    __tablename__ = "players"
+
+    id = Column(Integer, primary_key=True, index=True)
+    api_football_id = Column(Integer, unique=True, index=True)
+    team_id = Column(Integer, ForeignKey("teams.id"))
+    
+    name = Column(String, index=True)
+    position = Column(String, nullable=True) # e.g., "Attacker", "Midfielder"
+    rating = Column(Float, nullable=True) # API-Football rating (e.g., 7.5)
+    
+    matches_played = Column(Integer, default=0)
+    minutes_played = Column(Integer, default=0)
+    goals = Column(Integer, default=0)
+    assists = Column(Integer, default=0)
+    yellow_cards = Column(Integer, default=0)
+    red_cards = Column(Integer, default=0)
+    
+    last_updated = Column(DateTime, default=datetime.utcnow)
+
+    team = relationship("Team", back_populates="players")
 
 class Match(Base):
     __tablename__ = "matches"

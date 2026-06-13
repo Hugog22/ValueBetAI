@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import os, json
 
 from db.session import get_db
-from db.models import Bet, Match, Prediction, User
+from db.models import Bet, Match, Prediction, User, Team, WorldCupTeamStats, Player
 from routers.auth import get_current_user
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -286,3 +286,75 @@ def trigger_duplicate_cleanup(
         return {"status": "ok", "message": "Limpieza de duplicados ejecutada con éxito."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error durante limpieza: {str(e)}")
+
+class TeamStatResponse(BaseModel):
+    team_name: str
+    matches_played: int
+    goals_for: int
+    goals_against: int
+    wins: int
+    draws: int
+    losses: int
+    last_updated: str
+
+class PlayerResponse(BaseModel):
+    team_name: str
+    name: str
+    position: str
+    rating: float
+    matches_played: int
+    minutes_played: int
+    goals: int
+    assists: int
+    yellow_cards: int
+    red_cards: int
+    last_updated: str
+
+@router.get("/wc-team-stats", response_model=List[TeamStatResponse])
+def get_wc_team_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.email != "hugodesax123@gmail.com":
+        raise HTTPException(status_code=403, detail="Forbidden")
+        
+    stats = db.query(WorldCupTeamStats, Team).join(Team, WorldCupTeamStats.team_id == Team.id).all()
+    
+    return [
+        TeamStatResponse(
+            team_name=t.name,
+            matches_played=s.matches_played,
+            goals_for=s.goals_for,
+            goals_against=s.goals_against,
+            wins=s.wins,
+            draws=s.draws,
+            losses=s.losses,
+            last_updated=str(s.last_updated) if s.last_updated else ""
+        ) for s, t in stats
+    ]
+
+@router.get("/wc-players", response_model=List[PlayerResponse])
+def get_wc_players(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.email != "hugodesax123@gmail.com":
+        raise HTTPException(status_code=403, detail="Forbidden")
+        
+    players = db.query(Player, Team).join(Team, Player.team_id == Team.id).all()
+    
+    return [
+        PlayerResponse(
+            team_name=t.name,
+            name=p.name,
+            position=p.position or "",
+            rating=p.rating or 0.0,
+            matches_played=p.matches_played,
+            minutes_played=p.minutes_played,
+            goals=p.goals,
+            assists=p.assists,
+            yellow_cards=p.yellow_cards,
+            red_cards=p.red_cards,
+            last_updated=str(p.last_updated) if p.last_updated else ""
+        ) for p, t in players
+    ]

@@ -214,6 +214,73 @@ def sync_world_cup_odds() -> int:
 
     return new_count
 
+def update_world_cup_team_stats(db: Session):
+    from db.models import Match, Team, WorldCupTeamStats
+    from sqlalchemy import or_, and_
+    
+    # Get all teams
+    teams = db.query(Team).all()
+    
+    for team in teams:
+        # Get all finished matches for this team
+        matches = db.query(Match).filter(
+            or_(Match.home_team_id == team.id, Match.away_team_id == team.id),
+            Match.status == "Finished"
+        ).all()
+        
+        if not matches:
+            continue
+            
+        played = len(matches)
+        goals_for = 0
+        goals_against = 0
+        wins = 0
+        draws = 0
+        losses = 0
+        
+        for m in matches:
+            if m.home_team_id == team.id:
+                gf = m.home_goals or 0
+                ga = m.away_goals or 0
+            else:
+                gf = m.away_goals or 0
+                ga = m.home_goals or 0
+                
+            goals_for += gf
+            goals_against += ga
+            
+            if gf > ga:
+                wins += 1
+            elif gf < ga:
+                losses += 1
+            else:
+                draws += 1
+                
+        stats = db.query(WorldCupTeamStats).filter(WorldCupTeamStats.team_id == team.id).first()
+        if stats:
+            stats.matches_played = played
+            stats.goals_for = goals_for
+            stats.goals_against = goals_against
+            stats.wins = wins
+            stats.draws = draws
+            stats.losses = losses
+            stats.last_updated = datetime.utcnow()
+        else:
+            stats = WorldCupTeamStats(
+                team_id=team.id,
+                matches_played=played,
+                goals_for=goals_for,
+                goals_against=goals_against,
+                wins=wins,
+                draws=draws,
+                losses=losses
+            )
+            db.add(stats)
+            
+    db.commit()
+    logger.info("[world_cup_etl] WorldCupTeamStats updated.")
+
+
 
 def sync_world_cup_schedule() -> int:
     """
@@ -306,6 +373,9 @@ def sync_world_cup_schedule() -> int:
 
         db.commit()
         logger.info(f"[world_cup_etl] {new_count} new WC matches from football-data.org schedule")
+        
+        # Update WorldCupTeamStats based on latest results
+        update_world_cup_team_stats(db)
 
     except Exception as e:
         logger.error(f"[world_cup_etl] Schedule sync failed: {e}", exc_info=True)
