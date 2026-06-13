@@ -6,6 +6,24 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timedelta
 import os, json
+try:
+    from zoneinfo import ZoneInfo
+    MADRID_TZ = ZoneInfo("Europe/Madrid")
+except ImportError:
+    MADRID_TZ = None
+
+def format_trained_at(ts: str) -> str:
+    if not ts or ts == "N/A": return "N/A"
+    try:
+        dt = datetime.fromisoformat(ts)
+        if dt.tzinfo is None:
+            from datetime import timezone
+            dt = dt.replace(tzinfo=timezone.utc)
+        if MADRID_TZ:
+            dt = dt.astimezone(MADRID_TZ)
+        return dt.strftime("%Y-%m-%d %H:%M:%S (Madrid)")
+    except Exception:
+        return ts
 
 from db.session import get_db
 from db.models import Bet, Match, User, Team, WorldCupTeamStats, Player
@@ -234,9 +252,10 @@ def get_training_report(
         try:
             with open(wc_meta_path, "r", encoding="utf-8") as f:
                 meta = json.load(f)
+            trained_str = format_trained_at(meta.get('trained_at', 'N/A'))
             report_lines += [
                 "=== WORLD CUP AI ENSEMBLE ===",
-                f"Último entrenamiento : {meta.get('trained_at', 'N/A')}",
+                f"Último entrenamiento : {trained_str}",
                 f"Partidos históricos  : {meta.get('training_rows', 'N/A')}",
                 f"Partidos Mundial '26 : {meta.get('wc_matches_used', 0)}",
                 f"Jugadores evaluados  : {meta.get('players_used', 0)}",

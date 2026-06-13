@@ -20,6 +20,11 @@ import os
 import json
 import logging
 from datetime import datetime
+try:
+    from zoneinfo import ZoneInfo
+    MADRID_TZ = ZoneInfo("Europe/Madrid")
+except ImportError:
+    MADRID_TZ = None
 from typing import Optional, Any
 
 logger = logging.getLogger(__name__)
@@ -120,8 +125,8 @@ def write_training_report(
     """
     os.makedirs(LOG_DIR, exist_ok=True)
 
-    now = datetime.now()
-    ts = now.strftime("%Y-%m-%d %H:%M:%S")
+    now = datetime.now(MADRID_TZ) if MADRID_TZ else datetime.now()
+    ts = now.strftime("%Y-%m-%d %H:%M:%S (Madrid)")
     separator = "=" * 72
 
     lines = [

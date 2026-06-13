@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-06-13T14:28:27.154081",
+  "trained_at": "2026-06-13T16:18:37.265005",
   "training_rows": 2452,
   "features": [
     "home_fifa_pts",
@@ -38,5 +38,23 @@
     "learning_rate": 0.02434414678890834,
     "subsample": 0.7363570033289742,
     "colsample_bytree": 0.8283635061774562
+  },
+  "model_1x2": {
+    "cv_mean_accuracy": 0.7423,
+    "best_params": {
+      "max_depth": 3,
+      "learning_rate": 0.05856336159516834,
+      "subsample": 0.9112320253004815,
+      "colsample_bytree": 0.9740023822749413
+    }
+  },
+  "model_ou25": {
+    "cv_mean_logloss": 0.6727,
+    "best_params": {
+      "max_depth": 3,
+      "learning_rate": 0.02434414678890834,
+      "subsample": 0.7363570033289742,
+      "colsample_bytree": 0.8283635061774562
+    }
   }
 }

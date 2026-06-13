@@ -78,7 +78,7 @@ META_PATH  = os.path.join(MODELS_DIR, "wc_training_meta.json")
 
 TSCV_SPLITS   = 3   # fewer splits — WC has limited data (~400 matches total)
 OPTUNA_TRIALS = 20
-TODAY = datetime.utcnow()
+TODAY = datetime.utcnow()  # Will be redefined locally where needed
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +88,8 @@ TODAY = datetime.utcnow()
 def _days_ago(date_str: str) -> float:
     try:
         dt = datetime.strptime(str(date_str)[:10], "%Y-%m-%d")
-        return max(0, (TODAY - dt).days)
+        today = datetime.utcnow()
+        return max(0, (today - dt).days)
     except Exception:
         return 365.0
 
@@ -96,8 +97,9 @@ def _days_ago(date_str: str) -> float:
 def compute_sample_weights(df: pd.DataFrame, wc_stats: dict) -> np.ndarray:
     decay = 2.0
     weights = []
+    today = datetime.utcnow()
     for _, row in df.iterrows():
-        date_str = str(row.get("date", TODAY))
+        date_str = str(row.get("date", today))
         days   = _days_ago(date_str)
         w      = max(0.05, math.exp(-decay * days / 365.0))
         
@@ -476,7 +478,7 @@ def train():
 
     # ── Save metadata ─────────────────────────────────────────────────────────
     meta = {
-        "trained_at":    TODAY.isoformat(),
+        "trained_at":    datetime.utcnow().isoformat(),
         "training_rows": len(feat_df),
         "features":      FEATURES,
         "cv_1x2_acc":    round(float(np.mean(cv_scores)), 4),

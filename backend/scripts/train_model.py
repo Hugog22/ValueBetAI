@@ -63,7 +63,7 @@ ELO_BASE = 1500.0        # starting ELO for all teams
 ELO_K    = 20.0          # standard football K-factor
 CAL_HOLDOUT = 0.20       # fraction of most-recent data used to fit calibrators
 
-TODAY = datetime.utcnow()
+TODAY = datetime.utcnow()  # Will be redefined locally where needed
 
 
 # ---------------------------------------------------------------------------
@@ -129,11 +129,12 @@ def compute_sample_weights(dates: pd.Series) -> np.ndarray:
     Floored at MIN_WEIGHT so very old data has marginal (not zero) influence.
     """
     def _w(date_str: str) -> float:
+        today = datetime.utcnow()
         try:
             dt = datetime.strptime(str(date_str), "%Y-%m-%d %H:%M:%S")
         except ValueError:
-            dt = TODAY
-        days_ago = max(0, (TODAY - dt).days)
+            dt = today
+        days_ago = max(0, (today - dt).days)
         return max(MIN_WEIGHT, math.exp(-DECAY_RATE * days_ago / 365.0))
 
     return np.array([_w(d) for d in dates])
@@ -584,7 +585,7 @@ def train():
     # Save metadata
     # =====================================================================
     meta = {
-        "trained_at":   TODAY.isoformat(),
+        "trained_at":   datetime.utcnow().isoformat(),
         "seasons":      sorted(df["season"].unique().tolist()),
         "leagues":      sorted(df["league"].unique().tolist()) if "league" in df.columns else ["laliga"],
         "total_rows":   len(df),
