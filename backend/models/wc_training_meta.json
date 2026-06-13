@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-06-12T23:12:26.287482",
+  "trained_at": "2026-06-13T09:53:20.115198",
   "training_rows": 2448,
   "features": [
     "home_fifa_pts",
@@ -19,6 +19,18 @@
     "home_conceded_avg5",
     "away_conceded_avg5"
   ],
-  "cv_1x2_acc": 0.738,
-  "cv_ou25_logloss": 0.6918
+  "cv_1x2_acc": 0.7397,
+  "cv_ou25_logloss": 0.6769,
+  "best_xgb_1x2": {
+    "max_depth": 3,
+    "learning_rate": 0.05856336159516834,
+    "subsample": 0.9112320253004815,
+    "colsample_bytree": 0.9740023822749413
+  },
+  "best_xgb_ou25": {
+    "max_depth": 3,
+    "learning_rate": 0.02434414678890834,
+    "subsample": 0.7363570033289742,
+    "colsample_bytree": 0.8283635061774562
+  }
 }

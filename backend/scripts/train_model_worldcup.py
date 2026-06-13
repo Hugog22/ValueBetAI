@@ -220,14 +220,60 @@ FEATURES = [
 ]
 
 
+def make_objective_1x2(X: pd.DataFrame, y: np.ndarray, tscv):
+    import xgboost as xgb
+    from sklearn.metrics import log_loss
+    def objective(trial):
+        params = {
+            "objective": "multi:softprob", "num_class": 3,
+            "eval_metric": "mlogloss", "use_label_encoder": False,
+            "random_state": 42, "n_estimators": 100,
+            "max_depth": trial.suggest_int("max_depth", 3, 7),
+            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.1, log=True),
+            "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
+        }
+        lls = []
+        for tr, va in tscv.split(X):
+            clf = xgb.XGBClassifier(**params)
+            clf.fit(X.iloc[tr], y[tr], eval_set=[(X.iloc[va], y[va])], verbose=False)
+            probs = clf.predict_proba(X.iloc[va])
+            lls.append(log_loss(y[va], probs))
+        return np.mean(lls)
+    return objective
+
+def make_objective_ou25(X: pd.DataFrame, y: np.ndarray, tscv):
+    import xgboost as xgb
+    from sklearn.metrics import log_loss
+    def objective(trial):
+        params = {
+            "objective": "binary:logistic", "eval_metric": "logloss", 
+            "use_label_encoder": False, "random_state": 42, "n_estimators": 100,
+            "max_depth": trial.suggest_int("max_depth", 3, 7),
+            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.1, log=True),
+            "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
+        }
+        lls = []
+        for tr, va in tscv.split(X):
+            clf = xgb.XGBClassifier(**params)
+            clf.fit(X.iloc[tr], y[tr], eval_set=[(X.iloc[va], y[va])], verbose=False)
+            probs = clf.predict_proba(X.iloc[va])[:, 1]
+            lls.append(log_loss(y[va], probs))
+        return np.mean(lls)
+    return objective
+
 def train():
-    """Run full training pipeline for World Cup models."""
+    """Run full training pipeline for World Cup models with Optuna."""
     import xgboost as xgb
     import lightgbm as lgb
+    import optuna
     from sklearn.ensemble import RandomForestClassifier, VotingClassifier
     from sklearn.calibration import CalibratedClassifierCV
-    from sklearn.model_selection import TimeSeriesSplit, cross_val_score
+    from sklearn.model_selection import TimeSeriesSplit
     from sklearn.metrics import accuracy_score, log_loss
+
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
 
     if not os.path.exists(DATA_PATH):
         logger.error(f"No data found at {DATA_PATH}. Run fetch_world_cup_data.py first.")
@@ -235,52 +281,41 @@ def train():
 
     logger.info(f"Loading data from {DATA_PATH}")
     df = pd.read_csv(DATA_PATH)
-    logger.info(f"Raw rows: {len(df)}")
-
     logger.info("Building features…")
     feat_df = build_features(df)
-    logger.info(f"Feature rows: {len(feat_df)}")
-
+    
     if len(feat_df) < 30:
         logger.error("Not enough data to train. Need at least 30 matches.")
         sys.exit(1)
-
-    weights = compute_sample_weights(df.sort_values("date").reset_index(drop=True))
-    weights = weights[:len(feat_df)]
 
     X = feat_df[FEATURES].astype(float)
     tscv = TimeSeriesSplit(n_splits=TSCV_SPLITS)
 
     # ── MODEL A: 1X2 ─────────────────────────────────────────────────────────
-    logger.info("Training 1X2 model…")
+    logger.info("Training 1X2 model with Optuna…")
     y_1x2 = np.select(
         [feat_df["_home_goals"] > feat_df["_away_goals"],
          feat_df["_home_goals"] == feat_df["_away_goals"]],
         [0, 1], default=2
     )
 
-    # ── ENSEMBLE DEFINITION 1X2 ───────────────────────────────────────────────
+    study_1x2 = optuna.create_study(direction="minimize", sampler=optuna.samplers.TPESampler(seed=42))
+    study_1x2.optimize(make_objective_1x2(X, y_1x2, tscv), n_trials=OPTUNA_TRIALS, show_progress_bar=False)
+    best_1x2 = study_1x2.best_params
+    logger.info(f"Best XGBoost 1X2 params: {best_1x2}")
+
     xgb_1x2 = xgb.XGBClassifier(
-        objective="multi:softprob", num_class=3,
-        n_estimators=300, max_depth=4, learning_rate=0.05,
-        subsample=0.8, colsample_bytree=0.8,
-        use_label_encoder=False, random_state=42, eval_metric="mlogloss",
+        objective="multi:softprob", num_class=3, n_estimators=300,
+        use_label_encoder=False, random_state=42, eval_metric="mlogloss", **best_1x2
     )
     lgb_1x2 = lgb.LGBMClassifier(
-        objective="multiclass", num_class=3,
-        n_estimators=300, max_depth=4, learning_rate=0.05,
-        subsample=0.8, colsample_bytree=0.8, random_state=42, verbose=-1,
+        objective="multiclass", num_class=3, n_estimators=300, 
+        learning_rate=0.05, max_depth=4, random_state=42, verbose=-1,
     )
-    rf_1x2 = RandomForestClassifier(
-        n_estimators=300, max_depth=6, min_samples_split=5, random_state=42,
-    )
+    rf_1x2 = RandomForestClassifier(n_estimators=300, max_depth=6, random_state=42)
     
-    ensemble_1x2 = VotingClassifier(
-        estimators=[('xgb', xgb_1x2), ('lgb', lgb_1x2), ('rf', rf_1x2)],
-        voting='soft'
-    )
+    ensemble_1x2 = VotingClassifier(estimators=[('xgb', xgb_1x2), ('lgb', lgb_1x2), ('rf', rf_1x2)], voting='soft')
 
-    # Cross-validation
     cv_scores = []
     for tr, va in tscv.split(X):
         ensemble_1x2.fit(X.iloc[tr], y_1x2[tr])
@@ -288,39 +323,31 @@ def train():
         cv_scores.append(accuracy_score(y_1x2[va], preds))
     logger.info(f"1X2 Ensemble CV accuracy: {np.mean(cv_scores):.4f}")
 
-    # Final model on all data + calibration
     split_idx = max(1, int(len(X) * 0.80))
-    cal_1x2 = CalibratedClassifierCV(
-        ensemble_1x2, cv=3, method="isotonic"
-    )
+    cal_1x2 = CalibratedClassifierCV(ensemble_1x2, cv=3, method="isotonic")
     cal_1x2.fit(X.iloc[:split_idx], y_1x2[:split_idx])
     joblib.dump(cal_1x2, os.path.join(MODELS_DIR, "wc_1x2_xgb.pkl"))
-    logger.info("✅  wc_1x2_xgb.pkl saved")
 
     # ── MODEL B: O/U 2.5 ─────────────────────────────────────────────────────
-    logger.info("Training O/U 2.5 model…")
+    logger.info("Training O/U 2.5 model with Optuna…")
     y_ou25 = ((feat_df["_home_goals"] + feat_df["_away_goals"]) > 2.5).astype(int).values
 
-    # ── ENSEMBLE DEFINITION O/U 2.5 ──────────────────────────────────────────
+    study_ou25 = optuna.create_study(direction="minimize", sampler=optuna.samplers.TPESampler(seed=42))
+    study_ou25.optimize(make_objective_ou25(X, y_ou25, tscv), n_trials=OPTUNA_TRIALS, show_progress_bar=False)
+    best_ou25 = study_ou25.best_params
+    logger.info(f"Best XGBoost O/U 2.5 params: {best_ou25}")
+
     xgb_ou = xgb.XGBClassifier(
         objective="binary:logistic", n_estimators=300,
-        max_depth=4, learning_rate=0.05, subsample=0.8,
-        colsample_bytree=0.8, use_label_encoder=False,
-        random_state=42, eval_metric="logloss",
+        use_label_encoder=False, random_state=42, eval_metric="logloss", **best_ou25
     )
     lgb_ou = lgb.LGBMClassifier(
-        objective="binary", n_estimators=300,
-        max_depth=4, learning_rate=0.05, subsample=0.8,
-        colsample_bytree=0.8, random_state=42, verbose=-1,
+        objective="binary", n_estimators=300, learning_rate=0.05, 
+        max_depth=4, random_state=42, verbose=-1,
     )
-    rf_ou = RandomForestClassifier(
-        n_estimators=300, max_depth=6, min_samples_split=5, random_state=42,
-    )
+    rf_ou = RandomForestClassifier(n_estimators=300, max_depth=6, random_state=42)
     
-    ensemble_ou25 = VotingClassifier(
-        estimators=[('xgb', xgb_ou), ('lgb', lgb_ou), ('rf', rf_ou)],
-        voting='soft'
-    )
+    ensemble_ou25 = VotingClassifier(estimators=[('xgb', xgb_ou), ('lgb', lgb_ou), ('rf', rf_ou)], voting='soft')
 
     cv_ou25 = []
     for tr, va in tscv.split(X):
@@ -329,12 +356,9 @@ def train():
         cv_ou25.append(log_loss(y_ou25[va], probs))
     logger.info(f"O/U 2.5 Ensemble CV LogLoss: {np.mean(cv_ou25):.4f}")
 
-    cal_ou25 = CalibratedClassifierCV(
-        ensemble_ou25, cv=3, method="isotonic"
-    )
+    cal_ou25 = CalibratedClassifierCV(ensemble_ou25, cv=3, method="isotonic")
     cal_ou25.fit(X.iloc[:split_idx], y_ou25[:split_idx])
     joblib.dump(cal_ou25, os.path.join(MODELS_DIR, "wc_ou25_xgb.pkl"))
-    logger.info("✅  wc_ou25_xgb.pkl saved")
 
     # ── Save metadata ─────────────────────────────────────────────────────────
     meta = {
@@ -343,6 +367,8 @@ def train():
         "features":      FEATURES,
         "cv_1x2_acc":    round(float(np.mean(cv_scores)), 4),
         "cv_ou25_logloss": round(float(np.mean(cv_ou25)), 4),
+        "best_xgb_1x2":  best_1x2,
+        "best_xgb_ou25": best_ou25,
     }
     with open(META_PATH, "w") as f:
         json.dump(meta, f, indent=2)
