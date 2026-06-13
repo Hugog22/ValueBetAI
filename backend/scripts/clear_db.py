@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import text
 from db.session import engine, Base
-from db.models import Prediction, Odds, Match, Team
+from db.models import Odds, Match, Team
 
 def clear_database():
     """Delete all records from predictions, odds, matches, and teams tables."""
@@ -25,7 +25,7 @@ def clear_database():
     with engine.connect() as conn:
         # Delete in order to respect foreign key constraints
         tables = [
-            ("predictions", Prediction.__tablename__),
+            ("predictions".__tablename__),
             ("odds", Odds.__tablename__),
             ("matches", Match.__tablename__),
             ("teams", Team.__tablename__),

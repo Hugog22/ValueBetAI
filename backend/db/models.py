@@ -105,26 +105,7 @@ class Odds(Base):
 
     match = relationship("Match")
 
-class Prediction(Base):
-    __tablename__ = "predictions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    match_id = Column(Integer, ForeignKey("matches.id"))
-    timestamp = Column(DateTime, default=datetime.utcnow)
-    
-    predicted_home_prob = Column(Float) # Expected Probability
-    predicted_draw_prob = Column(Float)
-    predicted_away_prob = Column(Float)
-    
-    fair_home_odds = Column(Float) # Translated from Prob
-    fair_draw_odds = Column(Float)
-    fair_away_odds = Column(Float)
-
-    value_bet_flag = Column(Boolean, default=False)
-    recommendation = Column(String, nullable=True)
-    confidence_score = Column(Integer, nullable=True) # 1-10
-
-    match = relationship("Match")
 
 class MarketOdds(Base):
     __tablename__ = "market_odds"

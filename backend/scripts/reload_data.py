@@ -7,7 +7,7 @@ import logging
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db.session import SessionLocal, engine
-from db.models import Match, Team, OddsHistory, MarketOdds, Odds, Prediction, Bet
+from db.models import Match, Team, OddsHistory, MarketOdds, Odds, Bet
 from etl.odds_api import get_laliga_odds_all_markets, pick_best_bookmaker
 from sqlalchemy import text
 

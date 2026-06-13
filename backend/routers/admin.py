@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import os, json
 
 from db.session import get_db
-from db.models import Bet, Match, Prediction, User, Team, WorldCupTeamStats, Player
+from db.models import Bet, Match, User, Team, WorldCupTeamStats, Player
 from routers.auth import get_current_user
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])

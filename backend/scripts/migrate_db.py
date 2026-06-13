@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import inspect
 from db.session import engine, Base
-from db.models import MarketOdds, Odds, Match, Team, Prediction # Import all to assure they are registered
+from db.models import MarketOdds, Odds, Match, Team # Import all to assure they are registered
 
 def migrate():
     print("Running migration to create new tables...")
