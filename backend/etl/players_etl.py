@@ -12,8 +12,9 @@ from datetime import datetime
 import time
 
 from db.session import SessionLocal
-from db.models import Team, Player
+from db.models import Team, Player, WorldCupTeamStats
 from core.config import settings
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -141,17 +142,29 @@ def sync_team_players(team_id_db: int, season: int = 2026) -> int:
     return updated_count
 
 def sync_world_cup_players():
-    """Sync players for all teams currently playing in the World Cup."""
+    """Syncs players for World Cup teams only."""
     db = SessionLocal()
     try:
-        from db.models import Match
-        # Get all teams that have matches
-        matches = db.query(Match).all()
-        team_ids = set()
-        for m in matches:
-            team_ids.add(m.home_team_id)
-            team_ids.add(m.away_team_id)
+        # Load the 48 World Cup teams from squads JSON
+        squads_file = os.path.join(os.path.dirname(__file__), "..", "data", "world_cup_squads.json")
+        wc_team_names = []
+        if os.path.exists(squads_file):
+            with open(squads_file, "r") as f:
+                squads_data = json.load(f)
+                wc_team_names = list(squads_data.keys())
+                
+        # Find DB team IDs for these World Cup teams
+        team_ids = []
+        if wc_team_names:
+            teams = db.query(Team).filter(Team.name.in_(wc_team_names)).all()
+            team_ids = [t.id for t in teams]
+        else:
+            # Fallback to teams that have played a match
+            stats = db.query(WorldCupTeamStats).all()
+            team_ids = [s.team_id for s in stats]
             
+        logger.info(f"[players_etl] Found {len(team_ids)} World Cup teams to sync.")
+        
         total = 0
         for tid in team_ids:
             total += sync_team_players(tid)
