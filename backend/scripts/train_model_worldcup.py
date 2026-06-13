@@ -483,9 +483,27 @@ def train():
         "cv_ou25_logloss": round(float(np.mean(cv_ou25)), 4),
         "best_xgb_1x2":  best_1x2,
         "best_xgb_ou25": best_ou25,
+        "model_1x2": {
+            "cv_mean_accuracy": round(float(np.mean(cv_scores)), 4),
+            "best_params": best_1x2,
+        },
+        "model_ou25": {
+            "cv_mean_logloss": round(float(np.mean(cv_ou25)), 4),
+            "best_params": best_ou25,
+        }
     }
     with open(META_PATH, "w") as f:
         json.dump(meta, f, indent=2)
+
+    try:
+        from core.training_reporter import write_training_report
+        write_training_report(
+            model_name="World Cup — XGBoost Ensemble",
+            success=True,
+            meta=meta,
+        )
+    except Exception as e:
+        logger.error(f"Failed to write training report: {e}")
     
     # Logging Training Report
     logger.info(f"==== REPORTE DE ENTRENAMIENTO IA ====")

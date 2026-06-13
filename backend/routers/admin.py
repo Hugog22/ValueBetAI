@@ -247,12 +247,12 @@ def get_training_report(
         except Exception as e:
             report_lines.append(f"Error leyendo meta del Mundial: {e}\n")
 
-    # Club AI training log (last 500 lines)
+    # AI training log (last 500 lines)
     if os.path.exists(log_path):
         try:
             with open(log_path, "r", encoding="utf-8") as f:
                 lines = f.readlines()
-            report_lines += ["=== CLUBS AI LOG ==="] + lines[-500:]
+            report_lines += ["=== DETAILED AI LOG ==="] + lines[-500:]
         except Exception as e:
             report_lines.append(f"Error leyendo log de Clubes: {e}")
 
