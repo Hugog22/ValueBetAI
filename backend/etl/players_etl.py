@@ -297,8 +297,13 @@ def sync_world_cup_match_players():
                     json.dump(processed_ids, f)
                     
                 db.commit()
-                time.sleep(6) # Respect rate limits
+                time.sleep(15) # Increase sleep to 15s to respect 10 req/min API-Football free plan limits
                 
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 429:
+                    logger.error(f"[players_etl] Rate limit exceeded for fixture {match.api_football_id}. Try again later.")
+                else:
+                    logger.error(f"[players_etl] Failed to fetch players for fixture {match.api_football_id}: {e}")
             except Exception as e:
                 logger.error(f"[players_etl] Failed to fetch players for fixture {match.api_football_id}: {e}")
                 
