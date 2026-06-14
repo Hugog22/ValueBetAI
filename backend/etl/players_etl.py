@@ -8,7 +8,7 @@ Updates the Player database model.
 import logging
 import os
 import httpx
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 
 from db.session import SessionLocal
@@ -19,6 +19,14 @@ import json
 logger = logging.getLogger(__name__)
 
 API_URL = "https://v3.football.api-sports.io"
+
+# Minimum time after kickoff before we attempt to fetch /fixtures/players from
+# API-Football. Right when football-data.org marks a match "Finished",
+# API-Football usually hasn't finished publishing per-fixture player stats
+# yet. This is just an optimization to avoid wasted API calls — if stats
+# still aren't ready after this window, the match is retried on the next
+# scheduler run (it's only added to processed_ids once real data comes back).
+MATCH_STATS_DELAY = timedelta(hours=2)
 
 def get_headers():
     return {
@@ -157,6 +165,11 @@ def sync_world_cup_match_players():
     Maps them to API-Football fixtures if not already mapped.
     Fetches per-match player stats from /fixtures/players.
     Updates the cumulative Player model and prevents double-counting using a local file.
+
+    A match is only added to the processed list once API-Football actually
+    returns player stats for it. If the fixture mapping fails, or
+    /fixtures/players comes back empty (stats not published yet), the match
+    is left unmarked and retried on the next scheduler run.
     """
     db = SessionLocal()
     processed_matches_file = os.path.join(os.path.dirname(__file__), "..", "data", "processed_player_stats.json")
@@ -172,31 +185,62 @@ def sync_world_cup_match_players():
 
     try:
         from db.models import Match, Team
-        
-        # Load World Cup teams to filter matches
+        from sqlalchemy import or_
+        from etl.world_cup_etl import _normalize_name, TEAM_ALIASES
+
+        # Load World Cup teams to filter matches.
+        # Match by normalized name (the same normalization world_cup_etl.py
+        # uses when creating Team rows), so this still works even if
+        # world_cup_squads.json uses slightly different spellings/aliases
+        # than the canonical Team.name values stored in the DB.
         squads_file = os.path.join(os.path.dirname(__file__), "..", "data", "world_cup_squads.json")
         wc_team_names = []
         if os.path.exists(squads_file):
             with open(squads_file, "r") as f:
                 squads_data = json.load(f)
                 wc_team_names = list(squads_data.keys())
-                
-        # Find DB team IDs for these World Cup teams
+
         wc_team_ids = []
         if wc_team_names:
-            teams = db.query(Team).filter(Team.name.in_(wc_team_names)).all()
-            wc_team_ids = [t.id for t in teams]
+            normalized_wc_names = {
+                _normalize_name(TEAM_ALIASES.get(n, n)) for n in wc_team_names
+            }
+            all_teams = db.query(Team).all()
+            wc_team_ids = [t.id for t in all_teams if _normalize_name(t.name) in normalized_wc_names]
+            if not wc_team_ids:
+                logger.warning(
+                    "[players_etl] world_cup_squads.json found but no Team names matched "
+                    "(check for naming/alias mismatches). Falling back to all finished matches."
+                )
 
-        # Filter: Status is Finished AND home_team is a World Cup team
-        finished_matches = db.query(Match).filter(
-            Match.status == "Finished",
-            Match.home_team_id.in_(wc_team_ids) if wc_team_ids else True
-        ).all()
+        # Filter: Status is Finished AND (no usable WC team list, OR either
+        # side of the match is a World Cup team). Checking both home and
+        # away avoids silently skipping matches if only one side matches.
+        query = db.query(Match).filter(Match.status == "Finished")
+        if wc_team_ids:
+            query = query.filter(
+                or_(
+                    Match.home_team_id.in_(wc_team_ids),
+                    Match.away_team_id.in_(wc_team_ids),
+                )
+            )
+        finished_matches = query.all()
         
         total_players_updated = 0
+        now = datetime.utcnow()
         
         for match in finished_matches:
             if match.id in processed_ids:
+                continue
+
+            # Give API-Football time to publish per-fixture player stats
+            # after the match ends. If this isn't ready yet, skip without
+            # marking as processed — it'll be retried on the next run.
+            if now - match.date < MATCH_STATS_DELAY:
+                logger.info(
+                    f"[players_etl] Match {match.id} ({match.home_team.name} vs {match.away_team.name}) "
+                    f"finished recently ({match.date}); waiting before fetching player stats."
+                )
                 continue
                 
             logger.info(f"[players_etl] Processing player stats for match {match.id} ({match.home_team.name} vs {match.away_team.name})")
@@ -243,12 +287,21 @@ def sync_world_cup_match_players():
                 )
                 resp.raise_for_status()
                 data = resp.json()
-                
+
+                if not data.get("response"):
+                    # Fixture is mapped, but API-Football hasn't published
+                    # player stats for it yet. Don't mark as processed —
+                    # retry on the next run.
+                    logger.info(
+                        f"[players_etl] No player stats available yet for fixture "
+                        f"{match.api_football_id} (match {match.id}). Will retry later."
+                    )
+                    continue
+
                 for team_data in data.get("response", []):
                     team_api_id = team_data["team"]["id"]
                     
                     # find local team
-                    from db.models import Team
                     local_team = db.query(Team).filter(Team.api_football_id == team_api_id).first()
                     if not local_team:
                         continue
@@ -308,7 +361,8 @@ def sync_world_cup_match_players():
                         
                         total_players_updated += 1
                         
-                # Mark match as processed
+                # Mark match as processed — only reached if API-Football
+                # actually returned player stats for this fixture.
                 processed_ids.append(match.id)
                 # Ensure data directory exists
                 os.makedirs(os.path.dirname(processed_matches_file), exist_ok=True)
