@@ -365,3 +365,39 @@ def get_wc_team_stats(
             )
         )
     return result
+
+@router.post("/retrain-world-cup")
+def retrain_world_cup(current_user: User = Depends(get_current_user)):
+    """Manually trigger World Cup AI retraining."""
+    if current_user.email != ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    import sys, os, importlib
+    scripts_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "scripts"
+    )
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+        
+    try:
+        fetch_mod = importlib.import_module("fetch_world_cup_data")
+        importlib.reload(fetch_mod)
+        fetch_mod.main(force=True)
+
+        wc_mod = importlib.import_module("train_model_worldcup")
+        importlib.reload(wc_mod)
+        wc_mod.train(is_auto=False)
+        return {"success": True, "message": "Reentrenamiento completado con éxito"}
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Retrain failed: {e}", exc_info=True)
+        
+        from core.training_reporter import write_training_report
+        write_training_report(
+            model_name="World Cup — XGBoost Ensemble",
+            success=False,
+            error=str(e),
+            is_auto=False,
+        )
+        raise HTTPException(status_code=500, detail=f"Fallo en el reentrenamiento: {str(e)}")

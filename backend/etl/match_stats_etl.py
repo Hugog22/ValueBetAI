@@ -168,11 +168,6 @@ def sync_finished_match_statistics() -> int:
     processed_matches = 0
     
     try:
-        tracker = set()
-        if os.path.exists(TRACKER_FILE):
-            with open(TRACKER_FILE, "r") as f:
-                tracker = set(json.load(f))
-                
         wc_team_names = []
         if os.path.exists(SQUADS_FILE):
             with open(SQUADS_FILE, "r") as f:
@@ -194,9 +189,14 @@ def sync_finished_match_statistics() -> int:
             Match.date <= threshold
         ).all()
         
+        # Get IDs of all matches that already have statistics
+        processed_match_ids = {
+            m_id[0] for m_id in db.query(MatchTeamStatistics.match_id).distinct().all()
+        }
+        
         pending_matches = [
             m for m in matches 
-            if m.id not in tracker 
+            if m.id not in processed_match_ids 
             and (m.home_team_id in wc_team_ids or m.away_team_id in wc_team_ids)
         ]
         
@@ -238,16 +238,11 @@ def sync_finished_match_statistics() -> int:
             db.add(home_stats)
             db.add(away_stats)
             
-            tracker.add(match.id)
             processed_matches += 1
             logger.info(f"[match_stats_etl] Synced statistics for match {match.id}")
             time.sleep(2) # Rate limit
             
         db.commit()
-        
-        if processed_matches > 0:
-            with open(TRACKER_FILE, "w") as f:
-                json.dump(list(tracker), f)
                 
     except Exception as e:
         logger.error(f"[match_stats_etl] Sync failed: {e}", exc_info=True)

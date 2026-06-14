@@ -358,7 +358,7 @@ def train(is_auto=True):
 
     if not os.path.exists(DATA_PATH):
         logger.error(f"No data found at {DATA_PATH}. Run fetch_world_cup_data.py first.")
-        sys.exit(1)
+        raise ValueError(f"No data found at {DATA_PATH}. Run fetch_world_cup_data.py first.")
 
     logger.info(f"Loading data from {DATA_PATH}")
     df = pd.read_csv(DATA_PATH)
@@ -406,7 +406,7 @@ def train(is_auto=True):
     
     if len(feat_df) < 30:
         logger.error("Not enough data to train. Need at least 30 matches.")
-        sys.exit(1)
+        raise ValueError("Not enough data to train. Need at least 30 matches.")
 
     X = feat_df[FEATURES].astype(float)
     tscv = TimeSeriesSplit(n_splits=TSCV_SPLITS)

@@ -79,6 +79,8 @@ export default function BankrollPage() {
         loading: boolean;
     }>({ open: false, report: "", loading: false });
 
+    const [isRetraining, setIsRetraining] = useState(false);
+
     const { token, user, logout } = useAuth();
 
     useEffect(() => {
@@ -151,6 +153,29 @@ export default function BankrollPage() {
     };
 
     const closeTrainingReport = () => setTrainingModal({ open: false, report: "", loading: false });
+
+    const handleRetrainAI = async () => {
+        if (!token) return;
+        setIsRetraining(true);
+        try {
+            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+            const res = await fetch(`${API}/api/admin/retrain-world-cup`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message || "Reentrenamiento completado con éxito");
+            } else {
+                alert("Error: " + (data.detail || "Fallo en el reentrenamiento"));
+            }
+        } catch (err) {
+            console.error('Error triggering retrain', err);
+            alert("Error al intentar reentrenar la IA.");
+        } finally {
+            setIsRetraining(false);
+        }
+    };
 
     const getEsName = (teamName: string): string => {
         const translations: Record<string, string> = {
@@ -296,13 +321,27 @@ export default function BankrollPage() {
                                                 Rendimiento <span className="italic font-light">Global del Sistema</span>
                                             </h2>
                                         </div>
-                                        <button
-                                            onClick={openTrainingReport}
-                                            className="px-6 py-3 bg-[#0A0F1E] text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-[#1A2240] transition-colors flex items-center gap-2"
-                                        >
-                                            <span className="text-lg">⚙️</span>
-                                            Informe de Entrenamiento
-                                        </button>
+                                        <div className="flex items-center gap-4">
+                                            <button
+                                                onClick={openTrainingReport}
+                                                className="px-6 py-3 bg-[#0A0F1E] text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-[#1A2240] transition-colors flex items-center gap-2"
+                                            >
+                                                <span className="text-lg">⚙️</span>
+                                                Informe de Entrenamiento
+                                            </button>
+                                            <button
+                                                onClick={handleRetrainAI}
+                                                disabled={isRetraining}
+                                                className={`px-6 py-3 text-xs font-bold uppercase tracking-widest rounded-xl transition-colors flex items-center gap-2 ${
+                                                    isRetraining 
+                                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                                    : "bg-[#00D084] text-[#0A0F1E] hover:bg-[#00e691]"
+                                                }`}
+                                            >
+                                                <span className={`text-lg ${isRetraining ? 'animate-spin' : ''}`}>🤖</span>
+                                                {isRetraining ? "Entrenando..." : "Reentrenar IA"}
+                                            </button>
+                                        </div>
                                     </div>
                                     
                                     {adminStats.detail || adminStats.total_predictions === undefined ? (

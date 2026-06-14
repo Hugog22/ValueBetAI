@@ -117,6 +117,13 @@ def _settle_and_refresh():
             
         except Exception as e:
             logger.warning(f"⚠️  [scheduler] WC retraining failed: {e}", exc_info=True)
+            from core.training_reporter import write_training_report
+            write_training_report(
+                model_name="World Cup — XGBoost Ensemble",
+                success=False,
+                error=str(e),
+                is_auto=True,
+            )
 
     # ── Step 4: Conditional Cache Refresh ─────────────────────────────
     # Refresh cache if bets were settled, results changed, or new match
