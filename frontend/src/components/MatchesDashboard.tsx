@@ -6,7 +6,7 @@ import Link from 'next/link';
 import FeaturedBet from '@/components/FeaturedBet';
 import BentoCard from '@/components/BentoCard';
 import BetModal from '@/components/BetModal';
-import BookmakersModal from '@/components/BookmakersModal';
+import AllOptionsModal from '@/components/AllOptionsModal';
 import AnalysisModal from '@/components/AnalysisModal';
 import WorldCupBanner from '@/components/WorldCupBanner';
 
@@ -85,6 +85,7 @@ interface Match {
   bestPick?: PickData; topPicks?: PickData[];
   isSteam?: boolean; justification?: string;
   all_bookmakers?: BookmakerOdds[];
+  allCandidates?: PickData[];
   // World Cup specific
   homeFifaPts?: number; awayFifaPts?: number;
   homeSquadQuality?: number; awaySquadQuality?: number;
@@ -207,7 +208,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
     market: string; outcome: string; label: string;
     odds: number; probability: number; ev: number;
   } | null>(null);
-  const [activeBookmakersMatch, setActiveBookmakersMatch] = useState<Match | null>(null);
+  const [activeOptionsMatch, setActiveOptionsMatch] = useState<Match | null>(null);
   const [activeAnalysisMatch, setActiveAnalysisMatch] = useState<Match | null>(null);
 
   // Fetch bankroll
@@ -307,8 +308,8 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
               hour: '2-digit', minute: '2-digit',
             })}
             justification={featuredMatch.justification || ''}
-            allBookmakers={featuredMatch.all_bookmakers}
-            onViewBookmakers={() => setActiveBookmakersMatch(featuredMatch)}
+            hasOptions={!!(featuredMatch.allCandidates && featuredMatch.allCandidates.length > 0)}
+            onViewAllOptions={() => setActiveOptionsMatch(featuredMatch)}
             onAction={() => handleSimulateBet(featuredMatch.id, featuredMatch.bestPick!, featuredMatch.homeTeam, featuredMatch.awayTeam)}
           />
         </section>
@@ -661,16 +662,16 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                                 Análisis IA
                               </button>
                             )}
-                            {match.all_bookmakers && match.all_bookmakers.length > 0 && (
+                            {match.allCandidates && match.allCandidates.length > 0 && (
                               <button
-                                onClick={() => setActiveBookmakersMatch(match)}
+                                onClick={() => setActiveOptionsMatch(match)}
                                 className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors ${
                                   isWorldCupActive 
                                     ? 'border-white/20 text-white/70 hover:bg-white/10 hover:text-white' 
                                     : 'border-[#E5E7EB] text-[#64748B] hover:bg-[#F1F3F5] hover:text-[#1A1C1E]'
                                 }`}
                               >
-                                Ver casas
+                                Ver opciones
                               </button>
                             )}
                             <button
@@ -710,13 +711,17 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
         />
       )}
 
-      {/* ── BOOKMAKERS MODAL ───────────────────────────────────────────────── */}
-      {activeBookmakersMatch && (
-        <BookmakersModal
-          homeTeam={getEsName(activeBookmakersMatch.homeTeam)}
-          awayTeam={getEsName(activeBookmakersMatch.awayTeam)}
-          bookmakers={activeBookmakersMatch.all_bookmakers || []}
-          onClose={() => setActiveBookmakersMatch(null)}
+      {/* ── ALL OPTIONS MODAL ───────────────────────────────────────────────── */}
+      {activeOptionsMatch && (
+        <AllOptionsModal
+          homeTeam={getEsName(activeOptionsMatch.homeTeam)}
+          awayTeam={getEsName(activeOptionsMatch.awayTeam)}
+          allCandidates={activeOptionsMatch.allCandidates || []}
+          onClose={() => setActiveOptionsMatch(null)}
+          onSimulateBet={(candidate) => {
+            handleSimulateBet(activeOptionsMatch.id, candidate, activeOptionsMatch.homeTeam, activeOptionsMatch.awayTeam);
+            setActiveOptionsMatch(null);
+          }}
         />
       )}
 

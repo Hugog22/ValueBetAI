@@ -18,8 +18,8 @@ interface FeaturedBetProps {
     badge: string;
     bgClass: string;
   };
-  allBookmakers?: { title: string; home_odds: number; draw_odds: number; away_odds: number }[];
-  onViewBookmakers?: () => void;
+  hasOptions?: boolean;
+  onViewAllOptions?: () => void;
 }
 
 export default function FeaturedBet({
@@ -34,8 +34,8 @@ export default function FeaturedBet({
   aiProb = 0,
   bookieProb = 0,
   imagePath = '/featured_bet_placeholder.png',
-  allBookmakers = [],
-  onViewBookmakers
+  hasOptions = false,
+  onViewAllOptions
 }: FeaturedBetProps) {
   return (
     <div className="bento-card grid grid-cols-1 lg:grid-cols-2 min-h-[500px]">
@@ -95,12 +95,12 @@ export default function FeaturedBet({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
             </button>
-            {allBookmakers && allBookmakers.length > 0 && onViewBookmakers && (
+            {hasOptions && onViewAllOptions && (
               <button 
-                onClick={onViewBookmakers}
+                onClick={onViewAllOptions}
                 className="px-6 py-4 rounded-full border border-[#E5E7EB] text-sm font-bold text-[#64748B] hover:text-[#064E3B] hover:border-[#064E3B] hover:bg-[#F8FAFC] transition-all"
               >
-                Ver todas las casas
+                Ver todas las opciones
               </button>
             )}
           </div>
