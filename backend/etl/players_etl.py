@@ -171,8 +171,27 @@ def sync_world_cup_match_players():
                 processed_ids = []
 
     try:
-        from db.models import Match
-        finished_matches = db.query(Match).filter(Match.status == "Finished").all()
+        from db.models import Match, Team
+        
+        # Load World Cup teams to filter matches
+        squads_file = os.path.join(os.path.dirname(__file__), "..", "data", "world_cup_squads.json")
+        wc_team_names = []
+        if os.path.exists(squads_file):
+            with open(squads_file, "r") as f:
+                squads_data = json.load(f)
+                wc_team_names = list(squads_data.keys())
+                
+        # Find DB team IDs for these World Cup teams
+        wc_team_ids = []
+        if wc_team_names:
+            teams = db.query(Team).filter(Team.name.in_(wc_team_names)).all()
+            wc_team_ids = [t.id for t in teams]
+
+        # Filter: Status is Finished AND home_team is a World Cup team
+        finished_matches = db.query(Match).filter(
+            Match.status == "Finished",
+            Match.home_team_id.in_(wc_team_ids) if wc_team_ids else True
+        ).all()
         
         total_players_updated = 0
         
