@@ -388,6 +388,15 @@ def retrain_world_cup(current_user: User = Depends(get_current_user)):
         wc_mod = importlib.import_module("train_model_worldcup")
         importlib.reload(wc_mod)
         wc_mod.train(is_auto=False)
+        
+        # Reload the ML model dynamically in RAM
+        from core.shared_predictor import world_cup_predictor
+        world_cup_predictor.load_model()
+        
+        # Refresh the cache so the frontend sees the new predictions immediately
+        from core.cache_service import refresh_cache
+        refresh_cache()
+        
         return {"success": True, "message": "Reentrenamiento completado con éxito"}
     except Exception as e:
         import logging
