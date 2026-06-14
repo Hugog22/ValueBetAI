@@ -250,29 +250,49 @@ def sync_world_cup_match_players():
                 if not match.home_team.api_football_id:
                     match.home_team.api_football_id = fetch_team_api_football_id(match.home_team.name)
                     db.commit()
+                if not match.away_team.api_football_id:
+                    match.away_team.api_football_id = fetch_team_api_football_id(match.away_team.name)
+                    db.commit()
                 
-                if not match.home_team.api_football_id:
-                    logger.warning(f"[players_etl] Could not find API id for {match.home_team.name}")
+                if not match.home_team.api_football_id or not match.away_team.api_football_id:
+                    logger.warning(f"[players_etl] Could not find API id for {match.home_team.name} or {match.away_team.name}")
                     continue
                     
-                match_date_str = match.date.strftime("%Y-%m-%d")
-                
-                # Fetch fixture by date and home team
+                # Fetch fixture by league, season, and date range
                 try:
                     resp = httpx.get(
-                        f"{API_URL}/fixtures", 
-                        headers=get_headers(), 
-                        params={"date": match_date_str, "team": match.home_team.api_football_id}
+                        f"{API_URL}/fixtures",
+                        headers=get_headers(),
+                        params={
+                            "league": 1,           # World Cup
+                            "season": 2026,
+                            "from": (match.date - timedelta(days=1)).strftime("%Y-%m-%d"),
+                            "to":   (match.date + timedelta(days=1)).strftime("%Y-%m-%d"),
+                        }
                     )
                     resp.raise_for_status()
                     data = resp.json()
-                    if data.get("response"):
-                        fixture_id = data["response"][0]["fixture"]["id"]
+                    
+                    fixture_id = None
+                    home_id = match.home_team.api_football_id
+                    away_id = match.away_team.api_football_id
+                    for f in data.get("response", []):
+                        teams = f["teams"]
+                        ids = {teams["home"]["id"], teams["away"]["id"]}
+                        if home_id in ids or away_id in ids:
+                            fixture_id = f["fixture"]["id"]
+                            break
+                    
+                    if fixture_id:
                         match.api_football_id = fixture_id
                         db.commit()
                         logger.info(f"[players_etl] Mapped Match {match.id} to Fixture {fixture_id}")
                     else:
-                        logger.warning(f"[players_etl] No fixture found for team {match.home_team.name} on {match_date_str}")
+                        logger.warning(
+                            f"[players_etl] No fixture found for {match.home_team.name} vs "
+                            f"{match.away_team.name} around {match.date} "
+                            f"(API returned {len(data.get('response', []))} fixtures for league=1/season=2026 in this window)"
+                        )
                         continue
                 except Exception as e:
                     logger.error(f"[players_etl] Fixture search failed: {e}")
