@@ -34,7 +34,7 @@ import pandas as pd
 from db.session import SessionLocal
 from db.models import Match, WorldCupTeamStats, Player, Team
 
-USE_PLAYER_STATS = True
+USE_PLAYER_STATS = False
 
 def get_db_stats():
     db = SessionLocal()
