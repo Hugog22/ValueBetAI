@@ -59,10 +59,11 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"⚠️ Failed to clean duplicates: {e}")
 
-        # Step 2: Warm the prediction cache
+        # Step 2: Warm the prediction cache (Disabled to save API calls, scheduler handles it)
         try:
-            refresh_cache()
-            logger.info("✅ Cache warm-up completada.")
+            logger.info("ℹ️ Startup cache warm-up disabled (saves API requests). Will wait for next 10m tick.")
+            # refresh_cache()
+            # logger.info("✅ Cache warm-up completada.")
         except Exception as e:
             logger.warning(f"⚠️  Startup cache warm-up failed: {e}")
 
