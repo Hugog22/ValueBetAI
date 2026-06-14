@@ -714,14 +714,14 @@ export default function BankrollPage() {
                     </div>
 
                     {/* Modal Body */}
-                    <div className="flex-1 overflow-hidden p-6 bg-[#05080F]">
+                    <div className="flex-1 overflow-y-auto min-h-0 p-6 bg-[#05080F]">
                         {trainingModal.loading ? (
                             <div className="flex flex-col items-center justify-center h-full gap-4">
                                 <div className="w-8 h-8 border-2 border-white/20 border-t-[#00FF00] rounded-full animate-spin" />
                                 <p className="text-[#00FF00] font-mono text-xs">Descargando informe del servidor...</p>
                             </div>
                         ) : (
-                            <div className="h-full w-full bg-black/50 rounded-xl border border-white/5 p-6 overflow-y-auto">
+                            <div className="w-full bg-black/50 rounded-xl border border-white/5 p-6">
                                 <pre className="text-[#00FF00] font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
                                     {trainingModal.report}
                                 </pre>

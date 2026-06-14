@@ -9,6 +9,7 @@ interface PickData {
   bookmakerOdds?: number;
   label: string;
   isValueBet?: boolean;
+  is_value?: boolean;
   probability?: number;
   bookmaker_implied_prob?: number;
 }
@@ -93,12 +94,13 @@ export default function AllOptionsModal({
                 const odds = candidate.bookmaker_odds ?? candidate.bookmakerOdds ?? 1.0;
                 const bookieProb = (candidate.bookmaker_implied_prob ?? 0) * 100;
                 const aiProb = (candidate.probability ?? 0) * 100;
+                const isValue = candidate.isValueBet || candidate.is_value;
                 
                 return (
                   <div 
                     key={index} 
                     className={`border rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors ${
-                      candidate.isValueBet 
+                      isValue 
                         ? 'border-[#064E3B] bg-[#064E3B]/5' 
                         : 'border-[#E5E7EB] hover:border-[#CBD5E1]'
                     }`}
@@ -108,7 +110,7 @@ export default function AllOptionsModal({
                         <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">
                           {candidate.market}
                         </span>
-                        {candidate.isValueBet && (
+                        {isValue && (
                           <span className="bg-[#064E3B] text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
                             Value Bet
                           </span>
