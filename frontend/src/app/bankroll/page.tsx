@@ -419,7 +419,7 @@ export default function BankrollPage() {
                                                     </table>
                                                 </div>
                                             </div>
-                                        </div>                             </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
