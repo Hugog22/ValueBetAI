@@ -196,7 +196,36 @@ def start_scheduler():
                     duration_seconds=elapsed_1,
                 )
 
-        logger.info("🤖 [scheduler] AI retraining cycle complete (Club Leagues only).")
+        # ── Model 2: World Cup XGBoost ────────────────────────────────────
+        t1 = time.time()
+        try:
+            import sys, os
+            scripts_dir = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "scripts"
+            )
+            if scripts_dir not in sys.path:
+                sys.path.insert(0, scripts_dir)
+                
+            import importlib
+            wc_mod = importlib.import_module("train_model_worldcup")
+            importlib.reload(wc_mod)
+            
+            wc_mod.train()
+            elapsed_2 = time.time() - t1
+            logger.info(f"✅ [scheduler] World Cup model retrained in {elapsed_2:.0f}s")
+            
+        except Exception as e:
+            elapsed_2 = time.time() - t1
+            logger.error(f"❌ [scheduler] World Cup model retraining failed: {e}", exc_info=True)
+            write_training_report(
+                model_name="World Cup — XGBoost Ensemble",
+                success=False,
+                error=str(e),
+                duration_seconds=elapsed_2,
+            )
+
+        logger.info("🤖 [scheduler] AI retraining cycle complete (Club Leagues & World Cup).")
 
     scheduler.add_job(
         _run_training,
