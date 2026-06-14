@@ -56,9 +56,13 @@ def get_db_stats():
         tname = team_map.get(s.team_id)
         if tname:
             if tname not in xg_stats:
-                xg_stats[tname] = []
+                xg_stats[tname] = {"xg": [], "possession": [], "shots_on_target": []}
             if s.xg is not None:
-                xg_stats[tname].append(float(s.xg))
+                xg_stats[tname]["xg"].append(float(s.xg))
+            if s.possession_pct is not None:
+                xg_stats[tname]["possession"].append(float(s.possession_pct))
+            if s.shots_on_target is not None:
+                xg_stats[tname]["shots_on_target"].append(float(s.shots_on_target))
                 
     db.close()
     return wc_stats, xg_stats
@@ -232,10 +236,17 @@ def build_features(df: pd.DataFrame, wc_stats: dict, xg_stats: dict) -> pd.DataF
         h_wc = wc_stats.get(ht, {"matches": 0, "goals_scored": 0, "goals_conceded": 0})
         a_wc = wc_stats.get(at, {"matches": 0, "goals_scored": 0, "goals_conceded": 0})
         
-        h_xg = xg_stats.get(ht, [])
-        a_xg = xg_stats.get(at, [])
-        h_xg_avg = sum(h_xg)/len(h_xg) if h_xg else 1.5
-        a_xg_avg = sum(a_xg)/len(a_xg) if a_xg else 1.5
+        h_xg = xg_stats.get(ht, {"xg": [], "possession": [], "shots_on_target": []})
+        a_xg = xg_stats.get(at, {"xg": [], "possession": [], "shots_on_target": []})
+        
+        h_xg_avg = sum(h_xg["xg"])/len(h_xg["xg"]) if h_xg["xg"] else 1.5
+        a_xg_avg = sum(a_xg["xg"])/len(a_xg["xg"]) if a_xg["xg"] else 1.5
+        
+        h_poss_avg = sum(h_xg["possession"])/len(h_xg["possession"]) if h_xg["possession"] else 50.0
+        a_poss_avg = sum(a_xg["possession"])/len(a_xg["possession"]) if a_xg["possession"] else 50.0
+        
+        h_shots_avg = sum(h_xg["shots_on_target"])/len(h_xg["shots_on_target"]) if h_xg["shots_on_target"] else 4.0
+        a_shots_avg = sum(a_xg["shots_on_target"])/len(a_xg["shots_on_target"]) if a_xg["shots_on_target"] else 4.0
 
         h_form = form.get(ht, {"pts5": 7.5, "gf5": 1.5, "ga5": 1.2})
         a_form = form.get(at, {"pts5": 7.5, "gf5": 1.2, "ga5": 1.5})
@@ -259,6 +270,10 @@ def build_features(df: pd.DataFrame, wc_stats: dict, xg_stats: dict) -> pd.DataF
             "away_conceded_avg5": a_form["ga5"],
             "home_avg_xg": h_xg_avg,
             "away_avg_xg": a_xg_avg,
+            "home_avg_possession": h_poss_avg,
+            "away_avg_possession": a_poss_avg,
+            "home_avg_shots": h_shots_avg,
+            "away_avg_shots": a_shots_avg,
             "home_wc_matches": h_wc["matches"],
             "away_wc_matches": a_wc["matches"],
             "home_wc_goals": h_wc["goals_scored"],
@@ -279,6 +294,8 @@ FEATURES = [
     "home_goals_avg5", "away_goals_avg5",
     "home_conceded_avg5", "away_conceded_avg5",
     "home_avg_xg", "away_avg_xg",
+    "home_avg_possession", "away_avg_possession",
+    "home_avg_shots", "away_avg_shots",
     "home_wc_matches", "away_wc_matches",
     "home_wc_goals", "away_wc_goals"
 ]
@@ -475,7 +492,7 @@ def train(is_auto=True):
     joblib.dump(cal_ou25, os.path.join(MODELS_DIR, "wc_ou25_xgb.pkl"))
 
     wc_matches_used = sum(s["matches"] for s in wc_stats.values()) // 2
-    xg_data_points = sum(len(xgs) for xgs in xg_stats.values())
+    xg_data_points = sum(len(xgs["xg"]) for xgs in xg_stats.values())
 
     # ── Save metadata ─────────────────────────────────────────────────────────
     meta = {
@@ -515,7 +532,7 @@ def train(is_auto=True):
     logger.info(f"==== REPORTE DE ENTRENAMIENTO IA ====")
     logger.info(f"Partidos del Mundial 2026 usados: {len(new_rows) if new_rows else 0}")
     
-    xg_points = sum(len(x) for x in xg_stats.values())
+    xg_points = sum(len(x["xg"]) for x in xg_stats.values())
     logger.info(f"Estadísticas xG de equipos activadas. {xg_points} partidos evaluados.")
         
     cv_acc_percent = np.mean(cv_scores) * 100

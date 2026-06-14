@@ -104,6 +104,10 @@ FEATURES = [
     "away_conceded_avg5",
     "home_avg_xg",             # average expected goals
     "away_avg_xg",
+    "home_avg_possession",
+    "away_avg_possession",
+    "home_avg_shots",
+    "away_avg_shots",
     "home_wc_matches",         # dynamic world cup match count
     "away_wc_matches",
     "home_wc_goals",           # dynamic world cup goals
@@ -130,6 +134,10 @@ DEFAULTS: dict[str, float] = {
     "away_conceded_avg5": 1.3,
     "home_avg_xg": 1.5,
     "away_avg_xg": 1.5,
+    "home_avg_possession": 50.0,
+    "away_avg_possession": 50.0,
+    "home_avg_shots": 4.0,
+    "away_avg_shots": 4.0,
     # Dynamic WC match stats (injected via extra_features; default to 0 cold-start)
     "home_wc_matches":        0.0,
     "away_wc_matches":        0.0,
@@ -388,6 +396,10 @@ class WorldCupPredictor:
             "away_conceded_avg5": h2h_away.get("conceded_avg", 1.5),
             "home_avg_xg": 1.5,
             "away_avg_xg": 1.5,
+            "home_avg_possession": 50.0,
+            "away_avg_possession": 50.0,
+            "home_avg_shots": 4.0,
+            "away_avg_shots": 4.0,
         }
 
     def predict_match(self, home: str, away: str,

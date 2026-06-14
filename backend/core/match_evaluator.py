@@ -338,6 +338,12 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     from sqlalchemy.sql import func
     avg_h_xg = db.query(func.avg(MatchTeamStatistics.xg)).filter(MatchTeamStatistics.team_id == h_team.id).scalar() if h_team else None
     avg_a_xg = db.query(func.avg(MatchTeamStatistics.xg)).filter(MatchTeamStatistics.team_id == a_team.id).scalar() if a_team else None
+
+    avg_h_poss = db.query(func.avg(MatchTeamStatistics.possession_pct)).filter(MatchTeamStatistics.team_id == h_team.id).scalar() if h_team else None
+    avg_a_poss = db.query(func.avg(MatchTeamStatistics.possession_pct)).filter(MatchTeamStatistics.team_id == a_team.id).scalar() if a_team else None
+
+    avg_h_shots = db.query(func.avg(MatchTeamStatistics.shots_on_target)).filter(MatchTeamStatistics.team_id == h_team.id).scalar() if h_team else None
+    avg_a_shots = db.query(func.avg(MatchTeamStatistics.shots_on_target)).filter(MatchTeamStatistics.team_id == a_team.id).scalar() if a_team else None
     
     extra_features = {
         "home_wc_matches": h_stat.matches_played if h_stat else 0,
@@ -347,6 +353,11 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     }
     if avg_h_xg is not None: extra_features["home_avg_xg"] = float(avg_h_xg)
     if avg_a_xg is not None: extra_features["away_avg_xg"] = float(avg_a_xg)
+    if avg_h_poss is not None: extra_features["home_avg_possession"] = float(avg_h_poss)
+    if avg_a_poss is not None: extra_features["away_avg_possession"] = float(avg_a_poss)
+    if avg_h_shots is not None: extra_features["home_avg_shots"] = float(avg_h_shots)
+    if avg_a_shots is not None: extra_features["away_avg_shots"] = float(avg_a_shots)
+
 
     # Get prediction from World Cup specialist model
     pred = wc_predictor.predict_match(home, away, is_knockout=is_knockout, extra_features=extra_features)
