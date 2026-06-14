@@ -8,7 +8,7 @@ psycopg[binary]
 psycopg2-binary
 httpx
 pandas
-scikit-learn
+scikit-learn>=1.8.0
 xgboost
 lightgbm
 optuna
