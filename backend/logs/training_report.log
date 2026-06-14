@@ -124,3 +124,131 @@
   Los modelos actualizados se usarán en las próximas predicciones automáticamente.
   Si la exactitud bajó significativamente, considera revisar los datos de entrenamiento.
 ========================================================================
+
+========================================================================
+  INFORME DE AUTOENTRENAMIENTO — 2026-06-14 10:58:57 (Madrid)
+  Modelo: World Cup — XGBoost Ensemble
+========================================================================
+  ✅ ESTADO: EXITOSO
+  📊 Datos de entrenamiento: 2,456 partidos
+
+  ─── Modelo 1X2 (Victoria Local / Empate / Visitante) ───
+  📈 Exactitud CV: 74.10%  (antes: 74.10%, cambio: +0.00%)
+  🔧 Hiperparámetros seleccionados por Optuna:
+  • max_depth: 3  ← [sin cambio]
+  • learning_rate: 0.061778277937018636  ← [sin cambio]
+  • subsample: 0.9115888635752988  ← [sin cambio]
+  • colsample_bytree: 0.9203756938716146  ← [sin cambio]
+
+  ─── Modelo Over/Under 2.5 ───
+  📉 Log-Loss CV: 0.6776  (antes: 0.6776, cambio: +0.0000)
+  🔧 Hiperparámetros seleccionados por Optuna:
+  • max_depth: 3  ← [sin cambio]
+  • learning_rate: 0.04579897150621581  ← [sin cambio]
+  • subsample: 0.9162734575038668  ← [sin cambio]
+  • colsample_bytree: 0.5514541888257359  ← [sin cambio]
+  📈 1X2 CV Accuracy: 74.10%  (antes: 74.10%, cambio: +0.00%)
+  📉 O/U 2.5 CV Log-Loss: 0.6776
+
+  💡 RESUMEN:
+  Los modelos actualizados se usarán en las próximas predicciones automáticamente.
+  Si la exactitud bajó significativamente, considera revisar los datos de entrenamiento.
+========================================================================
+
+========================================================================
+  INFORME DE AUTOENTRENAMIENTO — 2026-06-14 11:20:01 (Madrid)
+  Modelo: World Cup — XGBoost Ensemble
+========================================================================
+  ✅ ESTADO: EXITOSO
+  📊 Datos de entrenamiento: 2,456 partidos
+
+  ─── Modelo 1X2 (Victoria Local / Empate / Visitante) ───
+  📈 Exactitud CV: 74.10%  (antes: 74.10%, cambio: +0.00%)
+  🔧 Hiperparámetros seleccionados por Optuna:
+  • max_depth: 3  ← [sin cambio]
+  • learning_rate: 0.061778277937018636  ← [sin cambio]
+  • subsample: 0.9115888635752988  ← [sin cambio]
+  • colsample_bytree: 0.9203756938716146  ← [sin cambio]
+
+  ─── Modelo Over/Under 2.5 ───
+  📉 Log-Loss CV: 0.6776  (antes: 0.6776, cambio: +0.0000)
+  🔧 Hiperparámetros seleccionados por Optuna:
+  • max_depth: 3  ← [sin cambio]
+  • learning_rate: 0.04579897150621581  ← [sin cambio]
+  • subsample: 0.9162734575038668  ← [sin cambio]
+  • colsample_bytree: 0.5514541888257359  ← [sin cambio]
+  📈 1X2 CV Accuracy: 74.10%  (antes: 74.10%, cambio: +0.00%)
+  📉 O/U 2.5 CV Log-Loss: 0.6776
+
+  💡 RESUMEN:
+  Los modelos actualizados se usarán en las próximas predicciones automáticamente.
+  Si la exactitud bajó significativamente, considera revisar los datos de entrenamiento.
+========================================================================
+
+========================================================================
+  INFORME DE AUTOENTRENAMIENTO — 2026-06-14 22:10:31 (Madrid)
+  Modelo: World Cup — XGBoost Ensemble
+========================================================================
+  ✅ ESTADO: EXITOSO
+  📊 Datos de entrenamiento: 2,457 partidos
+
+  ─── Modelo 1X2 (Victoria Local / Empate / Visitante) ───
+  📈 Exactitud CV: 74.97%  (antes: 74.10%, cambio: +0.87%) ✅ MEJORA
+  🔧 Hiperparámetros seleccionados por Optuna:
+  • max_depth: 3  ← [sin cambio]
+  • learning_rate: 0.061778277937018636 → 0.048925649656201595  (↓ bajó)
+    📌 Velocidad de aprendizaje del gradient boosting. Valores más bajos (<0.01) hacen el modelo más conservador y menos propenso a sobreajustarse, pero requieren más árboles. Valores más altos (>0.05) aprenden más rápido pero pueden sobreajustarse.
+  • subsample: 0.9115888635752988  ← [sin cambio]
+  • colsample_bytree: 0.9203756938716146 → 0.9756013548426002  (↑ aumentó)
+    📌 Fracción de variables (features) usada por árbol. Reducir este valor mejora la diversidad del ensemble y reduce sobreajuste.
+
+  ─── Modelo Over/Under 2.5 ───
+  📉 Log-Loss CV: 0.6723  (antes: 0.6776, cambio: -0.0053)
+  🔧 Hiperparámetros seleccionados por Optuna:
+  • max_depth: 3  ← [sin cambio]
+  • learning_rate: 0.04579897150621581 → 0.02434414678890834  (↓ bajó)
+    📌 Velocidad de aprendizaje del gradient boosting. Valores más bajos (<0.01) hacen el modelo más conservador y menos propenso a sobreajustarse, pero requieren más árboles. Valores más altos (>0.05) aprenden más rápido pero pueden sobreajustarse.
+  • subsample: 0.9162734575038668 → 0.7363570033289742  (↓ bajó)
+    📌 Fracción de datos usada para entrenar cada árbol. Valores <1.0 añaden aleatoriedad y reducen sobreajuste (regularización estocástica).
+  • colsample_bytree: 0.5514541888257359 → 0.8283635061774562  (↑ aumentó)
+    📌 Fracción de variables (features) usada por árbol. Reducir este valor mejora la diversidad del ensemble y reduce sobreajuste.
+  📈 1X2 CV Accuracy: 74.97%  (antes: 74.10%, cambio: +0.87%)
+  📉 O/U 2.5 CV Log-Loss: 0.6723
+
+  💡 RESUMEN:
+  Los modelos actualizados se usarán en las próximas predicciones automáticamente.
+  Si la exactitud bajó significativamente, considera revisar los datos de entrenamiento.
+========================================================================
+
+========================================================================
+  INFORME DE AUTOENTRENAMIENTO — 2026-06-14 22:27:09 (Madrid)
+  Modelo: World Cup — XGBoost Ensemble
+========================================================================
+  ✅ ESTADO: EXITOSO
+  📊 Datos de entrenamiento: 2,457 partidos
+
+  ─── Modelo 1X2 (Victoria Local / Empate / Visitante) ───
+  📈 Exactitud CV: 74.48%  (antes: 74.97%, cambio: -0.49%)
+  🔧 Hiperparámetros seleccionados por Optuna:
+  • max_depth: 3  ← [sin cambio]
+  • learning_rate: 0.048925649656201595  ← [sin cambio]
+  • subsample: 0.9115888635752988  ← [sin cambio]
+  • colsample_bytree: 0.9756013548426002  ← [sin cambio]
+
+  ─── Modelo Over/Under 2.5 ───
+  📉 Log-Loss CV: 0.6715  (antes: 0.6723, cambio: -0.0008)
+  🔧 Hiperparámetros seleccionados por Optuna:
+  • max_depth: 3  ← [sin cambio]
+  • learning_rate: 0.02434414678890834 → 0.023266985885261875  (↓ bajó)
+    📌 Velocidad de aprendizaje del gradient boosting. Valores más bajos (<0.01) hacen el modelo más conservador y menos propenso a sobreajustarse, pero requieren más árboles. Valores más altos (>0.05) aprenden más rápido pero pueden sobreajustarse.
+  • subsample: 0.7363570033289742 → 0.6943778140679043  (↓ bajó)
+    📌 Fracción de datos usada para entrenar cada árbol. Valores <1.0 añaden aleatoriedad y reducen sobreajuste (regularización estocástica).
+  • colsample_bytree: 0.8283635061774562 → 0.8433849910545115  (↑ aumentó)
+    📌 Fracción de variables (features) usada por árbol. Reducir este valor mejora la diversidad del ensemble y reduce sobreajuste.
+  📈 1X2 CV Accuracy: 74.48%  (antes: 74.97%, cambio: -0.49%)
+  📉 O/U 2.5 CV Log-Loss: 0.6715
+
+  💡 RESUMEN:
+  Los modelos actualizados se usarán en las próximas predicciones automáticamente.
+  Si la exactitud bajó significativamente, considera revisar los datos de entrenamiento.
+========================================================================

@@ -66,19 +66,19 @@ def _settle_and_refresh():
     except Exception as e:
         logger.warning(f"⚠️  [scheduler] La Liga ETL sync failed: {e}")
 
-    # ── Step 1.5: Sync per-match player stats for finished WC matches ──
+    # ── Step 1.5: Sync per-match team stats for finished WC matches ──
     # Run this every hour regardless of `wc_updated`. A match can sit as
-    # "Finished" for a while before API-Football publishes its
-    # /fixtures/players data, so this step needs its own retry loop instead
-    # of only running on the exact tick the schedule sync detects a change.
-    players_updated = 0
+    # "Finished" for a while before statistics are available, so this step
+    # needs its own retry loop instead of only running on the exact tick
+    # the schedule sync detects a change.
+    match_stats_updated = 0
     try:
-        from etl.players_etl import sync_world_cup_match_players
-        players_updated = sync_world_cup_match_players()
-        if players_updated > 0:
-            logger.info(f"🔄 [scheduler] Synced stats for {players_updated} player-entries from finished WC matches.")
+        from etl.match_stats_etl import sync_finished_match_statistics
+        match_stats_updated = sync_finished_match_statistics()
+        if match_stats_updated > 0:
+            logger.info(f"🔄 [scheduler] Synced stats for {match_stats_updated} matches from finished WC matches.")
     except Exception as e:
-        logger.warning(f"⚠️  [scheduler] WC player stats sync failed: {e}", exc_info=True)
+        logger.warning(f"⚠️  [scheduler] WC match stats sync failed: {e}", exc_info=True)
 
     # ── Step 2: Settle bets on newly-finished matches ─────────────────
     from core.bet_settler import settle_pending_bets
@@ -93,10 +93,10 @@ def _settle_and_refresh():
     except Exception as e:
         logger.error(f"❌ [scheduler] settle_pending_bets failed: {e}", exc_info=True)
 
-    # ── Step 3: Retrain model if new results or new player stats came in ──
-    if wc_updated > 0 or players_updated > 0:
+    # ── Step 3: Retrain model if new results or new match stats came in ──
+    if wc_updated > 0 or match_stats_updated > 0:
         try:
-            logger.info("🔄 [scheduler] New match results/player stats. Retraining World Cup AI...")
+            logger.info("🔄 [scheduler] New match results/stats. Retraining World Cup AI...")
 
             import sys, os, importlib
             scripts_dir = os.path.join(
@@ -119,9 +119,9 @@ def _settle_and_refresh():
             logger.warning(f"⚠️  [scheduler] WC retraining failed: {e}", exc_info=True)
 
     # ── Step 4: Conditional Cache Refresh ─────────────────────────────
-    # Refresh cache if bets were settled, results changed, or new player
+    # Refresh cache if bets were settled, results changed, or new match
     # stats came in (any of these can change predictions/recommendations)
-    if bets_settled > 0 or wc_updated > 0 or players_updated > 0:
+    if bets_settled > 0 or wc_updated > 0 or match_stats_updated > 0:
         try:
             logger.info("🔄 [scheduler] Triggering cache refresh due to settled bets, new results, or new player stats.")
             refresh_cache()

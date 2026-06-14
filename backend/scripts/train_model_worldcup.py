@@ -32,9 +32,7 @@ import numpy as np
 import pandas as pd
 
 from db.session import SessionLocal
-from db.models import Match, WorldCupTeamStats, Player, Team
-
-USE_PLAYER_STATS = True
+from db.models import Match, WorldCupTeamStats, Team, MatchTeamStatistics
 
 def get_db_stats():
     db = SessionLocal()
@@ -52,18 +50,18 @@ def get_db_stats():
                 "goals_conceded": s.goals_against
             }
             
-    player_stats = {}
-    players = db.query(Player).all()
-    for p in players:
-        tname = team_map.get(p.team_id)
+    xg_stats = {}
+    match_stats = db.query(MatchTeamStatistics).all()
+    for s in match_stats:
+        tname = team_map.get(s.team_id)
         if tname:
-            if tname not in player_stats:
-                player_stats[tname] = []
-            if p.rating:
-                player_stats[tname].append(p.rating)
+            if tname not in xg_stats:
+                xg_stats[tname] = []
+            if s.xg is not None:
+                xg_stats[tname].append(float(s.xg))
                 
     db.close()
-    return wc_stats, player_stats
+    return wc_stats, xg_stats
 
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -204,7 +202,7 @@ def load_squad_quality() -> dict[str, float]:
         return {}
 
 
-def build_features(df: pd.DataFrame, wc_stats: dict, player_stats: dict) -> pd.DataFrame:
+def build_features(df: pd.DataFrame, wc_stats: dict, xg_stats: dict) -> pd.DataFrame:
     """Construct all feature columns for training."""
     from models.world_cup_predictor import FIFA_POINTS, DEFAULT_FIFA_POINTS
     h2h      = build_h2h_stats(df)
@@ -234,10 +232,10 @@ def build_features(df: pd.DataFrame, wc_stats: dict, player_stats: dict) -> pd.D
         h_wc = wc_stats.get(ht, {"matches": 0, "goals_scored": 0, "goals_conceded": 0})
         a_wc = wc_stats.get(at, {"matches": 0, "goals_scored": 0, "goals_conceded": 0})
         
-        h_pr = player_stats.get(ht, [])
-        a_pr = player_stats.get(at, [])
-        h_pr_avg = sum(h_pr)/len(h_pr) if USE_PLAYER_STATS and h_pr else home_q / 10.0
-        a_pr_avg = sum(a_pr)/len(a_pr) if USE_PLAYER_STATS and a_pr else away_q / 10.0
+        h_xg = xg_stats.get(ht, [])
+        a_xg = xg_stats.get(at, [])
+        h_xg_avg = sum(h_xg)/len(h_xg) if h_xg else 1.5
+        a_xg_avg = sum(a_xg)/len(a_xg) if a_xg else 1.5
 
         h_form = form.get(ht, {"pts5": 7.5, "gf5": 1.5, "ga5": 1.2})
         a_form = form.get(at, {"pts5": 7.5, "gf5": 1.2, "ga5": 1.5})
@@ -259,8 +257,8 @@ def build_features(df: pd.DataFrame, wc_stats: dict, player_stats: dict) -> pd.D
             "away_goals_avg5":    a_form["gf5"],
             "home_conceded_avg5": h_form["ga5"],
             "away_conceded_avg5": a_form["ga5"],
-            "home_avg_player_rating": h_pr_avg,
-            "away_avg_player_rating": a_pr_avg,
+            "home_avg_xg": h_xg_avg,
+            "away_avg_xg": a_xg_avg,
             "home_wc_matches": h_wc["matches"],
             "away_wc_matches": a_wc["matches"],
             "home_wc_goals": h_wc["goals_scored"],
@@ -280,7 +278,7 @@ FEATURES = [
     "is_knockout",
     "home_goals_avg5", "away_goals_avg5",
     "home_conceded_avg5", "away_conceded_avg5",
-    "home_avg_player_rating", "away_avg_player_rating",
+    "home_avg_xg", "away_avg_xg",
     "home_wc_matches", "away_wc_matches",
     "home_wc_goals", "away_wc_goals"
 ]
@@ -347,7 +345,7 @@ def train():
 
     logger.info(f"Loading data from {DATA_PATH}")
     df = pd.read_csv(DATA_PATH)
-    wc_stats, player_stats = get_db_stats()
+    wc_stats, xg_stats = get_db_stats()
     
     # Merge finished matches from DB into df
     db = SessionLocal()
@@ -387,7 +385,7 @@ def train():
         logger.info(f"Appended {len(new_rows)} finished 2026 matches from DB.")
         
     logger.info("Building features…")
-    feat_df = build_features(df, wc_stats, player_stats)
+    feat_df = build_features(df, wc_stats, xg_stats)
     
     if len(feat_df) < 30:
         logger.error("Not enough data to train. Need at least 30 matches.")
@@ -477,14 +475,14 @@ def train():
     joblib.dump(cal_ou25, os.path.join(MODELS_DIR, "wc_ou25_xgb.pkl"))
 
     wc_matches_used = sum(s["matches"] for s in wc_stats.values()) // 2
-    players_used = sum(len(ratings) for ratings in player_stats.values())
+    xg_data_points = sum(len(xgs) for xgs in xg_stats.values())
 
     # ── Save metadata ─────────────────────────────────────────────────────────
     meta = {
         "trained_at":    datetime.utcnow().isoformat(),
         "training_rows": len(feat_df),
         "wc_matches_used": wc_matches_used,
-        "players_used": players_used,
+        "xg_data_points": xg_data_points,
         "features":      FEATURES,
         "cv_1x2_acc":    round(float(np.mean(cv_scores)), 4),
         "cv_ou25_logloss": round(float(np.mean(cv_ou25)), 4),
@@ -516,11 +514,8 @@ def train():
     logger.info(f"==== REPORTE DE ENTRENAMIENTO IA ====")
     logger.info(f"Partidos del Mundial 2026 usados: {len(new_rows) if new_rows else 0}")
     
-    players_used = sum(len(p) for p in player_stats.values()) if USE_PLAYER_STATS else 0
-    if USE_PLAYER_STATS:
-        logger.info(f"Estadísticas individuales de jugadores activadas. {players_used} jugadores usados.")
-    else:
-        logger.info(f"Estadísticas individuales de jugadores en pausa temporal. 0 jugadores evaluados.")
+    xg_points = sum(len(x) for x in xg_stats.values())
+    logger.info(f"Estadísticas xG de equipos activadas. {xg_points} partidos evaluados.")
         
     cv_acc_percent = np.mean(cv_scores) * 100
     logger.info(f"Precisión (Accuracy) alcanzada: {cv_acc_percent:.2f}%")

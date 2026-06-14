@@ -13,7 +13,7 @@ The correct evaluator is selected by cache_service based on sport key.
 import random
 from datetime import datetime
 from sqlalchemy.orm import Session
-from db.models import Match, Odds, MarketOdds, OddsHistory, Team, WorldCupTeamStats, Player
+from db.models import Match, Odds, MarketOdds, OddsHistory, Team, WorldCupTeamStats
 
 
 # ---------------------------------------------------------------------------
@@ -328,7 +328,7 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
         db = SessionLocal()
         local_db_created = True
         
-    from db.models import WorldCupTeamStats, Player
+    from db.models import WorldCupTeamStats, MatchTeamStatistics
     h_team = db.query(Team).filter(Team.name == home).first()
     a_team = db.query(Team).filter(Team.name == away).first()
     
@@ -336,8 +336,8 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     a_stat = db.query(WorldCupTeamStats).filter(WorldCupTeamStats.team_id == a_team.id).first() if a_team else None
     
     from sqlalchemy.sql import func
-    avg_h = db.query(func.avg(Player.rating)).filter(Player.team_id == h_team.id).scalar() if h_team else None
-    avg_a = db.query(func.avg(Player.rating)).filter(Player.team_id == a_team.id).scalar() if a_team else None
+    avg_h_xg = db.query(func.avg(MatchTeamStatistics.xg)).filter(MatchTeamStatistics.team_id == h_team.id).scalar() if h_team else None
+    avg_a_xg = db.query(func.avg(MatchTeamStatistics.xg)).filter(MatchTeamStatistics.team_id == a_team.id).scalar() if a_team else None
     
     extra_features = {
         "home_wc_matches": h_stat.matches_played if h_stat else 0,
@@ -345,8 +345,8 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
         "home_wc_goals": (h_stat.goals_for + h_stat.goals_against) if h_stat else 0,
         "away_wc_goals": (a_stat.goals_for + a_stat.goals_against) if a_stat else 0,
     }
-    if avg_h: extra_features["home_avg_player_rating"] = float(avg_h)
-    if avg_a: extra_features["away_avg_player_rating"] = float(avg_a)
+    if avg_h_xg is not None: extra_features["home_avg_xg"] = float(avg_h_xg)
+    if avg_a_xg is not None: extra_features["away_avg_xg"] = float(avg_a_xg)
 
     # Get prediction from World Cup specialist model
     pred = wc_predictor.predict_match(home, away, is_knockout=is_knockout, extra_features=extra_features)
@@ -423,33 +423,16 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     
     h_stats_str = ""
     a_stats_str = ""
-    
-    try:
-        import sys
-        import os
-        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        from scripts.train_model_worldcup import USE_PLAYER_STATS
-    except ImportError:
-        USE_PLAYER_STATS = False
-        
+
     if h_team:
         h_stat = db.query(WorldCupTeamStats).filter(WorldCupTeamStats.team_id == h_team.id).first()
         if h_stat and h_stat.matches_played > 0:
             h_stats_str = f" {home} lleva {h_stat.matches_played} partidos en el Mundial 2026 ({h_stat.goals_for} GF, {h_stat.goals_against} GC)."
-    
+
     if a_team:
         a_stat = db.query(WorldCupTeamStats).filter(WorldCupTeamStats.team_id == a_team.id).first()
         if a_stat and a_stat.matches_played > 0:
             a_stats_str = f" {away} lleva {a_stat.matches_played} partidos en el Mundial 2026 ({a_stat.goals_for} GF, {a_stat.goals_against} GC)."
-            
-    player_note = ""
-    if USE_PLAYER_STATS:
-        # Find best player
-        best_hp = db.query(Player).filter(Player.team_id == h_team.id).order_by(Player.rating.desc()).first() if h_team else None
-        if best_hp and best_hp.rating:
-            player_note = f" Jugador clave: {best_hp.name} (Nota: {best_hp.rating})."
-    else:
-        player_note = " (Estadísticas individuales en pausa por límites de API, 0 jugadores evaluados)."
         
     if local_db_created:
         db.close()
@@ -457,7 +440,7 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     justification = (
         f"FIFA Rankings: {home} ({home_pts:.0f} pts) vs {away} ({away_pts:.0f} pts). "
         f"Calidad de plantilla: {home_qual:.0f} vs {away_qual:.0f}/100. {h2h_note}"
-        f"{h_stats_str}{a_stats_str}{player_note}"
+        f"{h_stats_str}{a_stats_str}"
     )
 
     return {

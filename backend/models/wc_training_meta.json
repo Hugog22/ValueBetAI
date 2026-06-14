@@ -1,8 +1,8 @@
 {
-  "trained_at": "2026-06-14T08:48:36.018911",
-  "training_rows": 2456,
+  "trained_at": "2026-06-14T20:27:09.840517",
+  "training_rows": 2457,
   "wc_matches_used": 8,
-  "players_used": 0,
+  "xg_data_points": 18,
   "features": [
     "home_fifa_pts",
     "away_fifa_pts",
@@ -20,43 +20,43 @@
     "away_goals_avg5",
     "home_conceded_avg5",
     "away_conceded_avg5",
-    "home_avg_player_rating",
-    "away_avg_player_rating",
+    "home_avg_xg",
+    "away_avg_xg",
     "home_wc_matches",
     "away_wc_matches",
     "home_wc_goals",
     "away_wc_goals"
   ],
-  "cv_1x2_acc": 0.741,
-  "cv_ou25_logloss": 0.6776,
+  "cv_1x2_acc": 0.7448,
+  "cv_ou25_logloss": 0.6715,
   "best_xgb_1x2": {
     "max_depth": 3,
-    "learning_rate": 0.061778277937018636,
+    "learning_rate": 0.048925649656201595,
     "subsample": 0.9115888635752988,
-    "colsample_bytree": 0.9203756938716146
+    "colsample_bytree": 0.9756013548426002
   },
   "best_xgb_ou25": {
     "max_depth": 3,
-    "learning_rate": 0.04579897150621581,
-    "subsample": 0.9162734575038668,
-    "colsample_bytree": 0.5514541888257359
+    "learning_rate": 0.023266985885261875,
+    "subsample": 0.6943778140679043,
+    "colsample_bytree": 0.8433849910545115
   },
   "model_1x2": {
-    "cv_mean_accuracy": 0.741,
+    "cv_mean_accuracy": 0.7448,
     "best_params": {
       "max_depth": 3,
-      "learning_rate": 0.061778277937018636,
+      "learning_rate": 0.048925649656201595,
       "subsample": 0.9115888635752988,
-      "colsample_bytree": 0.9203756938716146
+      "colsample_bytree": 0.9756013548426002
     }
   },
   "model_ou25": {
-    "cv_mean_logloss": 0.6776,
+    "cv_mean_logloss": 0.6715,
     "best_params": {
       "max_depth": 3,
-      "learning_rate": 0.04579897150621581,
-      "subsample": 0.9162734575038668,
-      "colsample_bytree": 0.5514541888257359
+      "learning_rate": 0.023266985885261875,
+      "subsample": 0.6943778140679043,
+      "colsample_bytree": 0.8433849910545115
     }
   }
 }

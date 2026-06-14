@@ -26,7 +26,7 @@ def format_trained_at(ts: str) -> str:
         return ts
 
 from db.session import get_db
-from db.models import Bet, Match, User, Team, WorldCupTeamStats, Player
+from db.models import Bet, Match, User, Team, WorldCupTeamStats, MatchTeamStatistics
 from routers.auth import get_current_user
 
 ADMIN_EMAIL = "hugodesax123@gmail.com"
@@ -314,24 +314,16 @@ class TeamStatResponse(BaseModel):
     team_name: str
     matches_played: int
     goals_for: int
+
+
     goals_against: int
     wins: int
     draws: int
     losses: int
     last_updated: str
-
-class PlayerResponse(BaseModel):
-    team_name: str
-    name: str
-    position: str
-    rating: float
-    matches_played: int
-    minutes_played: int
-    goals: int
-    assists: int
-    yellow_cards: int
-    red_cards: int
-    last_updated: str
+    avg_xg: Optional[float] = None
+    avg_possession: Optional[float] = None
+    avg_shots_on_target: Optional[float] = None
 
 @router.get("/wc-team-stats", response_model=List[TeamStatResponse])
 def get_wc_team_stats(
@@ -341,43 +333,35 @@ def get_wc_team_stats(
     if current_user.email != ADMIN_EMAIL:
         raise HTTPException(status_code=403, detail="Forbidden")
         
+    # Query WC teams and their basic stats
     stats = db.query(WorldCupTeamStats, Team).join(Team, WorldCupTeamStats.team_id == Team.id).all()
     
-    return [
-        TeamStatResponse(
-            team_name=t.name,
-            matches_played=s.matches_played,
-            goals_for=s.goals_for,
-            goals_against=s.goals_against,
-            wins=s.wins,
-            draws=s.draws,
-            losses=s.losses,
-            last_updated=str(s.last_updated) if s.last_updated else ""
-        ) for s, t in stats
-    ]
-
-@router.get("/wc-players", response_model=List[PlayerResponse])
-def get_wc_players(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    if current_user.email != ADMIN_EMAIL:
-        raise HTTPException(status_code=403, detail="Forbidden")
-        
-    players = db.query(Player, Team).join(Team, Player.team_id == Team.id).all()
+    # Pre-calculate averages for MatchTeamStatistics
+    avg_stats = db.query(
+        MatchTeamStatistics.team_id,
+        func.avg(MatchTeamStatistics.xg).label('avg_xg'),
+        func.avg(MatchTeamStatistics.possession_pct).label('avg_possession'),
+        func.avg(MatchTeamStatistics.shots_on_target).label('avg_shots_on_target')
+    ).group_by(MatchTeamStatistics.team_id).all()
     
-    return [
-        PlayerResponse(
-            team_name=t.name,
-            name=p.name,
-            position=p.position or "",
-            rating=p.rating or 0.0,
-            matches_played=p.matches_played,
-            minutes_played=p.minutes_played,
-            goals=p.goals,
-            assists=p.assists,
-            yellow_cards=p.yellow_cards,
-            red_cards=p.red_cards,
-            last_updated=str(p.last_updated) if p.last_updated else ""
-        ) for p, t in players
-    ]
+    avg_map = {row.team_id: row for row in avg_stats}
+    
+    result = []
+    for s, t in stats:
+        t_avgs = avg_map.get(t.id)
+        result.append(
+            TeamStatResponse(
+                team_name=t.name,
+                matches_played=s.matches_played,
+                goals_for=s.goals_for,
+                goals_against=s.goals_against,
+                wins=s.wins,
+                draws=s.draws,
+                losses=s.losses,
+                last_updated=str(s.last_updated) if s.last_updated else "",
+                avg_xg=round(t_avgs.avg_xg, 2) if t_avgs and t_avgs.avg_xg is not None else None,
+                avg_possession=round(t_avgs.avg_possession, 1) if t_avgs and t_avgs.avg_possession is not None else None,
+                avg_shots_on_target=round(t_avgs.avg_shots_on_target, 1) if t_avgs and t_avgs.avg_shots_on_target is not None else None
+            )
+        )
+    return result
