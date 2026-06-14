@@ -150,18 +150,12 @@ def sync_world_cup_odds() -> int:
                 .first()
             )
 
-            if existing:
-                match = existing
-            else:
-                match = Match(
-                    date=match_date,
-                    home_team_id=home_team.id,
-                    away_team_id=away_team.id,
-                    status="Not Started",
-                )
-                db.add(match)
-                db.flush()
-                new_count += 1
+            if not existing:
+                # El usuario ha pedido que The Odds API solo se use para cuotas.
+                # Si el partido no existe todavía (no lo ha bajado football-data.org), lo saltamos.
+                continue
+                
+            match = existing
 
             # Store h2h odds for all bookmakers
             bookmakers = event.get("bookmakers", [])
