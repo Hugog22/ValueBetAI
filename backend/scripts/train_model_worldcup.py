@@ -327,7 +327,7 @@ def make_objective_ou25(X: pd.DataFrame, y: np.ndarray, tscv):
         return np.mean(lls)
     return objective
 
-def train():
+def train(is_auto=True):
     """Run full training pipeline for World Cup models with Optuna."""
     import xgboost as xgb
     import lightgbm as lgb
@@ -506,6 +506,7 @@ def train():
             model_name="World Cup — XGBoost Ensemble",
             success=True,
             meta=meta,
+            is_auto=is_auto,
         )
     except Exception as e:
         logger.error(f"Failed to write training report: {e}")
@@ -526,4 +527,4 @@ def train():
 
 
 if __name__ == "__main__":
-    train()
+    train(is_auto=False)

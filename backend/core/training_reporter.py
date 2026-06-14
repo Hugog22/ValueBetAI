@@ -111,6 +111,7 @@ def write_training_report(
     meta: Optional[dict] = None,
     error: Optional[str] = None,
     duration_seconds: Optional[float] = None,
+    is_auto: bool = True,
 ) -> None:
     """
     Append a training report entry to logs/training_report.log.
@@ -129,10 +130,11 @@ def write_training_report(
     ts = now.strftime("%Y-%m-%d %H:%M:%S (Madrid)")
     separator = "=" * 72
 
+    report_type = "AUTOENTRENAMIENTO" if is_auto else "ENTRENAMIENTO MANUAL"
     lines = [
         "",
         separator,
-        f"  INFORME DE AUTOENTRENAMIENTO — {ts}",
+        f"  INFORME DE {report_type} — {ts}",
         f"  Modelo: {model_name}",
         separator,
     ]
@@ -239,11 +241,11 @@ def write_training_report(
 
 
 def _write_lines(lines: list[str]) -> None:
-    """Append lines to the training report log file."""
+    """Overwrite lines in the training report log file."""
     text = "\n".join(lines) + "\n"
-    with open(REPORT_PATH, "a", encoding="utf-8") as f:
+    with open(REPORT_PATH, "w", encoding="utf-8") as f:
         f.write(text)
-    logger.info(f"📝 Training report appended → {REPORT_PATH}")
+    logger.info(f"📝 Training report written → {REPORT_PATH}")
 
 
 def get_report_path() -> str:

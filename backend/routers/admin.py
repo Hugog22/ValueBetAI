@@ -258,7 +258,7 @@ def get_training_report(
                 f"Último entrenamiento : {trained_str}",
                 f"Partidos históricos  : {meta.get('training_rows', 'N/A')}",
                 f"Partidos Mundial '26 : {meta.get('wc_matches_used', 0)}",
-                f"Jugadores evaluados  : {meta.get('players_used', 0)}",
+                f"Puntos de datos xG   : {meta.get('xg_data_points', 0)}",
                 f"Precisión 1X2        : {meta.get('cv_1x2_acc', 0) * 100:.2f}%",
                 f"LogLoss O/U 2.5      : {meta.get('cv_ou25_logloss', 0):.4f}",
                 "",
