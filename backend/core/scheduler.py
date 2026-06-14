@@ -81,8 +81,11 @@ def _settle_and_refresh():
     # ── Step 3: Retrain model if new matches finished ─────────────────
     if wc_updated > 0:
         try:
-            logger.info("🔄 [scheduler] Match finished/updated. Retraining World Cup AI...")
-            # Note: players_etl is disabled temporarily until API integration is complete
+            logger.info("🔄 [scheduler] Match finished/updated. Fetching per-match player stats and retraining World Cup AI...")
+            
+            # Use the new per-match stats sync
+            from etl.players_etl import sync_world_cup_match_players
+            sync_world_cup_match_players()
             
             import sys, os, importlib
             scripts_dir = os.path.join(
