@@ -45,25 +45,44 @@ def _parse_cron(expr: str) -> dict:
 
 def _settle_and_refresh():
     """
-    Composite job: sync match results → settle pending bets → conditional cache refresh.
-
-    Called hourly (xx:05) so that finished matches are detected promptly
-    and bets get resolved within ~1 hour of match completion.
-
-    Key insight: bet_settler requires Match.status == "Finished", but that
-    status is only set by the ETL sync.  We MUST sync results first.
+    Composite job: sync match results → settle pending bets → retrain if needed → conditional cache refresh.
     """
     # ── Step 1: Sync match results from external sources ──────────────
-    # This marks recently-finished matches as "Finished" in the DB.
+    wc_updated = 0
     try:
         from etl.world_cup_etl import sync_world_cup_schedule
         wc_updated = sync_world_cup_schedule()
         logger.info(f"🔄 [scheduler] World Cup results synced. Changes detected: {wc_updated}")
-        
-        if wc_updated > 0:
-            logger.info("🔄 [scheduler] Match finished/updated. Fetching players and retraining...")
-            from etl.players_etl import sync_world_cup_players
-            sync_world_cup_players()
+    except Exception as e:
+        logger.warning(f"⚠️  [scheduler] WC results sync failed: {e}")
+
+    try:
+        from core.config import settings
+        if getattr(settings, 'enable_club_leagues', False):
+            from etl.run_etl import run_pipeline
+            run_pipeline()
+            logger.info("🔄 [scheduler] La Liga ETL results synced.")
+    except Exception as e:
+        logger.warning(f"⚠️  [scheduler] La Liga ETL sync failed: {e}")
+
+    # ── Step 2: Settle bets on newly-finished matches ─────────────────
+    from core.bet_settler import settle_pending_bets
+    from core.cache_service import refresh_cache
+    
+    bets_settled = 0
+    try:
+        summary = settle_pending_bets()
+        bets_settled = summary.get("settled", 0)
+        if bets_settled > 0:
+            logger.info(f"🔄 [scheduler] Settled {bets_settled} bets.")
+    except Exception as e:
+        logger.error(f"❌ [scheduler] settle_pending_bets failed: {e}", exc_info=True)
+
+    # ── Step 3: Retrain model if new matches finished ─────────────────
+    if wc_updated > 0:
+        try:
+            logger.info("🔄 [scheduler] Match finished/updated. Retraining World Cup AI...")
+            # Note: players_etl is disabled temporarily until API integration is complete
             
             import sys, os, importlib
             scripts_dir = os.path.join(
@@ -82,28 +101,19 @@ def _settle_and_refresh():
             wc_mod.train()
             logger.info("✅ [scheduler] World Cup AI retrained successfully on new match data.")
             
-    except Exception as e:
-        logger.warning(f"⚠️  [scheduler] WC results sync/train failed: {e}")
+        except Exception as e:
+            logger.warning(f"⚠️  [scheduler] WC retraining failed: {e}", exc_info=True)
 
-    try:
-        from etl.run_etl import run_pipeline
-        run_pipeline()
-        logger.info("🔄 [scheduler] La Liga ETL results synced.")
-    except Exception as e:
-        logger.warning(f"⚠️  [scheduler] La Liga ETL sync failed: {e}")
-
-    # ── Step 2: Settle bets on newly-finished matches ─────────────────
-    from core.bet_settler import settle_pending_bets
-    from core.cache_service import refresh_cache
-    try:
-        summary = settle_pending_bets()
-        if summary.get("settled", 0) > 0:
-            logger.info(f"🔄 [scheduler] Settled {summary['settled']} bets — triggering cache refresh.")
+    # ── Step 4: Conditional Cache Refresh ─────────────────────────────
+    # Refresh cache if bets were settled or if the model was retrained (predictions changed)
+    if bets_settled > 0 or wc_updated > 0:
+        try:
+            logger.info("🔄 [scheduler] Triggering cache refresh due to settled bets or retrained model.")
             refresh_cache()
-        else:
-            logger.debug("[scheduler] No bets settled — skipping cache refresh.")
-    except Exception as e:
-        logger.error(f"❌ [scheduler] settle_and_refresh failed: {e}", exc_info=True)
+        except Exception as e:
+            logger.error(f"❌ [scheduler] refresh_cache failed: {e}", exc_info=True)
+    else:
+        logger.debug("[scheduler] No bets settled and no matches updated — skipping cache refresh.")
 
 
 def start_scheduler():
