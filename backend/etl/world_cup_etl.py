@@ -319,8 +319,6 @@ def sync_world_cup_schedule() -> int:
         resp    = httpx.get(url, headers=headers, timeout=30)
         if resp.status_code in (404, 422):
             logger.warning("[world_cup_etl] WC schedule not available on football-data.org yet")
-            # Update team stats using what we have in the DB even if API is 404
-            update_world_cup_team_stats(db)
             return 0
         resp.raise_for_status()
         matches = resp.json().get("matches", [])
