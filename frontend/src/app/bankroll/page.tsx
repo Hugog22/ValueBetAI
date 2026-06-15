@@ -246,8 +246,8 @@ export default function BankrollPage() {
                                 <span>Regresar al Radar</span>
                             </Link>
                             {user && (
-                                <div className="flex items-center gap-4 border-l border-black/10 pl-8">
-                                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#64748B]">{user.email}</span>
+                                <div className="flex items-center gap-2 md:gap-4 border-l border-black/10 pl-4 md:pl-8 ml-2 md:ml-0">
+                                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#64748B] truncate max-w-[80px] md:max-w-none">{user.email}</span>
                                     <button onClick={logout} className="text-[10px] uppercase tracking-widest font-bold text-red-600 hover:opacity-70 transition-colors">Salir</button>
                                 </div>
                             )}
@@ -311,7 +311,7 @@ export default function BankrollPage() {
                             {/* ADMIN SYSTEM STATS */}
                             {user?.email === 'hugodesax123@gmail.com' && adminStats && (
                                 <div className="mb-20">
-                                    <div className="flex items-center justify-between mb-8">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6 md:gap-0">
                                         <div>
                                             <div className="flex items-center gap-3 mb-6">
                                                 <span className="h-px w-8 bg-[#0A0F1E]"></span>
@@ -321,7 +321,7 @@ export default function BankrollPage() {
                                                 Rendimiento <span className="italic font-light">Global del Sistema</span>
                                             </h2>
                                         </div>
-                                        <div className="flex items-center gap-4">
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 md:gap-4">
                                             <button
                                                 onClick={openTrainingReport}
                                                 className="px-6 py-3 bg-[#0A0F1E] text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-[#1A2240] transition-colors flex items-center gap-2"

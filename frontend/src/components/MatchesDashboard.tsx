@@ -645,18 +645,18 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                             AI {((pick.probability ?? 0) * 100).toFixed(0)}% vs Media {((pick.bookmaker_implied_prob ?? 0) * 100).toFixed(0)}%
                           </span>
                         </div>
-                        <div className="flex items-center justify-between gap-4">
-                          <div className={`text-lg font-editorial font-bold ${isWorldCupActive ? 'text-white' : 'text-[#1A1C1E]'}`}>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4">
+                          <div className={`text-base md:text-lg font-editorial font-bold ${isWorldCupActive ? 'text-white' : 'text-[#1A1C1E]'}`}>
                             {pick.label}
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 md:gap-2">
                             {match.justification && (
                               <button
                                 onClick={() => setActiveAnalysisMatch(match)}
-                                className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors ${
+                                className={`text-[9px] md:text-[10px] font-bold uppercase tracking-widest px-2 md:px-3 py-1 md:py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
                                   isWorldCupActive 
                                     ? 'border-white/20 text-white/70 hover:bg-white/10 hover:text-white' 
-                                    : 'border-[#E5E7EB] text-[#64748B] hover:bg-[#F1F3F5] hover:text-[#1A1C1E]'
+                                    : 'border-[#E5E7EB] text-[#64748B hover:bg-[#F1F3F5] hover:text-[#1A1C1E]'
                                 }`}
                               >
                                 Análisis IA
@@ -665,7 +665,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                             {match.allCandidates && match.allCandidates.length > 0 && (
                               <button
                                 onClick={() => setActiveOptionsMatch(match)}
-                                className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors ${
+                                className={`text-[9px] md:text-[10px] font-bold uppercase tracking-widest px-2 md:px-3 py-1 md:py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
                                   isWorldCupActive 
                                     ? 'border-white/20 text-white/70 hover:bg-white/10 hover:text-white' 
                                     : 'border-[#E5E7EB] text-[#64748B] hover:bg-[#F1F3F5] hover:text-[#1A1C1E]'
@@ -676,7 +676,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                             )}
                             <button
                               onClick={() => handleSimulateBet(match.id, pick, match.homeTeam, match.awayTeam)}
-                              className={`font-black px-4 py-2 rounded-xl transition-all active:scale-95 min-w-[60px] text-sm ${
+                              className={`font-black px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all active:scale-95 min-w-[50px] md:min-w-[60px] text-xs md:text-sm ${
                               isWorldCupActive
                                 ? 'bg-white/10 hover:bg-amber-400 hover:text-[#0A0F1E] text-white border border-white/20'
                                 : 'bg-[#F1F3F5] hover:bg-[#064E3B] hover:text-white text-[#1A1C1E]'

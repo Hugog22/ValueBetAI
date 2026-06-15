@@ -10,7 +10,7 @@ export default function Navbar() {
     <header className="fixed top-0 w-full z-50 glass-light">
       <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center transition-all">
         {/* Logo and Nav links */}
-        <div className="flex items-center gap-10">
+        <div className="flex items-center gap-4 md:gap-10">
           <Link href="/" className="flex items-center gap-2">
             <div className="h-10 w-10 bg-[#FFD700] flex items-center justify-center rounded-lg shadow-sm">
               <span className="text-[#1A1C1E] font-black text-xs leading-none">BET<br/>AI</span>
@@ -19,7 +19,7 @@ export default function Navbar() {
               ValueBet <span className="opacity-50">AI</span>
             </span>
           </Link>
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-[#1A1C1E]/60">
+          <nav className="flex items-center gap-3 md:gap-8 text-xs md:text-sm font-semibold text-[#1A1C1E]/60 overflow-x-auto whitespace-nowrap px-2 md:px-0 scrollbar-hide">
             <Link href="/" className="text-[#1A1C1E] underline decoration-2 underline-offset-8 decoration-[#FFD700]">Inicio</Link>
             <Link href="#radar-de-valor" className="hover:text-[#1A1C1E] transition-colors">Análisis</Link>
             <Link href="#explorar-mercados" className="hover:text-[#1A1C1E] transition-colors">Mercados</Link>
@@ -27,18 +27,18 @@ export default function Navbar() {
         </div>
 
         {/* Search and Auth */}
-        <div className="flex items-center gap-6 flex-1 max-w-md justify-end">
+        <div className="flex items-center gap-2 md:gap-6 flex-1 justify-end ml-4">
           {user ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 md:gap-4">
               <button 
                 onClick={logout}
-                className="text-xs font-bold text-[#1A1C1E]/60 hover:text-red-600 transition-colors uppercase tracking-widest"
+                className="text-[10px] md:text-xs font-bold text-[#1A1C1E]/60 hover:text-red-600 transition-colors uppercase tracking-widest"
               >
                 Salir
               </button>
               <Link 
                 href="/bankroll"
-                className="bg-[#1A1C1E] text-white px-6 py-2.5 rounded-full text-sm font-bold tracking-tight hover:bg-[#064E3B] transition-all"
+                className="bg-[#1A1C1E] text-white px-4 md:px-6 py-2 md:py-2.5 rounded-full text-[11px] md:text-sm font-bold tracking-tight hover:bg-[#064E3B] transition-all whitespace-nowrap"
               >
                 Mi Portafolio
               </Link>
