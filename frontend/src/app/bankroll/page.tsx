@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import { getEsName } from '@/utils/translations';
 
 interface BankrollStats {
     total_bets: number;
@@ -178,41 +179,7 @@ export default function BankrollPage() {
         }
     };
 
-    const getEsName = (teamName: string): string => {
-        const translations: Record<string, string> = {
-            'Spain': 'España',
-            'Germany': 'Alemania',
-            'England': 'Inglaterra',
-            'France': 'Francia',
-            'Italy': 'Italia',
-            'Netherlands': 'Países Bajos',
-            'Belgium': 'Bélgica',
-            'Switzerland': 'Suiza',
-            'Poland': 'Polonia',
-            'Turkey': 'Turquía',
-            'Croatia': 'Croacia',
-            'Denmark': 'Dinamarca',
-            'Sweden': 'Suecia',
-            'Norway': 'Noruega',
-            'Scotland': 'Escocia',
-            'Wales': 'Gales',
-            'Ireland': 'Irlanda',
-            'Greece': 'Grecia',
-            'Czech Republic': 'República Checa',
-            'Bosnia & Herzegovina': 'Bosnia y Herzegovina',
-            'Bosnia-Herzegovina': 'Bosnia y Herzegovina',
-            'United States': 'Estados Unidos',
-            'Brazil': 'Brasil',
-            'Argentina': 'Argentina',
-            'South Korea': 'Corea del Sur',
-            'Japan': 'Japón',
-            'Morocco': 'Marruecos',
-            'South Africa': 'Sudáfrica',
-            'Egypt': 'Egipto',
-            'Saudi Arabia': 'Arabia Saudí'
-        };
-        return translations[teamName] || teamName;
-    };
+
 
     const getSelectionLabel = (bet: BetRecord) => {
         const sel = bet.selection.toLowerCase();

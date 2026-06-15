@@ -1,0 +1,6 @@
+1. Análisis de los registros: No hay partidos del Mundial finalizados actualmente en la base de datos (hay 72 partidos de fase de grupos y todos están con estado "Not Started"). Sin embargo, todos estos 72 partidos tienen la columna "stage" (fase) actualizada a "group_stage".
+2. Lo que ocurrió a las 16:05: El proveedor de datos (football-data.org) probablemente actualizó la información de los partidos del Mundial (por ejemplo, asignándoles formalmente la fase "group_stage" en lugar de estar vacía).
+3. El fallo en la lógica: En el archivo `backend/etl/world_cup_etl.py`, la función `sync_world_cup_schedule()` suma un cambio (`new_count += 1`) si se actualiza la fase (`stage`) o el estado, incluso en partidos que **aún no han comenzado**.
+4. En `backend/core/scheduler.py`, la condición para reentrenar a la IA es simplemente `if wc_updated > 0 or match_stats_updated > 0:`. Esto significa que la IA se reentrenó simplemente porque se actualizaron los metadatos (la fase del torneo) de los partidos futuros, no porque hubiera resultados nuevos.
+
+La parte del código que se encarga de esto **no es del todo correcta en cuanto a eficiencia**. El reentrenamiento de la IA solo debería dispararse si hay partidos **finalizados** con nuevos goles o resultados, no cuando se actualiza el horario o la fase de un partido futuro.
