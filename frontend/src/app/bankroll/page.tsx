@@ -559,7 +559,7 @@ export default function BankrollPage() {
                         <div className="flex flex-col md:flex-row items-end md:items-center gap-3">
                             {/* Risk selector */}
                             <div className="flex bg-white rounded-xl border border-[#E5E7EB] overflow-hidden shadow-sm">
-                                {['all', 'LOW', 'MEDIUM', 'HIGH'].map(r => (
+                                {['all', 'BAJO', 'MEDIO', 'ALTO'].map(r => (
                                     <button
                                         key={r}
                                         onClick={() => setPredictionModal(prev => ({ ...prev, risk: r }))}
@@ -567,7 +567,7 @@ export default function BankrollPage() {
                                             predictionModal.risk === r 
                                                 ? 'bg-[#064E3B] text-white' 
                                                 : 'text-[#64748B] hover:bg-slate-50'
-                                        } ${r !== 'HIGH' ? 'border-r border-[#E5E7EB]' : ''}`}
+                                        } ${r !== 'ALTO' ? 'border-r border-[#E5E7EB]' : ''}`}
                                     >
                                         {r === 'all' ? 'TODOS' : r}
                                     </button>
@@ -609,7 +609,12 @@ export default function BankrollPage() {
                         ) : predictionModal.data ? (
                             (() => {
                                 const filteredPredictions = predictionModal.data.predictions.filter(
-                                    p => predictionModal.risk === 'all' || (p as any).risk_level === predictionModal.risk
+                                    p => {
+                                        if (predictionModal.risk === 'all') return true;
+                                        const pRisk = (p as any).risk_level?.toUpperCase();
+                                        if (predictionModal.risk === 'ALTO') return pRisk === 'ALTO' || pRisk === 'LOTERÍA';
+                                        return pRisk === predictionModal.risk;
+                                    }
                                 );
                                 const won = filteredPredictions.filter(p => p.status === 'Won').length;
                                 const lost = filteredPredictions.filter(p => p.status === 'Lost').length;
