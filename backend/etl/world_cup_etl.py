@@ -316,7 +316,19 @@ def sync_world_cup_schedule() -> int:
     try:
         headers = {"X-Auth-Token": fd_key}
         url     = f"{FD_BASE}/competitions/{FD_WC_CODE}/matches"
-        resp    = httpx.get(url, headers=headers, timeout=30)
+        
+        # Retry mechanism for transient network errors
+        import time
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                resp = httpx.get(url, headers=headers, timeout=30)
+                break
+            except httpx.RequestError as e:
+                if attempt == max_retries - 1:
+                    raise
+                logger.warning(f"[world_cup_etl] Network error during schedule sync (attempt {attempt + 1}/{max_retries}): {e}")
+                time.sleep(2 * (attempt + 1))
         if resp.status_code in (404, 422):
             logger.warning("[world_cup_etl] WC schedule not available on football-data.org yet")
             return 0

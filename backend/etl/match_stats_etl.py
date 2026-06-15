@@ -36,8 +36,12 @@ def find_sofascore_event(match: Match) -> int | None:
 
     url = f"https://{settings.SOFASCORE_RAPIDAPI_HOST}/api/sofascore/v1/search/matches"
     
-    # Try searching with home team name first, then away team if no match
-    queries = [match.home_team.name, match.away_team.name]
+    # Try searching with both team names combined first, then fallback to individual names
+    queries = [
+        f"{match.home_team.name} {match.away_team.name}",
+        match.home_team.name,
+        match.away_team.name
+    ]
 
     for query in queries:
         try:
