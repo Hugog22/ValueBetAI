@@ -645,18 +645,18 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                             AI {((pick.probability ?? 0) * 100).toFixed(0)}% vs Media {((pick.bookmaker_implied_prob ?? 0) * 100).toFixed(0)}%
                           </span>
                         </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4">
-                          <div className={`text-base md:text-lg font-editorial font-bold ${isWorldCupActive ? 'text-white' : 'text-[#1A1C1E]'}`}>
+                        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 md:gap-4">
+                          <div className={`text-base md:text-lg font-editorial font-bold flex-1 min-w-0 break-words ${isWorldCupActive ? 'text-white' : 'text-[#1A1C1E]'}`}>
                             {pick.label}
                           </div>
-                          <div className="flex items-center gap-1.5 md:gap-2">
+                          <div className="flex flex-wrap items-center justify-end gap-1.5 md:gap-2 shrink-0">
                             {match.justification && (
                               <button
                                 onClick={() => setActiveAnalysisMatch(match)}
                                 className={`text-[9px] md:text-[10px] font-bold uppercase tracking-widest px-2 md:px-3 py-1 md:py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
                                   isWorldCupActive 
                                     ? 'border-white/20 text-white/70 hover:bg-white/10 hover:text-white' 
-                                    : 'border-[#E5E7EB] text-[#64748B hover:bg-[#F1F3F5] hover:text-[#1A1C1E]'
+                                    : 'border-[#E5E7EB] text-[#64748B] hover:bg-[#F1F3F5] hover:text-[#1A1C1E]'
                                 }`}
                               >
                                 Análisis IA
