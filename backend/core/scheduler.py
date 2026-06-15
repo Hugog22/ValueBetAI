@@ -113,6 +113,10 @@ def _settle_and_refresh():
             wc_mod = importlib.import_module("train_model_worldcup")
             importlib.reload(wc_mod)
             wc_mod.train()
+            
+            from models.world_cup_predictor import world_cup_predictor
+            world_cup_predictor.load_model()
+            
             logger.info("✅ [scheduler] World Cup AI retrained successfully on new match data.")
             
         except Exception as e:
