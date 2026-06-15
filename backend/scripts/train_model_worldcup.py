@@ -404,6 +404,26 @@ def train(is_auto=True):
     logger.info("Building features…")
     feat_df = build_features(df, wc_stats, xg_stats)
     
+    # Mirror features to eliminate home bias for neutral ground
+    mirrored_feat = feat_df.copy()
+    rename_cols = {
+        "_home_goals": "_away_goals",
+        "_away_goals": "_home_goals"
+    }
+    for col in FEATURES:
+        if col.startswith("home_"):
+            rename_cols[col] = col.replace("home_", "away_")
+        elif col.startswith("away_"):
+            rename_cols[col] = col.replace("away_", "home_")
+    
+    mirrored_feat.rename(columns=rename_cols, inplace=True)
+    mirrored_feat["fifa_pts_diff"] = -mirrored_feat["fifa_pts_diff"]
+    mirrored_feat["squad_quality_diff"] = -mirrored_feat["squad_quality_diff"]
+    mirrored_feat["form_diff"] = -mirrored_feat["form_diff"]
+
+    feat_df = pd.concat([feat_df, mirrored_feat], ignore_index=True)
+    df = pd.concat([df, df.copy()], ignore_index=True)
+    
     if len(feat_df) < 30:
         logger.error("Not enough data to train. Need at least 30 matches.")
         raise ValueError("Not enough data to train. Need at least 30 matches.")

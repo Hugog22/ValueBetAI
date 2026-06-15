@@ -125,13 +125,13 @@ DEFAULTS: dict[str, float] = {
     "home_form_pts5":    7.5,
     "away_form_pts5":    7.5,
     "form_diff":         0.0,
-    "home_h2h_win_rate": 0.35,
-    "away_h2h_win_rate": 0.30,
+    "home_h2h_win_rate": 0.33,
+    "away_h2h_win_rate": 0.33,
     "is_knockout":       0.0,
-    "home_goals_avg5":   1.5,
-    "away_goals_avg5":   1.2,
-    "home_conceded_avg5": 1.0,
-    "away_conceded_avg5": 1.3,
+    "home_goals_avg5":   1.35,
+    "away_goals_avg5":   1.35,
+    "home_conceded_avg5": 1.15,
+    "away_conceded_avg5": 1.15,
     "home_avg_xg": 1.5,
     "away_avg_xg": 1.5,
     "home_avg_possession": 50.0,
@@ -312,17 +312,18 @@ def _analytic_ou25(home_quality: float, away_quality: float,
     return round(1.0 - p_under, 4)
 
 
-def _anchor_to_fifa_differential(probs: dict, home_pts: float, away_pts: float,
-                                   alpha: float = 0.35) -> dict:
+def _anchor_to_fifa_differential(probs: dict, home_pts: float, away_pts: float) -> dict:
     """
     Mezcla las probabilidades del modelo ML con las del modelo analítico
     usando alpha como peso del modelo analítico.
     Evita que el ML se aleje demasiado de lo que dictan los FIFA points
     en partidos muy desiguales (donde el ML tiene menos datos de entrenamiento).
     """
-    # Solo aplicar si hay diferencia grande (>300 puntos FIFA)
-    if abs(home_pts - away_pts) < 300:
+    diff = abs(home_pts - away_pts)
+    if diff < 150:
         return probs
+
+    alpha = min(0.65, 0.25 + diff / 1500.0)
 
     analytic = _analytic_predict(home_pts, away_pts, 60.0, 60.0, 0.0, False)
     blended = {
@@ -415,10 +416,10 @@ class WorldCupPredictor:
             "home_h2h_win_rate":  h2h_win_rate_home,
             "away_h2h_win_rate":  h2h_win_rate_away,
             "is_knockout":        1.0 if is_knockout else 0.0,
-            "home_goals_avg5":    h2h_home.get("goals_avg", 1.5),
-            "away_goals_avg5":    h2h_away.get("goals_avg", 1.2),
-            "home_conceded_avg5": h2h_home.get("conceded_avg", 1.2),
-            "away_conceded_avg5": h2h_away.get("conceded_avg", 1.5),
+            "home_goals_avg5":    h2h_home.get("goals_avg", 1.35),
+            "away_goals_avg5":    h2h_away.get("goals_avg", 1.35),
+            "home_conceded_avg5": h2h_home.get("conceded_avg", 1.15),
+            "away_conceded_avg5": h2h_away.get("conceded_avg", 1.15),
             "home_avg_xg": 1.5,
             "away_avg_xg": 1.5,
             "home_avg_possession": 50.0,
@@ -456,7 +457,25 @@ class WorldCupPredictor:
         if self._model_1x2 is not None:
             X = pd.DataFrame([{k: fv[k] for k in FEATURES}]).astype(float)
             raw = self._model_1x2.predict_proba(X)[0]
-            probs_1x2 = {"home": float(raw[0]), "draw": float(raw[1]), "away": float(raw[2])}
+            
+            fv_inv = fv.copy()
+            for col in FEATURES:
+                if col.startswith("home_"):
+                    fv_inv[col.replace("home_", "away_")] = fv[col]
+                elif col.startswith("away_"):
+                    fv_inv[col.replace("away_", "home_")] = fv[col]
+            fv_inv["fifa_pts_diff"] = -fv["fifa_pts_diff"]
+            fv_inv["squad_quality_diff"] = -fv["squad_quality_diff"]
+            fv_inv["form_diff"] = -fv["form_diff"]
+            
+            X_inv = pd.DataFrame([{k: fv_inv[k] for k in FEATURES}]).astype(float)
+            raw_inv = self._model_1x2.predict_proba(X_inv)[0]
+            
+            p_home = (raw[0] + raw_inv[2]) / 2.0
+            p_draw = (raw[1] + raw_inv[1]) / 2.0
+            p_away = (raw[2] + raw_inv[0]) / 2.0
+            
+            probs_1x2 = {"home": float(p_home), "draw": float(p_draw), "away": float(p_away)}
             probs_1x2 = _anchor_to_fifa_differential(
                 probs_1x2, fv["home_fifa_pts"], fv["away_fifa_pts"]
             )
@@ -470,7 +489,22 @@ class WorldCupPredictor:
         # ── O/U 2.5 ──────────────────────────────────────────────────────
         if self._model_ou25 is not None:
             X = pd.DataFrame([{k: fv[k] for k in FEATURES}]).astype(float)
-            prob_over25 = float(self._model_ou25.predict_proba(X)[0][1])
+            prob_over25_1 = float(self._model_ou25.predict_proba(X)[0][1])
+            
+            fv_inv = fv.copy()
+            for col in FEATURES:
+                if col.startswith("home_"):
+                    fv_inv[col.replace("home_", "away_")] = fv[col]
+                elif col.startswith("away_"):
+                    fv_inv[col.replace("away_", "home_")] = fv[col]
+            fv_inv["fifa_pts_diff"] = -fv["fifa_pts_diff"]
+            fv_inv["squad_quality_diff"] = -fv["squad_quality_diff"]
+            fv_inv["form_diff"] = -fv["form_diff"]
+            
+            X_inv = pd.DataFrame([{k: fv_inv[k] for k in FEATURES}]).astype(float)
+            prob_over25_2 = float(self._model_ou25.predict_proba(X_inv)[0][1])
+            
+            prob_over25 = (prob_over25_1 + prob_over25_2) / 2.0
         else:
             prob_over25 = _analytic_ou25(
                 fv["home_squad_quality"], fv["away_squad_quality"],
