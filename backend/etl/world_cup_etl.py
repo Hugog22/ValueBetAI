@@ -52,6 +52,7 @@ TEAM_ALIASES: dict[str, str] = {
     "DR Congo":                     "Democratic Republic of Congo",
     "Congo DR":                     "Democratic Republic of Congo",
     "Cape Verde Islands":           "Cape Verde",
+    "Cabo Verde":                   "Cape Verde",
     "New Zealand":                  "New Zealand",
 }
 
