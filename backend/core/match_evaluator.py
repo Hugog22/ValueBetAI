@@ -270,7 +270,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
         c["risk"]  = _calculate_risk(c["probability"], c["bookmaker_odds"])
         c["stake"] = _fractional_kelly(c["probability"], c["bookmaker_odds"])
 
-    candidates.sort(key=lambda x: x["ev"], reverse=True)
+    candidates.sort(key=lambda x: x["probability"], reverse=True)
     best = candidates[0]
 
     return {
@@ -415,7 +415,7 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
         c["risk"]  = _calculate_risk(c["probability"], c["bookmaker_odds"])
         c["stake"] = _fractional_kelly(c["probability"], c["bookmaker_odds"])
 
-    candidates.sort(key=lambda x: x["ev"], reverse=True)
+    candidates.sort(key=lambda x: x["probability"], reverse=True)
     best = candidates[0]
 
     # Build rich justification with FIFA context and Live 2026 DB stats
