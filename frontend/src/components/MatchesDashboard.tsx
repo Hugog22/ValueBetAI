@@ -645,11 +645,11 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                             AI {((pick.probability ?? 0) * 100).toFixed(0)}% vs Media {((pick.bookmaker_implied_prob ?? 0) * 100).toFixed(0)}%
                           </span>
                         </div>
-                        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 md:gap-4">
-                          <div className={`text-base md:text-lg font-editorial font-bold flex-1 min-w-0 break-words ${isWorldCupActive ? 'text-white' : 'text-[#1A1C1E]'}`}>
+                        <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4">
+                          <div className={`text-base md:text-lg font-editorial font-bold pr-2 ${isWorldCupActive ? 'text-white' : 'text-[#1A1C1E]'}`}>
                             {pick.label}
                           </div>
-                          <div className="flex flex-wrap items-center justify-end gap-1.5 md:gap-2 shrink-0">
+                          <div className="flex items-center gap-1.5 md:gap-2 ml-auto">
                             {match.justification && (
                               <button
                                 onClick={() => setActiveAnalysisMatch(match)}
