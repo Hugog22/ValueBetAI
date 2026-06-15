@@ -228,9 +228,9 @@ export default function BankrollPage() {
         <ProtectedRoute>
             <div className="min-h-screen bg-[#FCF9F1] text-[#1A1C1E] font-sans selection:bg-[#064E3B]/10 overflow-x-hidden">
 
-                <header className="fixed top-0 w-full z-50 glass-light border-b border-black/5">
-                    <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center">
-                        <div className="flex items-center gap-10">
+                <header className="fixed top-0 w-full z-50 glass-light border-b border-black/5 overflow-x-auto scrollbar-hide">
+                    <div className="max-w-7xl mx-auto px-4 md:px-8 h-20 flex justify-between items-center min-w-max md:min-w-0 gap-6 md:gap-0">
+                        <div className="flex items-center gap-6 md:gap-10 shrink-0">
                             <Link href="/" className="flex items-center gap-2">
                                 <div className="h-10 w-10 bg-[#FFD700] flex items-center justify-center rounded-lg shadow-sm">
                                     <span className="text-[#1A1C1E] font-black text-xs leading-none">BET<br />AI</span>
@@ -240,7 +240,7 @@ export default function BankrollPage() {
                                 </span>
                             </Link>
                         </div>
-                        <nav className="flex items-center gap-8">
+                        <nav className="flex items-center gap-6 md:gap-8 shrink-0 pr-4 md:pr-0">
                             <Link href="/" className="text-sm font-bold text-[#1A1C1E] hover:text-[#064E3B] transition-colors flex items-center gap-2">
                                 <span className="text-lg">←</span>
                                 <span>Regresar al Radar</span>
