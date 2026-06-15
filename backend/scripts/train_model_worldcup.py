@@ -97,7 +97,7 @@ def _days_ago(date_str: str) -> float:
 
 
 def compute_sample_weights(df: pd.DataFrame, wc_stats: dict) -> np.ndarray:
-    decay = 2.0
+    decay = 1.0
     weights = []
     today = datetime.utcnow()
     for _, row in df.iterrows():
@@ -439,7 +439,6 @@ def train(is_auto=True):
     cv_scores = []
     for tr, va in tscv.split(X):
         w_tr = compute_sample_weights(df.iloc[tr], wc_stats)
-        ensemble_1x2.fit(X.iloc[tr], y_1x2[tr]) # VotingClassifier doesn't fully support sample_weight trivially, but XGB does.
         # Actually VotingClassifier does support sample_weight!
         ensemble_1x2.fit(X.iloc[tr], y_1x2[tr], sample_weight=w_tr)
         preds = ensemble_1x2.predict(X.iloc[va])
@@ -447,7 +446,7 @@ def train(is_auto=True):
     logger.info(f"1X2 Ensemble CV accuracy: {np.mean(cv_scores):.4f}")
 
     split_idx = max(1, int(len(X) * 0.80))
-    cal_1x2 = CalibratedClassifierCV(ensemble_1x2, cv=3, method="isotonic")
+    cal_1x2 = CalibratedClassifierCV(ensemble_1x2, cv=3, method="sigmoid")
     w_full = compute_sample_weights(df.iloc[:split_idx], wc_stats)
     try:
         cal_1x2.fit(X.iloc[:split_idx], y_1x2[:split_idx], sample_weight=w_full)
@@ -484,7 +483,7 @@ def train(is_auto=True):
         cv_ou25.append(log_loss(y_ou25[va], probs))
     logger.info(f"O/U 2.5 Ensemble CV LogLoss: {np.mean(cv_ou25):.4f}")
 
-    cal_ou25 = CalibratedClassifierCV(ensemble_ou25, cv=3, method="isotonic")
+    cal_ou25 = CalibratedClassifierCV(ensemble_ou25, cv=3, method="sigmoid")
     try:
         cal_ou25.fit(X.iloc[:split_idx], y_ou25[:split_idx], sample_weight=w_full)
     except:

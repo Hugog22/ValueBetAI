@@ -1,9 +1,9 @@
 {
   "World Cup \u2014 XGBoost Ensemble": {
-    "trained_at": "2026-06-14T20:27:09.840517",
-    "training_rows": 2457,
-    "wc_matches_used": 8,
-    "xg_data_points": 18,
+    "trained_at": "2026-06-15T06:28:08.200272",
+    "training_rows": 2459,
+    "wc_matches_used": 12,
+    "xg_data_points": 24,
     "features": [
       "home_fifa_pts",
       "away_fifa_pts",
@@ -23,13 +23,17 @@
       "away_conceded_avg5",
       "home_avg_xg",
       "away_avg_xg",
+      "home_avg_possession",
+      "away_avg_possession",
+      "home_avg_shots",
+      "away_avg_shots",
       "home_wc_matches",
       "away_wc_matches",
       "home_wc_goals",
       "away_wc_goals"
     ],
     "cv_1x2_acc": 0.7448,
-    "cv_ou25_logloss": 0.6715,
+    "cv_ou25_logloss": 0.6689,
     "best_xgb_1x2": {
       "max_depth": 3,
       "learning_rate": 0.048925649656201595,
@@ -52,7 +56,7 @@
       }
     },
     "model_ou25": {
-      "cv_mean_logloss": 0.6715,
+      "cv_mean_logloss": 0.6689,
       "best_params": {
         "max_depth": 3,
         "learning_rate": 0.023266985885261875,

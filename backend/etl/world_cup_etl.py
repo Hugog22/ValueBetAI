@@ -330,6 +330,7 @@ def sync_world_cup_schedule() -> int:
             home_name = raw.get("homeTeam", {}).get("name", "")
             away_name = raw.get("awayTeam", {}).get("name", "")
             utc_date  = raw.get("utcDate", "")
+            stage     = raw.get("stage", "").lower()
 
             if not home_name or not away_name or not utc_date:
                 continue
@@ -369,13 +370,15 @@ def sync_world_cup_schedule() -> int:
                     status=db_status,
                     home_goals=home_goals,
                     away_goals=away_goals,
+                    stage=stage,
                 ))
                 new_count += 1
             else:
-                if existing.status != db_status or existing.home_goals != home_goals or existing.away_goals != away_goals:
+                if existing.status != db_status or existing.home_goals != home_goals or existing.away_goals != away_goals or existing.stage != stage:
                     existing.status = db_status
                     existing.home_goals = home_goals
                     existing.away_goals = away_goals
+                    existing.stage = stage
                     new_count += 1
 
         db.commit()

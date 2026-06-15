@@ -202,7 +202,7 @@ class H2HCache:
         entry = self._cache.get(key, {})
         total = entry.get("wins", 0) + entry.get("draws", 0) + entry.get("losses", 0)
         if total == 0:
-            return {"win_rate": 0.35, "goals_avg": 1.5, "conceded_avg": 1.2, "n": 0}
+            return {"win_rate": None, "goals_avg": None, "conceded_avg": None, "n": 0}
         win_rate    = entry["wins"] / total
         goals_avg   = entry["goals_for"] / total
         conceded_avg = entry["goals_ag"] / total
@@ -244,7 +244,8 @@ class SquadQualityCache:
             return self._data[team_norm]
         # Derive from FIFA points if no squad data
         pts = _get_fifa_pts(team)
-        return 40.0 + (pts - 1280.0) / (1862.0 - 1280.0) * 55.0
+        normalized = (pts - 1280.0) / (1862.0 - 1280.0)
+        return 40.0 + (normalized ** 0.7) * 55.0
 
 
 _squad_quality = SquadQualityCache()
@@ -269,11 +270,10 @@ def _analytic_predict(home_pts: float, away_pts: float,
     delta = home_str - away_str + form_diff * 30
 
     # Bradley-Terry logistic for home win (extremely sharp curve to crush mismatches)
-    p_home = 1.0 / (1.0 + 10.0 ** (-delta / 150.0))
+    p_home = 1.0 / (1.0 + 10.0 ** (-delta / 200.0))
 
     # Draw probability: peaks at 0.28 when evenly matched, collapses for huge mismatches
-    draw_base = 0.30 * (1.0 - abs(delta) / 800.0)
-    draw_base = max(0.01, min(0.30, draw_base))
+    draw_base = 0.28 * max(0.0, 1.0 - abs(delta) / 600.0)
     if is_knockout:
         draw_base *= 0.40  # penalties replace draws in knockout
 
@@ -310,6 +310,28 @@ def _analytic_ou25(home_quality: float, away_quality: float,
         for k in range(3)
     )
     return round(1.0 - p_under, 4)
+
+
+def _anchor_to_fifa_differential(probs: dict, home_pts: float, away_pts: float,
+                                   alpha: float = 0.35) -> dict:
+    """
+    Mezcla las probabilidades del modelo ML con las del modelo analítico
+    usando alpha como peso del modelo analítico.
+    Evita que el ML se aleje demasiado de lo que dictan los FIFA points
+    en partidos muy desiguales (donde el ML tiene menos datos de entrenamiento).
+    """
+    # Solo aplicar si hay diferencia grande (>300 puntos FIFA)
+    if abs(home_pts - away_pts) < 300:
+        return probs
+
+    analytic = _analytic_predict(home_pts, away_pts, 60.0, 60.0, 0.0, False)
+    blended = {
+        k: (1 - alpha) * probs[k] + alpha * analytic[k]
+        for k in ("home", "draw", "away")
+    }
+    # Renormalizar
+    total = sum(blended.values())
+    return {k: round(v / total, 4) for k, v in blended.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -377,6 +399,9 @@ class WorldCupPredictor:
         h2h_home   = _h2h.get_stats(home_n, away_n)
         h2h_away   = _h2h.get_stats(away_n, home_n)
 
+        h2h_win_rate_home = h2h_home["win_rate"] if h2h_home["n"] > 0 else (0.5 + (home_pts - away_pts) / 3000.0)
+        h2h_win_rate_away = h2h_away["win_rate"] if h2h_away["n"] > 0 else (0.5 + (away_pts - home_pts) / 3000.0)
+
         return {
             "home_fifa_pts":      home_pts,
             "away_fifa_pts":      away_pts,
@@ -387,8 +412,8 @@ class WorldCupPredictor:
             "home_form_pts5":     7.5,   # default — overridden by feature enrichment
             "away_form_pts5":     7.5,
             "form_diff":          0.0,
-            "home_h2h_win_rate":  h2h_home["win_rate"],
-            "away_h2h_win_rate":  h2h_away["win_rate"],
+            "home_h2h_win_rate":  h2h_win_rate_home,
+            "away_h2h_win_rate":  h2h_win_rate_away,
             "is_knockout":        1.0 if is_knockout else 0.0,
             "home_goals_avg5":    h2h_home.get("goals_avg", 1.5),
             "away_goals_avg5":    h2h_away.get("goals_avg", 1.2),
@@ -432,6 +457,9 @@ class WorldCupPredictor:
             X = pd.DataFrame([{k: fv[k] for k in FEATURES}]).astype(float)
             raw = self._model_1x2.predict_proba(X)[0]
             probs_1x2 = {"home": float(raw[0]), "draw": float(raw[1]), "away": float(raw[2])}
+            probs_1x2 = _anchor_to_fifa_differential(
+                probs_1x2, fv["home_fifa_pts"], fv["away_fifa_pts"]
+            )
         else:
             probs_1x2 = _analytic_predict(
                 fv["home_fifa_pts"], fv["away_fifa_pts"],

@@ -155,10 +155,6 @@ def _calculate_risk(ai_prob: float, bookmaker_odds: float,
     """Classify betting risk based on AI probability vs market probability."""
     house_prob = (1.0 / bookmaker_odds) if bookmaker_odds > 0 else 0.0
 
-    # Pull back extreme deviations unless strongly supported
-    if abs(ai_prob - house_prob) > 0.15 and abs(xg_diff) < 1.0:
-        ai_prob = house_prob + (0.15 if ai_prob > house_prob else -0.15)
-
     # Flag obvious model errors
     if ai_prob > 0.50 and (is_draw or bookmaker_odds >= 4.0):
         return {"level": "ERROR", "badge": "⚠️ ERROR MODELO", "bgClass": "bg-red-900 text-white font-black"}
@@ -201,7 +197,7 @@ def _dynamic_ev_threshold(odds_val: float) -> float:
         return 5.0   # 5% edge required
     elif odds_val > 2.0:
         return 2.0   # 2% edge required
-    return 0.0       # Any positive EV is fine
+    return 1.5       # At least 1.5% edge for low odds
 
 
 # ---------------------------------------------------------------------------
@@ -320,7 +316,7 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     home, away = match.home_team.name, match.away_team.name
 
     # Detect knockout stage
-    is_knockout = False
+    is_knockout = getattr(match, 'stage', '') in ('round_of_16', 'quarter_final', 'semi_final', 'final')
     
     local_db_created = False
     if db is None:

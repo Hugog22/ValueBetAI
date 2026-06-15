@@ -63,6 +63,7 @@ class Match(Base):
     away_shots_on_target = Column(Integer, nullable=True)
 
     status = Column(String) # "Not Started", "Finished", etc.
+    stage = Column(String, nullable=True) # e.g. "GROUP_STAGE", "ROUND_OF_16"
 
     home_team = relationship("Team", foreign_keys=[home_team_id])
     away_team = relationship("Team", foreign_keys=[away_team_id])
