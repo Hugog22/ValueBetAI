@@ -635,7 +635,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                   )}
 
                   <div className="mt-auto space-y-4">
-                    {(match.topPicks || (match.bestPick ? [match.bestPick] : [])).slice(0, 1).map((pick, pi) => (
+                    {(match.bestPick ? [match.bestPick] : []).map((pick, pi) => (
                       <div key={pi} className="group">
                         <div className="flex items-center justify-between mb-3">
                           <span className={`text-[10px] font-bold uppercase tracking-widest ${
