@@ -71,7 +71,8 @@ export default function BankrollPage() {
         data: PredictionsDetailData | null;
         loading: boolean;
         days: number;
-    }>({ open: false, data: null, loading: false, days: 7 });
+        risk: string;
+    }>({ open: false, data: null, loading: false, days: 7, risk: 'all' });
     
     const [trainingModal, setTrainingModal] = useState<{
         open: boolean;
@@ -119,7 +120,7 @@ export default function BankrollPage() {
 
     const openPredictionsModal = async (days: number = 7) => {
         if (!token) return;
-        setPredictionModal({ open: true, data: null, loading: true, days });
+        setPredictionModal(prev => ({ ...prev, open: true, data: null, loading: true, days }));
         try {
             const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
             const res = await fetch(`${API}/api/admin/predictions-detail?days=${days}`, {
@@ -134,7 +135,7 @@ export default function BankrollPage() {
     };
 
     const closePredictionsModal = () =>
-        setPredictionModal({ open: false, data: null, loading: false, days: 7 });
+        setPredictionModal(prev => ({ ...prev, open: false, data: null, loading: false, days: 7 }));
 
     const openTrainingReport = async () => {
         if (!token) return;
@@ -555,27 +556,46 @@ export default function BankrollPage() {
                                 Detalle de <span className="italic font-light">Predicciones</span>
                             </h2>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col md:flex-row items-end md:items-center gap-3">
+                            {/* Risk selector */}
+                            <div className="flex bg-white rounded-xl border border-[#E5E7EB] overflow-hidden shadow-sm">
+                                {['all', 'LOW', 'MEDIUM', 'HIGH'].map(r => (
+                                    <button
+                                        key={r}
+                                        onClick={() => setPredictionModal(prev => ({ ...prev, risk: r }))}
+                                        className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                                            predictionModal.risk === r 
+                                                ? 'bg-[#064E3B] text-white' 
+                                                : 'text-[#64748B] hover:bg-slate-50'
+                                        } ${r !== 'HIGH' ? 'border-r border-[#E5E7EB]' : ''}`}
+                                    >
+                                        {r === 'all' ? 'TODOS' : r}
+                                    </button>
+                                ))}
+                            </div>
+                            
                             {/* Period selector */}
-                            {[7, 14, 30].map(d => (
+                            <div className="flex gap-2">
+                                {[7, 14, 30].map(d => (
+                                    <button
+                                        key={d}
+                                        onClick={() => openPredictionsModal(d)}
+                                        className={`px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all ${
+                                            predictionModal.days === d
+                                                ? 'bg-[#0A0F1E] text-white'
+                                                : 'bg-white border border-[#E5E7EB] text-[#64748B] hover:border-[#0A0F1E]'
+                                        }`}
+                                    >
+                                        {d}d
+                                    </button>
+                                ))}
                                 <button
-                                    key={d}
-                                    onClick={() => openPredictionsModal(d)}
-                                    className={`px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all ${
-                                        predictionModal.days === d
-                                            ? 'bg-[#0A0F1E] text-white'
-                                            : 'bg-white border border-[#E5E7EB] text-[#64748B] hover:border-[#0A0F1E]'
-                                    }`}
+                                    onClick={closePredictionsModal}
+                                    className="ml-2 w-10 h-10 rounded-xl bg-[#F1F5F9] flex items-center justify-center text-[#64748B] hover:bg-red-50 hover:text-red-600 transition-all text-xl font-bold"
                                 >
-                                    {d}d
+                                    ×
                                 </button>
-                            ))}
-                            <button
-                                onClick={closePredictionsModal}
-                                className="ml-4 w-10 h-10 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#64748B] hover:bg-red-50 hover:text-red-600 transition-all text-xl font-bold"
-                            >
-                                ×
-                            </button>
+                            </div>
                         </div>
                     </div>
 
@@ -587,105 +607,125 @@ export default function BankrollPage() {
                                 <p className="text-[#64748B] font-bold text-sm">Cargando predicciones…</p>
                             </div>
                         ) : predictionModal.data ? (
-                            <>
-                                {/* Summary strip */}
-                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-10">
-                                    <div className="bg-[#0A0F1E] p-5 rounded-2xl">
-                                        <div className="text-[9px] font-bold text-white/50 uppercase tracking-widest mb-1">Total</div>
-                                        <div className="text-2xl font-editorial font-bold text-white">{predictionModal.data.total}</div>
-                                    </div>
-                                    <div className="bg-emerald-50 border border-emerald-100 p-5 rounded-2xl">
-                                        <div className="text-[9px] font-bold text-emerald-800 uppercase tracking-widest mb-1">Acertadas</div>
-                                        <div className="text-2xl font-editorial font-bold text-emerald-900">{predictionModal.data.won}</div>
-                                    </div>
-                                    <div className="bg-rose-50 border border-rose-100 p-5 rounded-2xl">
-                                        <div className="text-[9px] font-bold text-rose-800 uppercase tracking-widest mb-1">Falladas</div>
-                                        <div className="text-2xl font-editorial font-bold text-rose-900">{predictionModal.data.lost}</div>
-                                    </div>
-                                    <div className="bg-amber-50 border border-amber-100 p-5 rounded-2xl">
-                                        <div className="text-[9px] font-bold text-amber-700 uppercase tracking-widest mb-1">Efectividad</div>
-                                        <div className="text-2xl font-editorial font-bold text-amber-900">{predictionModal.data.hit_rate}%</div>
-                                    </div>
-                                    <div className={`p-5 rounded-2xl border ${
-                                        predictionModal.data.net_pnl >= 0
-                                            ? 'bg-emerald-50 border-emerald-100'
-                                            : 'bg-rose-50 border-rose-100'
-                                    }`}>
-                                        <div className={`text-[9px] font-bold uppercase tracking-widest mb-1 ${
-                                            predictionModal.data.net_pnl >= 0 ? 'text-emerald-700' : 'text-rose-700'
-                                        }`}>PnL Neto</div>
-                                        <div className={`text-2xl font-editorial font-bold ${
-                                            predictionModal.data.net_pnl >= 0 ? 'text-emerald-900' : 'text-rose-900'
-                                        }`}>
-                                            {predictionModal.data.net_pnl >= 0 ? '+' : ''}{predictionModal.data.net_pnl.toFixed(2)}€
-                                        </div>
-                                    </div>
-                                </div>
+                            (() => {
+                                const filteredPredictions = predictionModal.data.predictions.filter(
+                                    p => predictionModal.risk === 'all' || (p as any).risk_level === predictionModal.risk
+                                );
+                                const won = filteredPredictions.filter(p => p.status === 'Won').length;
+                                const lost = filteredPredictions.filter(p => p.status === 'Lost').length;
+                                const totalResolved = won + lost;
+                                const hitRate = totalResolved > 0 ? ((won / totalResolved) * 100).toFixed(2) : '0.00';
+                                const netPnl = filteredPredictions.reduce((acc, p) => acc + (p.pnl || 0), 0);
+                                const total = filteredPredictions.length;
 
-                                {/* Predictions table */}
-                                {predictionModal.data.predictions.length === 0 ? (
-                                    <div className="text-center py-16 text-[#64748B]">
-                                        <div className="text-5xl mb-4">📭</div>
-                                        <p className="font-bold">No hay predicciones en los últimos {predictionModal.data.period_days} días</p>
-                                    </div>
-                                ) : (
-                                    <div className="overflow-x-auto rounded-2xl border border-[#E5E7EB]">
-                                        <table className="w-full text-sm">
-                                            <thead>
-                                                <tr className="bg-[#F8F9FB] border-b border-[#E5E7EB]">
-                                                    <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Fecha</th>
-                                                    <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Partido</th>
-                                                    <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Selección</th>
-                                                    <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Cuota</th>
-                                                    <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Estado</th>
-                                                    <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-[#64748B]">PnL</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-[#F1F5F9]">
-                                                {predictionModal.data.predictions.map(pred => (
-                                                    <tr key={pred.bet_id} className="bg-white hover:bg-[#F8F9FB] transition-colors">
-                                                        <td className="px-6 py-4 text-[#64748B] text-xs whitespace-nowrap">
-                                                            {new Date(pred.match_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="font-bold text-[#1A1C1E] text-xs">{getEsName(pred.home_team)}</div>
-                                                            <div className="text-[#64748B] text-[10px]">vs {getEsName(pred.away_team)}</div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="text-xs font-bold text-[#1A1C1E] capitalize">{pred.selection}</div>
-                                                            <div className="text-[10px] text-[#64748B]">{pred.market}</div>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-right">
-                                                            <span className="font-bold text-sm text-[#1A1C1E]">{pred.odds_taken.toFixed(2)}</span>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-center">
-                                                            <span className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                                                                pred.status === 'Won' ? 'bg-emerald-100 text-emerald-700' :
-                                                                pred.status === 'Lost' ? 'bg-rose-100 text-rose-700' :
-                                                                pred.status === 'Void' ? 'bg-gray-100 text-gray-500' :
-                                                                'bg-amber-100 text-amber-700'
-                                                            }`}>
-                                                                {pred.status}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-right">
-                                                            {pred.status === 'Pending' || pred.status === 'Void' ? (
-                                                                <span className="text-[#64748B] text-xs">—</span>
-                                                            ) : (
-                                                                <span className={`font-bold text-sm ${
-                                                                    pred.pnl >= 0 ? 'text-emerald-700' : 'text-rose-700'
-                                                                }`}>
-                                                                    {pred.pnl >= 0 ? '+' : ''}{pred.pnl.toFixed(2)}€
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
+                                return (
+                                    <>
+                                        {/* Summary strip */}
+                                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-10">
+                                            <div className="bg-[#0A0F1E] p-5 rounded-2xl">
+                                                <div className="text-[9px] font-bold text-white/50 uppercase tracking-widest mb-1">Total</div>
+                                                <div className="text-2xl font-editorial font-bold text-white">{total}</div>
+                                            </div>
+                                            <div className="bg-emerald-50 border border-emerald-100 p-5 rounded-2xl">
+                                                <div className="text-[9px] font-bold text-emerald-800 uppercase tracking-widest mb-1">Acertadas</div>
+                                                <div className="text-2xl font-editorial font-bold text-emerald-900">{won}</div>
+                                            </div>
+                                            <div className="bg-rose-50 border border-rose-100 p-5 rounded-2xl">
+                                                <div className="text-[9px] font-bold text-rose-800 uppercase tracking-widest mb-1">Falladas</div>
+                                                <div className="text-2xl font-editorial font-bold text-rose-900">{lost}</div>
+                                            </div>
+                                            <div className="bg-amber-50 border border-amber-100 p-5 rounded-2xl">
+                                                <div className="text-[9px] font-bold text-amber-700 uppercase tracking-widest mb-1">Efectividad</div>
+                                                <div className="text-2xl font-editorial font-bold text-amber-900">{hitRate}%</div>
+                                            </div>
+                                            <div className={`p-5 rounded-2xl border ${
+                                                netPnl >= 0
+                                                    ? 'bg-emerald-50 border-emerald-100'
+                                                    : 'bg-rose-50 border-rose-100'
+                                            }`}>
+                                                <div className={`text-[9px] font-bold uppercase tracking-widest mb-1 ${
+                                                    netPnl >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                                                }`}>PnL Neto</div>
+                                                <div className={`text-2xl font-editorial font-bold ${
+                                                    netPnl >= 0 ? 'text-emerald-900' : 'text-rose-900'
+                                                }`}>
+                                                    {netPnl >= 0 ? '+' : ''}{netPnl.toFixed(2)}€
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Predictions table */}
+                                        {filteredPredictions.length === 0 ? (
+                                            <div className="text-center py-16 text-[#64748B]">
+                                                <div className="text-5xl mb-4">📭</div>
+                                                <p className="font-bold">No hay predicciones en los últimos {predictionModal.data.period_days} días para este filtro</p>
+                                            </div>
+                                        ) : (
+                                            <div className="overflow-x-auto rounded-2xl border border-[#E5E7EB]">
+                                                <table className="w-full text-sm">
+                                                    <thead>
+                                                        <tr className="bg-[#F8F9FB] border-b border-[#E5E7EB]">
+                                                            <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Fecha</th>
+                                                            <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Partido</th>
+                                                            <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Riesgo</th>
+                                                            <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Selección</th>
+                                                            <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Cuota</th>
+                                                            <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Estado</th>
+                                                            <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-[#64748B]">PnL</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-[#F1F5F9]">
+                                                        {filteredPredictions.map(pred => (
+                                                            <tr key={pred.bet_id} className="bg-white hover:bg-[#F8F9FB] transition-colors">
+                                                                <td className="px-6 py-4 text-[#64748B] text-xs whitespace-nowrap">
+                                                                    {new Date(pred.match_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="font-bold text-[#1A1C1E] text-xs">{getEsName(pred.home_team)}</div>
+                                                                    <div className="text-[#64748B] text-[10px]">vs {getEsName(pred.away_team)}</div>
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <span className={`${(pred as any).risk_bg_class || 'bg-gray-100 text-gray-600'} px-2 py-1 rounded-md text-[8px] font-black tracking-widest uppercase`}>
+                                                                        {(pred as any).risk_level || 'N/D'}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="text-xs font-bold text-[#1A1C1E] capitalize">{pred.selection}</div>
+                                                                    <div className="text-[10px] text-[#64748B]">{pred.market}</div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-right">
+                                                                    <span className="font-bold text-sm text-[#1A1C1E]">{pred.odds_taken.toFixed(2)}</span>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-center">
+                                                                    <span className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                                                        pred.status === 'Won' ? 'bg-emerald-100 text-emerald-700' :
+                                                                        pred.status === 'Lost' ? 'bg-rose-100 text-rose-700' :
+                                                                        pred.status === 'Void' ? 'bg-gray-100 text-gray-500' :
+                                                                        'bg-amber-100 text-amber-700'
+                                                                    }`}>
+                                                                        {pred.status}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-right">
+                                                                    {pred.status === 'Pending' || pred.status === 'Void' ? (
+                                                                        <span className="text-[#64748B] text-xs">—</span>
+                                                                    ) : (
+                                                                        <span className={`font-bold text-sm ${
+                                                                            pred.pnl >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                                                                        }`}>
+                                                                            {pred.pnl >= 0 ? '+' : ''}{pred.pnl.toFixed(2)}€
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
                                             </tbody>
                                         </table>
                                     </div>
                                 )}
-                            </>
+                                    </>
+                                )
+                            })()
                         ) : (
                             <div className="text-center py-16 text-[#64748B]">
                                 <p className="font-bold">Error cargando datos. Inténtalo de nuevo.</p>
