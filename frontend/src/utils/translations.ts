@@ -21,6 +21,8 @@ export const COUNTRY_FLAGS: Record<string, string> = {
   'South Africa': '🇿🇦', Qatar: '🇶🇦', UAE: '🇦🇪', Iraq: '🇮🇶', Syria: '🇸🇾',
   China: '🇨🇳', 'China PR': '🇨🇳', India: '🇮🇳', Vietnam: '🇻🇳', Thailand: '🇹🇭',
   Jamaica: '🇯🇲', 'Trinidad and Tobago': '🇹🇹',
+  Uzbekistan: '🇺🇿', 'DR Congo': '🇨🇩', 'Czech Republic': '🇨🇿',
+  Curaçao: '🇨🇼', Haiti: '🇭🇹', Jordan: '🇯🇴',
 };
 
 export const COUNTRY_NAMES_ES: Record<string, string> = {
@@ -46,6 +48,8 @@ export const COUNTRY_NAMES_ES: Record<string, string> = {
   'South Africa': 'Sudáfrica', Qatar: 'Catar', UAE: 'EAU', Iraq: 'Irak', Syria: 'Siria',
   China: 'China', 'China PR': 'China', India: 'India', Vietnam: 'Vietnam', Thailand: 'Tailandia',
   Jamaica: 'Jamaica', 'Trinidad and Tobago': 'Trinidad y Tobago',
+  Uzbekistan: 'Uzbekistán', 'DR Congo': 'RD Congo', 'Czech Republic': 'República Checa',
+  Curaçao: 'Curazao', Haiti: 'Haití', Jordan: 'Jordania',
 };
 
 export function getFlag(teamName: string): string {
