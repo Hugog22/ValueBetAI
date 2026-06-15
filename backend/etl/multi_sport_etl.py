@@ -133,9 +133,6 @@ def sync_sport_matches(sport_key: str) -> int:
             )
 
             if existing:
-                # Update status if needed
-                if existing.status == "Finished":
-                    existing.status = "Not Started"
                 match = existing
             else:
                 match = Match(
