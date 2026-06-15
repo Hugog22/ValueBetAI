@@ -53,6 +53,9 @@ class PredictionDetail(BaseModel):
     status: str
     pnl: float
     user_email: str
+    risk_level: Optional[str] = None
+    risk_badge: Optional[str] = None
+    risk_bg_class: Optional[str] = None
 
 class PredictionsDetailResponse(BaseModel):
     period_days: int
@@ -196,6 +199,15 @@ def get_predictions_detail(
         home = match.home_team.name if match.home_team else "?"
         away = match.away_team.name if match.away_team else "?"
 
+        # Reconstruct risk based on simple implied probability and odds_taken
+        # Safe approximation since we only have odds_taken here
+        from core.match_evaluator import _calculate_risk
+        # We don't have the exact AI probability here, but odds_taken is a decent proxy.
+        # However, to be more accurate, we can just pass odds_taken for both or approx prob.
+        # Wait, the best way is to fetch the odds and calculate risk, but we can approximate:
+        approx_prob = 1.0 / bet.odds_taken if bet.odds_taken > 0 else 0
+        risk_info = _calculate_risk(approx_prob, bet.odds_taken)
+
         predictions.append(PredictionDetail(
             bet_id=bet.id,
             match_date=match.date.isoformat() + "Z" if match.date else "",
@@ -208,6 +220,9 @@ def get_predictions_detail(
             status=bet.status,
             pnl=pnl,
             user_email=user.email if user else "unknown",
+            risk_level=risk_info.get("level", "N/D"),
+            risk_badge=risk_info.get("badge", "N/D"),
+            risk_bg_class=risk_info.get("bgClass", "bg-gray-100 text-gray-800"),
         ))
 
     resolved = won + lost
