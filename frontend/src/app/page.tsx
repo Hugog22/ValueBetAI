@@ -351,7 +351,7 @@ export default function LandingPage() {
             <div className="border-t border-white/10 pt-6">
               <h3 className="text-lg font-bold mb-2 text-white">¿Con qué deportes funciona?</h3>
               <p className="text-[#94a3b8] leading-relaxed text-sm">
-                Actualmente especializado en fútbol de selecciones nacionales (Copa del Mundo, Eurocopas, Nations League). Se están desarrollando modelos para ligas de clubes.
+                Actualmente especializado en fútbol de selecciones nacionales (Copa del Mundo, Eurocopas, Nations League) y en La Liga española.
               </p>
             </div>
             <div className="border-t border-white/10 pt-6">
