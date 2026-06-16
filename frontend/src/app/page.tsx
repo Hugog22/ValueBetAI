@@ -32,9 +32,8 @@ export default function LandingPage() {
             Modo Mundial 2026 · En vivo
           </div>
           
-          <h1 className="text-5xl lg:text-7xl font-editorial font-bold leading-[1.1] mb-8">
-            La ventaja <i className="text-[#94a3b8] font-normal">injusta</i><br />
-            en apuestas deportivas
+          <h1 className="text-4xl lg:text-6xl font-editorial font-bold leading-[1.1] mb-8 text-balance">
+            Sistema de <i className="text-[#94a3b8] font-normal">Inteligencia Artificial</i> para detectar cuotas rentables en tiempo real.
           </h1>
           
           <p className="text-xl text-[#94a3b8] leading-relaxed max-w-2xl mb-12">
@@ -106,8 +105,8 @@ export default function LandingPage() {
               </span>
             </div>
 
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-2xl font-editorial font-bold">🇫🇷 Francia vs Marruecos 🇲🇦</span>
+            <div className="flex items-center gap-3 mb-2 pr-24 sm:pr-0">
+              <span className="text-2xl font-editorial font-bold leading-tight">🇫🇷 Francia vs Marruecos 🇲🇦</span>
             </div>
             <div className="text-sm text-[#64748B] mb-6">Mundial 2022 · Semifinales · 14 dic, 20:00</div>
 
