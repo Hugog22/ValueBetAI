@@ -1,266 +1,723 @@
 {
-    "Algeria": {
-        "squad_quality_score": 60
-    },
-    "Argentina": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 95.0,
-        "fifa_pts": 1862.0
-    },
-    "Australia": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 68.35,
-        "fifa_pts": 1580.0
-    },
-    "Austria": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 62.11,
-        "fifa_pts": 1514.0
-    },
-    "Belgium": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 83.85,
-        "fifa_pts": 1744.0
-    },
-    "Bosnia & Herzegovina": {
-        "squad_quality_score": 60
-    },
-    "Brazil": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 86.78,
-        "fifa_pts": 1775.0
-    },
-    "Canada": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 69.11,
-        "fifa_pts": 1588.0
-    },
-    "Cape Verde": {
-        "squad_quality_score": 60
-    },
-    "Colombia": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 78.93,
-        "fifa_pts": 1692.0
-    },
-    "Croatia": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 75.34,
-        "fifa_pts": 1654.0
-    },
-    "Cura\u00e7ao": {
-        "squad_quality_score": 60
-    },
-    "Czech Republic": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 57.01,
-        "fifa_pts": 1460.0
-    },
-    "DR Congo": {
-        "squad_quality_score": 60
-    },
-    "Ecuador": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 71.0,
-        "fifa_pts": 1608.0
-    },
-    "Egypt": {
-        "squad_quality_score": 60
-    },
-    "England": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 88.2,
-        "fifa_pts": 1790.0
-    },
-    "France": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 92.92,
-        "fifa_pts": 1840.0
-    },
-    "Germany": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 82.34,
-        "fifa_pts": 1728.0
-    },
-    "Ghana": {
-        "squad_quality_score": 60
-    },
-    "Haiti": {
-        "squad_quality_score": 60
-    },
-    "Iran": {
-        "squad_quality_score": 60
-    },
-    "Iraq": {
-        "squad_quality_score": 60
-    },
-    "Ivory Coast": {
-        "squad_quality_score": 60
-    },
-    "Japan": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 71.56,
-        "fifa_pts": 1614.0
-    },
-    "Jordan": {
-        "squad_quality_score": 60
-    },
-    "Mexico": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 72.51,
-        "fifa_pts": 1624.0
-    },
-    "Morocco": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 76.76,
-        "fifa_pts": 1669.0
-    },
-    "Netherlands": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 83.28,
-        "fifa_pts": 1738.0
-    },
-    "New Zealand": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 41.7,
-        "fifa_pts": 1298.0
-    },
-    "Norway": {
-        "squad_quality_score": 60
-    },
-    "Panama": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 51.15,
-        "fifa_pts": 1398.0
-    },
-    "Paraguay": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 48.13,
-        "fifa_pts": 1366.0
-    },
-    "Portugal": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 86.02,
-        "fifa_pts": 1767.0
-    },
-    "Qatar": {
-        "squad_quality_score": 60
-    },
-    "Saudi Arabia": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 40.0,
-        "fifa_pts": 1280.0
-    },
-    "Scotland": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 55.88,
-        "fifa_pts": 1448.0
-    },
-    "Senegal": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 73.83,
-        "fifa_pts": 1638.0
-    },
-    "South Africa": {
-        "squad_quality_score": 60
-    },
-    "South Korea": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 69.86,
-        "fifa_pts": 1596.0
-    },
-    "Spain": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 90.56,
-        "fifa_pts": 1815.0
-    },
-    "Sweden": {
-        "squad_quality_score": 60
-    },
-    "Switzerland": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 67.41,
-        "fifa_pts": 1570.0
-    },
-    "Tunisia": {
-        "squad_quality_score": 60
-    },
-    "Turkey": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 63.06,
-        "fifa_pts": 1524.0
-    },
-    "USA": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 73.08,
-        "fifa_pts": 1630.0
-    },
-    "Uruguay": {
-        "team_id": null,
-        "players": [],
-        "squad_size": 23,
-        "squad_quality_score": 77.61,
-        "fifa_pts": 1678.0
-    },
-    "Uzbekistan": {
-        "squad_quality_score": 60
-    }
+  "France": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 97.37,
+    "fifa_pts": 1887.11
+  },
+  "Argentina": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 96.44,
+    "fifa_pts": 1877.27
+  },
+  "Spain": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 94.44,
+    "fifa_pts": 1856.03
+  },
+  "England": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 91.79,
+    "fifa_pts": 1828.02
+  },
+  "Portugal": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 86.1,
+    "fifa_pts": 1767.85
+  },
+  "Brazil": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 85.87,
+    "fifa_pts": 1765.34
+  },
+  "Morocco": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 84.95,
+    "fifa_pts": 1755.62
+  },
+  "Netherlands": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 84.34,
+    "fifa_pts": 1749.2
+  },
+  "Germany": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 83.81,
+    "fifa_pts": 1743.54
+  },
+  "Belgium": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 82.9,
+    "fifa_pts": 1733.93
+  },
+  "Croatia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 81.1,
+    "fifa_pts": 1714.87
+  },
+  "Italy": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 80.14,
+    "fifa_pts": 1704.73
+  },
+  "Mexico": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 79.78,
+    "fifa_pts": 1700.98
+  },
+  "Colombia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 79.53,
+    "fifa_pts": 1698.35
+  },
+  "United States": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 78.61,
+    "fifa_pts": 1688.53
+  },
+  "Senegal": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 76.63,
+    "fifa_pts": 1667.66
+  },
+  "Japan": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 76.47,
+    "fifa_pts": 1665.94
+  },
+  "Uruguay": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 76.09,
+    "fifa_pts": 1661.95
+  },
+  "Switzerland": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 74.11,
+    "fifa_pts": 1640.92
+  },
+  "Denmark": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 72.08,
+    "fifa_pts": 1619.47
+  },
+  "South Korea": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 71.43,
+    "fifa_pts": 1612.55
+  },
+  "Australia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 70.77,
+    "fifa_pts": 1605.61
+  },
+  "Iran": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 70.72,
+    "fifa_pts": 1605.12
+  },
+  "Austria": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 69.99,
+    "fifa_pts": 1597.4
+  },
+  "Nigeria": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 68.82,
+    "fifa_pts": 1585.02
+  },
+  "Turkey": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 68.3,
+    "fifa_pts": 1579.47
+  },
+  "Algeria": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 67.5,
+    "fifa_pts": 1571.03
+  },
+  "Ecuador": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 67.48,
+    "fifa_pts": 1570.76
+  },
+  "Egypt": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 67.47,
+    "fifa_pts": 1570.67
+  },
+  "Ivory Coast": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 67.28,
+    "fifa_pts": 1568.62
+  },
+  "Norway": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 65.72,
+    "fifa_pts": 1552.18
+  },
+  "Canada": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 65.66,
+    "fifa_pts": 1551.5
+  },
+  "Ukraine": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 65.45,
+    "fifa_pts": 1549.29
+  },
+  "Panama": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 64.49,
+    "fifa_pts": 1539.16
+  },
+  "Sweden": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 63.93,
+    "fifa_pts": 1533.19
+  },
+  "Russia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 63.59,
+    "fifa_pts": 1529.6
+  },
+  "Poland": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 63.26,
+    "fifa_pts": 1526.18
+  },
+  "Scotland": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 62.56,
+    "fifa_pts": 1518.77
+  },
+  "Wales": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 62.39,
+    "fifa_pts": 1516.95
+  },
+  "Hungary": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 61.39,
+    "fifa_pts": 1506.39
+  },
+  "Serbia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 60.99,
+    "fifa_pts": 1502.13
+  },
+  "Paraguay": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 59.66,
+    "fifa_pts": 1488.05
+  },
+  "Czechia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 59.36,
+    "fifa_pts": 1484.82
+  },
+  "Cameroon": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 59.02,
+    "fifa_pts": 1481.24
+  },
+  "DR Congo": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 58.37,
+    "fifa_pts": 1474.43
+  },
+  "Slovakia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 58.3,
+    "fifa_pts": 1473.66
+  },
+  "Greece": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 58.26,
+    "fifa_pts": 1473.19
+  },
+  "Venezuela": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 57.88,
+    "fifa_pts": 1469.18
+  },
+  "Qatar": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 56.96,
+    "fifa_pts": 1459.45
+  },
+  "Uzbekistan": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 56.89,
+    "fifa_pts": 1458.73
+  },
+  "Chile": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 56.84,
+    "fifa_pts": 1458.2
+  },
+  "Peru": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 56.79,
+    "fifa_pts": 1457.69
+  },
+  "Costa Rica": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 56.64,
+    "fifa_pts": 1456.03
+  },
+  "Romania": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 56.62,
+    "fifa_pts": 1455.89
+  },
+  "Mali": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 56.59,
+    "fifa_pts": 1455.59
+  },
+  "Tunisia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 56.35,
+    "fifa_pts": 1453.0
+  },
+  "Iraq": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 56.21,
+    "fifa_pts": 1451.53
+  },
+  "Republic of Ireland": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 55.22,
+    "fifa_pts": 1441.1
+  },
+  "Slovenia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 55.22,
+    "fifa_pts": 1441.09
+  },
+  "Saudi Arabia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 54.65,
+    "fifa_pts": 1435.0
+  },
+  "South Africa": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 52.75,
+    "fifa_pts": 1414.88
+  },
+  "Burkina Faso": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 52.0,
+    "fifa_pts": 1406.99
+  },
+  "Bosnia and Herzegovina": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 50.89,
+    "fifa_pts": 1395.19
+  },
+  "Cape Verde": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 50.38,
+    "fifa_pts": 1389.79
+  },
+  "Jordan": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 50.18,
+    "fifa_pts": 1387.74
+  },
+  "Honduras": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 49.35,
+    "fifa_pts": 1378.97
+  },
+  "Albania": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 49.07,
+    "fifa_pts": 1376.03
+  },
+  "United Arab Emirates": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 48.55,
+    "fifa_pts": 1370.47
+  },
+  "North Macedonia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 48.43,
+    "fifa_pts": 1369.16
+  },
+  "Northern Ireland": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 48.06,
+    "fifa_pts": 1365.3
+  },
+  "Jamaica": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 47.36,
+    "fifa_pts": 1357.84
+  },
+  "Georgia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 47.11,
+    "fifa_pts": 1355.26
+  },
+  "Ghana": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 46.32,
+    "fifa_pts": 1346.88
+  },
+  "Iceland": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 45.93,
+    "fifa_pts": 1342.77
+  },
+  "Finland": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 45.85,
+    "fifa_pts": 1341.92
+  },
+  "Israel": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 45.09,
+    "fifa_pts": 1333.9
+  },
+  "Bolivia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 44.35,
+    "fifa_pts": 1326.0
+  },
+  "Kosovo": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 43.7,
+    "fifa_pts": 1319.12
+  },
+  "Oman": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 42.54,
+    "fifa_pts": 1306.9
+  },
+  "Montenegro": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 42.08,
+    "fifa_pts": 1301.98
+  },
+  "Guinea": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 41.47,
+    "fifa_pts": 1295.6
+  },
+  "New Zealand": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 40.95,
+    "fifa_pts": 1290.04
+  },
+  "Curaçao": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 40.66,
+    "fifa_pts": 1287.0
+  },
+  "Syria": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 40.29,
+    "fifa_pts": 1283.05
+  },
+  "Haiti": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 39.78,
+    "fifa_pts": 1277.67
+  },
+  "Gabon": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 39.29,
+    "fifa_pts": 1272.51
+  },
+  "Bulgaria": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 39.21,
+    "fifa_pts": 1271.68
+  },
+  "Angola": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 38.64,
+    "fifa_pts": 1265.58
+  },
+  "Uganda": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 38.5,
+    "fifa_pts": 1264.09
+  },
+  "Zambia": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 37.71,
+    "fifa_pts": 1255.82
+  },
+  "China PR": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 37.62,
+    "fifa_pts": 1254.81
+  },
+  "Bahrain": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 37.58,
+    "fifa_pts": 1254.41
+  },
+  "Benin": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 37.37,
+    "fifa_pts": 1252.17
+  },
+  "Thailand": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 37.24,
+    "fifa_pts": 1250.8
+  },
+  "Palestine": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 36.57,
+    "fifa_pts": 1243.71
+  },
+  "Belarus": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 36.49,
+    "fifa_pts": 1242.88
+  },
+  "Guatemala": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 36.1,
+    "fifa_pts": 1238.74
+  },
+  "Luxembourg": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 35.54,
+    "fifa_pts": 1232.82
+  },
+  "Vietnam": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 34.87,
+    "fifa_pts": 1225.68
+  },
+  "El Salvador": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 34.83,
+    "fifa_pts": 1225.34
+  },
+  "Tajikistan": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 34.73,
+    "fifa_pts": 1224.19
+  },
+  "Trinidad and Tobago": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 34.29,
+    "fifa_pts": 1219.59
+  },
+  "Mozambique": {
+    "team_id": null,
+    "players": [],
+    "squad_size": 23,
+    "squad_quality_score": 34.2,
+    "fifa_pts": 1218.62
+  }
 }
