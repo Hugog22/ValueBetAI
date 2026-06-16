@@ -95,7 +95,7 @@ export default function LandingPage() {
           <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.2em] mb-4">Producto</div>
           <h2 className="text-3xl lg:text-4xl font-editorial font-bold mb-4">Así funciona una predicción</h2>
           <p className="text-[#94a3b8] max-w-2xl mb-12">
-            Ejemplo real de una value bet identificada por el modelo en el Mundial 2026.
+            Ejemplo real de una value bet identificada por el modelo en el Mundial 2022.
           </p>
 
           <div className="bg-[#0A1A12] border border-white/10 rounded-[2rem] p-8 lg:p-12 relative overflow-hidden">
@@ -109,7 +109,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-3 mb-2">
               <span className="text-2xl font-editorial font-bold">🇫🇷 Francia vs Marruecos 🇲🇦</span>
             </div>
-            <div className="text-sm text-[#64748B] mb-6">Mundial 2026 · Fase de grupos · 22 jun, 20:00</div>
+            <div className="text-sm text-[#64748B] mb-6">Mundial 2022 · Semifinales · 14 dic, 20:00</div>
 
             <div className="flex gap-4 mb-10">
               <span className="px-3 py-1 rounded-md bg-white/5 border border-white/10 text-xs text-[#94a3b8]">Francia 1840 pts</span>
