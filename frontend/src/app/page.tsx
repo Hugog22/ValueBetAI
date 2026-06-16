@@ -336,6 +336,39 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* PREGUNTAS FRECUENTES */}
+        <section className="mb-16">
+          <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.2em] mb-4">Preguntas frecuentes</div>
+          <h2 className="text-3xl lg:text-4xl font-editorial font-bold mb-12">Resuelve tus dudas</h2>
+
+          <div className="space-y-6">
+            <div className="border-t border-white/10 pt-6">
+              <h3 className="text-lg font-bold mb-2 text-white">¿El modelo garantiza ganancias?</h3>
+              <p className="text-[#94a3b8] leading-relaxed text-sm">
+                No. El modelo identifica value bets estadísticamente favorables, pero las apuestas deportivas conllevan riesgo. El objetivo es tener edge a largo plazo, no ganar cada apuesta.
+              </p>
+            </div>
+            <div className="border-t border-white/10 pt-6">
+              <h3 className="text-lg font-bold mb-2 text-white">¿Con qué deportes funciona?</h3>
+              <p className="text-[#94a3b8] leading-relaxed text-sm">
+                Actualmente especializado en fútbol de selecciones nacionales (Copa del Mundo, Eurocopas, Nations League). Se están desarrollando modelos para ligas de clubes.
+              </p>
+            </div>
+            <div className="border-t border-white/10 pt-6">
+              <h3 className="text-lg font-bold mb-2 text-white">¿Cada cuánto se actualiza el modelo?</h3>
+              <p className="text-[#94a3b8] leading-relaxed text-sm">
+                El modelo se reentrena automáticamente después de cada ventana de partidos con los resultados más recientes. Los FIFA points se actualizan mensualmente.
+              </p>
+            </div>
+            <div className="border-t border-white/10 pt-6">
+              <h3 className="text-lg font-bold mb-2 text-white">¿Puedo cancelar en cualquier momento?</h3>
+              <p className="text-[#94a3b8] leading-relaxed text-sm">
+                Sí, sin permanencia ni penalización. Cancela desde tu perfil y seguirás teniendo acceso hasta el fin del período pagado.
+              </p>
+            </div>
+          </div>
+        </section>
+
       </main>
 
       <footer className="border-t border-white/5 bg-[#051209] py-12 text-center text-sm text-[#64748B]">
