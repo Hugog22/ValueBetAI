@@ -53,6 +53,14 @@ export default function RegisterPage() {
             
             {/* Background Texture/Art */}
             <div className="absolute top-0 left-0 w-1/2 h-full bg-[#064E3B]/[0.02] skew-x-12 transform origin-top-left"></div>
+
+            {/* Back Button */}
+            <Link href="/" className="absolute top-8 left-8 flex items-center gap-2 text-[#64748B] hover:text-[#1A1C1E] transition-colors z-20 group">
+                <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span className="text-xs font-bold uppercase tracking-wider">Volver</span>
+            </Link>
             
             <div className="max-w-md w-full z-10">
                 <div className="text-center mb-12">

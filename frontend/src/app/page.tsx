@@ -8,7 +8,7 @@ export default function LandingPage() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#C0FF00]/[0.03] blur-[120px] rounded-full pointer-events-none"></div>
 
       {/* Navigation */}
-      <nav className="absolute top-0 w-full flex items-center justify-between px-8 py-6 z-10 max-w-7xl mx-auto left-0 right-0">
+      <nav className="absolute top-0 w-full flex items-center justify-between px-8 py-6 z-50 max-w-7xl mx-auto left-0 right-0">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 bg-[#FFD700] flex items-center justify-center rounded-xl shadow-lg shadow-[#FFD700]/20">
             <span className="text-[#1A1C1E] font-black text-[10px] leading-none">BET<br />AI</span>
