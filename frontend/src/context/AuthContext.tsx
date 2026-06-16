@@ -42,28 +42,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
 
-    useEffect(() => {
-        const storedToken = localStorage.getItem('auth_token');
-        if (storedToken) {
-            // Fast-path: decode locally and set user immediately so the app
-            // renders without waiting for a network round-trip.
-            const payload = parseJwtPayload(storedToken);
-            if (payload?.sub) {
-                setToken(storedToken);
-                setUser({ id: payload.id ?? 0, email: payload.sub });
-                setIsLoading(false);
-                // Validate in background — logs out silently if token expired
-                validateTokenInBackground(storedToken);
-            } else {
-                // Malformed token — clear it
-                localStorage.removeItem('auth_token');
-                setIsLoading(false);
-            }
-        } else {
-            setIsLoading(false);
-        }
-    }, []);
-
     /**
      * Silently verify the token server-side without blocking the UI.
      * If invalid/expired, logs out the user gracefully.
@@ -88,6 +66,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    useEffect(() => {
+        const storedToken = localStorage.getItem('auth_token');
+        if (storedToken) {
+            // Fast-path: decode locally and set user immediately so the app
+            // renders without waiting for a network round-trip.
+            const payload = parseJwtPayload(storedToken);
+            if (payload?.sub) {
+                setToken(storedToken);
+                setUser({ id: payload.id ?? 0, email: payload.sub });
+                setIsLoading(false);
+                // Validate in background — logs out silently if token expired
+                validateTokenInBackground(storedToken);
+            } else {
+                // Malformed token — clear it
+                localStorage.removeItem('auth_token');
+                setIsLoading(false);
+            }
+        } else {
+            setIsLoading(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+
     const login = (newToken: string) => {
         localStorage.setItem('auth_token', newToken);
         setToken(newToken);
@@ -99,7 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         // Navigate FIRST, then confirm user data in background
-        router.push('/');
+        router.push('/dashboard');
         validateTokenInBackground(newToken);
     };
 
