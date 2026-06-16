@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  generateBuildId: async () => 'cache-bust-v3',
   images: {
     remotePatterns: [
       {

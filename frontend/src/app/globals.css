@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../../src";
 
 @theme {
   --color-background: #FCF9F1; /* Creamy Off-white */
