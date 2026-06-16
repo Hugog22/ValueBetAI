@@ -27,8 +27,9 @@ export default function LandingPage() {
         
         {/* HERO SECTION */}
         <div className="mb-32">
-          <div className="inline-block bg-[#064E3B]/30 border border-[#064E3B] text-[#C0FF00] px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-6">
-            ValueBet AI · Modelo v2.0
+          <div className="inline-flex items-center gap-2 bg-[#064E3B]/30 border border-[#064E3B] text-[#C0FF00] px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-6">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00] animate-pulse"></div>
+            Modo Mundial 2026 · En vivo
           </div>
           
           <h1 className="text-5xl lg:text-7xl font-editorial font-bold leading-[1.1] mb-8">
@@ -37,7 +38,7 @@ export default function LandingPage() {
           </h1>
           
           <p className="text-xl text-[#94a3b8] leading-relaxed max-w-2xl mb-12">
-            Nuestra IA analiza probabilidades reales y las compara con las cuotas del mercado para identificar value bets que las casas subestiman. Funciona para el <strong>Mundial</strong> y también está implementado para <strong>La Liga española</strong>.
+            Nuestra IA analiza probabilidades reales y las compara con las cuotas del mercado para identificar value bets que las casas subestiman. Está implementado para el <strong>fútbol internacional</strong> y <strong>La Liga</strong>.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -94,7 +95,7 @@ export default function LandingPage() {
           <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.2em] mb-4">Producto</div>
           <h2 className="text-3xl lg:text-4xl font-editorial font-bold mb-4">Así funciona una predicción</h2>
           <p className="text-[#94a3b8] max-w-2xl mb-12">
-            Ejemplo real de una value bet identificada por el modelo en La Liga esta semana.
+            Ejemplo real de una value bet identificada por el modelo en el Mundial 2026.
           </p>
 
           <div className="bg-[#0A1A12] border border-white/10 rounded-[2rem] p-8 lg:p-12 relative overflow-hidden">
@@ -106,56 +107,56 @@ export default function LandingPage() {
             </div>
 
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-2xl font-editorial font-bold">Real Sociedad vs Athletic Club</span>
+              <span className="text-2xl font-editorial font-bold">🇫🇷 Francia vs Marruecos 🇲🇦</span>
             </div>
-            <div className="text-sm text-[#64748B] mb-6">La Liga · Jornada 18 · 12 ene, 21:00</div>
+            <div className="text-sm text-[#64748B] mb-6">Mundial 2026 · Fase de grupos · 22 jun, 20:00</div>
 
             <div className="flex gap-4 mb-10">
-              <span className="px-3 py-1 rounded-md bg-white/5 border border-white/10 text-xs text-[#94a3b8]">Real Sociedad 1720 pts</span>
-              <span className="px-3 py-1 rounded-md bg-white/5 border border-white/10 text-xs text-[#94a3b8]">Athletic Club 1745 pts</span>
+              <span className="px-3 py-1 rounded-md bg-white/5 border border-white/10 text-xs text-[#94a3b8]">Francia 1840 pts</span>
+              <span className="px-3 py-1 rounded-md bg-white/5 border border-white/10 text-xs text-[#94a3b8]">Marruecos 1669 pts</span>
             </div>
 
             <div className="grid grid-cols-3 gap-8 mb-8 border-b border-white/10 pb-8">
               <div>
                 <div className="text-xs text-[#64748B] uppercase tracking-widest mb-2">IA estima</div>
-                <div className="text-xl font-bold text-white">Real Sociedad 42%</div>
+                <div className="text-xl font-bold text-white">Francia 61%</div>
               </div>
               <div>
                 <div className="text-xs text-[#64748B] uppercase tracking-widest mb-2">Casa ofrece</div>
-                <div className="text-xl font-bold text-white">Real Sociedad 35%</div>
+                <div className="text-xl font-bold text-white">Francia 48%</div>
               </div>
               <div>
                 <div className="text-xs text-[#64748B] uppercase tracking-widest mb-2">Edge</div>
-                <div className="text-xl font-bold text-[#C0FF00]">+7.0%</div>
+                <div className="text-xl font-bold text-[#C0FF00]">+13.0%</div>
               </div>
             </div>
 
             {/* Bars */}
             <div className="mb-10">
               <div className="flex h-3 rounded-full overflow-hidden bg-white/5 mb-3">
-                <div className="bg-[#C0FF00]" style={{ width: '42%' }}></div>
-                <div className="bg-[#64748B]" style={{ width: '30%' }}></div>
-                <div className="bg-red-500" style={{ width: '28%' }}></div>
+                <div className="bg-[#C0FF00]" style={{ width: '61%' }}></div>
+                <div className="bg-[#64748B]" style={{ width: '21%' }}></div>
+                <div className="bg-red-500" style={{ width: '18%' }}></div>
               </div>
               <div className="flex justify-between text-xs text-[#64748B] font-medium">
-                <span>Real Sociedad 42%</span>
-                <span>Empate 30%</span>
-                <span>Athletic Club 28%</span>
+                <span>Francia 61%</span>
+                <span>Empate 21%</span>
+                <span>Marruecos 18%</span>
               </div>
             </div>
 
             <div className="flex justify-between items-center bg-white/5 rounded-2xl p-6 border border-white/10">
               <div className="flex gap-3">
-                <span className="bg-[#B45309]/20 text-[#F59E0B] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest border border-[#B45309]/30">
-                  Riesgo Medio
+                <span className="bg-[#064E3B]/20 text-[#C0FF00] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest border border-[#064E3B]/30">
+                  Riesgo Bajo
                 </span>
                 <span className="bg-[#064E3B]/30 text-[#C0FF00] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest border border-[#064E3B]/50">
-                  EV +7.0%
+                  EV +8.4%
                 </span>
               </div>
               <div className="text-right">
                 <div className="text-xs text-[#64748B] uppercase tracking-widest mb-1">Cuota sugerida</div>
-                <div className="text-2xl font-editorial font-bold text-white">2.85</div>
+                <div className="text-2xl font-editorial font-bold text-white">2.08</div>
               </div>
             </div>
           </div>
@@ -173,7 +174,7 @@ export default function LandingPage() {
             <div className="relative pl-16">
               <div className="absolute left-0 top-0 w-12 h-12 rounded-full bg-[#051209] border border-[#064E3B] flex items-center justify-center text-[#C0FF00] font-bold z-10">1</div>
               <h3 className="text-xl font-bold mb-2">Análisis del partido</h3>
-              <p className="text-[#94a3b8]">Elo points, forma reciente, historial H2H, xG, posesión, calidad de plantilla y fase del torneo.</p>
+              <p className="text-[#94a3b8]">FIFA points, forma reciente, historial H2H, xG, posesión, calidad de plantilla y fase del torneo.</p>
             </div>
             <div className="relative pl-16">
               <div className="absolute left-0 top-0 w-12 h-12 rounded-full bg-[#051209] border border-[#064E3B] flex items-center justify-center text-[#C0FF00] font-bold z-10">2</div>
