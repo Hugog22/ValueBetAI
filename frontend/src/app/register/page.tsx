@@ -39,7 +39,7 @@ export default function RegisterPage() {
 
             if (loginRes.ok) {
                 const data = await loginRes.json();
-                login(data.access_token);
+                login(data.access_token, false); // Don't redirect to dashboard yet
                 
                 // Trigger Stripe Checkout
                 const checkoutRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/stripe/create-checkout-session`, {

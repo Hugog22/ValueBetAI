@@ -90,7 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
 
-    const login = (newToken: string) => {
+    const login = (newToken: string, redirect: boolean = true) => {
         localStorage.setItem('auth_token', newToken);
         setToken(newToken);
 
@@ -100,8 +100,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser({ id: payload.id ?? 0, email: payload.sub });
         }
 
-        // Navigate FIRST, then confirm user data in background
-        router.push('/dashboard');
+        if (redirect) {
+            router.push('/dashboard');
+        }
         validateTokenInBackground(newToken);
     };
 
