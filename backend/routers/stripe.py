@@ -7,14 +7,12 @@ from datetime import datetime
 from db.session import get_db
 from db.models import User
 from routers.auth import get_current_user
-from dotenv import load_dotenv
+from core.config import settings
 
-load_dotenv()
-
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
-price_id = os.getenv("STRIPE_PRICE_ID")
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+stripe.api_key = settings.STRIPE_SECRET_KEY
+webhook_secret = settings.STRIPE_WEBHOOK_SECRET
+price_id = settings.STRIPE_PRICE_ID
+frontend_url = settings.FRONTEND_URL
 
 router = APIRouter(prefix="/api/stripe", tags=["Stripe"])
 
