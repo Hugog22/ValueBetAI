@@ -13,14 +13,20 @@ import MatchesDashboard from '@/components/MatchesDashboard';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 async function fetchJSON<T>(url: string, fallback: T): Promise<T> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+    
     const res = await fetch(url, {
-      next: { revalidate },
-      headers: { 'Cache-Control': 'no-store' },
+      cache: 'no-store',
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
+    
     if (!res.ok) return fallback;
     const data = await res.json();
     return data as T;
