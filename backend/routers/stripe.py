@@ -9,10 +9,10 @@ from db.models import User
 from routers.auth import get_current_user
 from core.config import settings
 
-stripe.api_key = settings.STRIPE_SECRET_KEY
-webhook_secret = settings.STRIPE_WEBHOOK_SECRET
-price_id = settings.STRIPE_PRICE_ID
-frontend_url = settings.FRONTEND_URL
+stripe.api_key = settings.STRIPE_SECRET_KEY.strip() if settings.STRIPE_SECRET_KEY else ""
+webhook_secret = settings.STRIPE_WEBHOOK_SECRET.strip() if settings.STRIPE_WEBHOOK_SECRET else ""
+price_id = settings.STRIPE_PRICE_ID.strip() if settings.STRIPE_PRICE_ID else ""
+frontend_url = settings.FRONTEND_URL.strip() if settings.FRONTEND_URL else "http://localhost:3000"
 
 router = APIRouter(prefix="/api/stripe", tags=["Stripe"])
 
