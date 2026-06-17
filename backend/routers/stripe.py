@@ -99,6 +99,12 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
         if user:
             user.subscription_status = status
+            
+            # Save the end date of the current billing period (or cancellation date)
+            period_end = getattr(subscription, 'current_period_end', None)
+            if period_end:
+                user.subscription_end_date = datetime.utcfromtimestamp(period_end)
+                
             db.commit()
 
     return {"status": "success"}
