@@ -53,6 +53,8 @@ export default function RegisterPage() {
                     const checkoutData = await checkoutRes.json();
                     window.location.href = checkoutData.url;
                 } else {
+                    const errData = await checkoutRes.text();
+                    alert(`Error conectando con Stripe: ${errData}`);
                     // Fallback in case Stripe integration is down
                     router.push('/dashboard');
                 }
