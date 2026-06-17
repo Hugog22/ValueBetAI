@@ -209,7 +209,7 @@ export default function BankrollPage() {
                             </Link>
                         </div>
                         <nav className="flex items-center gap-6 md:gap-8 shrink-0 pr-4 md:pr-0">
-                            <Link href="/" className="text-sm font-bold text-[#1A1C1E] hover:text-[#064E3B] transition-colors flex items-center gap-2">
+                            <Link href="/dashboard" className="text-sm font-bold text-[#1A1C1E] hover:text-[#064E3B] transition-colors flex items-center gap-2">
                                 <span className="text-lg">←</span>
                                 <span>Regresar al Radar</span>
                             </Link>
@@ -230,7 +230,7 @@ export default function BankrollPage() {
                             <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#64748B]">Auditoría de Inversión</span>
                         </div>
                         <h1 className="text-6xl font-editorial text-[#1A1C1E] leading-tight font-bold mb-6">
-                            Mi Portafolio <span className="italic font-light">Digital</span>
+                            Mi Perfil <span className="italic font-light">Digital</span>
                         </h1>
                         <p className="text-[#64748B] text-lg font-medium max-w-2xl leading-relaxed">
                             Seguimiento avanzado de posiciones algorítmicas y análisis de rendimiento para decisiones de inversión inteligente.

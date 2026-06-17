@@ -342,6 +342,12 @@ export default function LandingPage() {
 
           <div className="space-y-6">
             <div className="border-t border-white/10 pt-6">
+              <h3 className="text-lg font-bold mb-2 text-white">¿Debes apostar a todas las cuotas que el sistema marque como value bets?</h3>
+              <p className="text-[#94a3b8] leading-relaxed text-sm">
+                No, una value bet es que hay más probabilidad real de que ocurra de lo que cree la casa de apuestas, sin embargo puede que haya muy poca probabildad de que ocurra. Por tanto se debe de usar para analizar el mercado y analizar riesgos. Nuestro sistema califica las value bets según si nivel de riesgo como bajo, medio, alto o lotería.
+              </p>
+            </div>
+            <div className="border-t border-white/10 pt-6">
               <h3 className="text-lg font-bold mb-2 text-white">¿El modelo garantiza ganancias?</h3>
               <p className="text-[#94a3b8] leading-relaxed text-sm">
                 No. El modelo identifica value bets estadísticamente favorables, pero las apuestas deportivas conllevan riesgo. El objetivo es tener edge a largo plazo, no ganar cada apuesta.
