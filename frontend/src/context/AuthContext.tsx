@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 interface User {
     id: number;
     email: string;
+    subscription_status?: string | null;
 }
 
 interface AuthContextType {
@@ -14,6 +15,7 @@ interface AuthContextType {
     login: (token: string, redirect?: boolean) => void;
     logout: () => void;
     isLoading: boolean;
+    isValidating: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,6 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isValidating, setIsValidating] = useState(true);
     const router = useRouter();
 
     /**
@@ -47,6 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
      * If invalid/expired, logs out the user gracefully.
      */
     const validateTokenInBackground = async (authToken: string) => {
+        setIsValidating(true);
         try {
             const response = await fetch(
                 `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/auth/me`,
@@ -54,7 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             );
             if (response.ok) {
                 const userData = await response.json();
-                // Update with full server data (e.g. confirmed id)
+                // Update with full server data (e.g. confirmed id, subscription_status)
                 setUser(userData);
             } else {
                 // Token rejected by server (expired, revoked) — logout
@@ -63,6 +67,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch {
             // Network error — keep user logged in locally, retry will happen later
             console.warn('[AuthContext] Background token validation failed (network). Keeping session.');
+        } finally {
+            setIsValidating(false);
         }
     };
 
@@ -82,9 +88,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 // Malformed token — clear it
                 localStorage.removeItem('auth_token');
                 setIsLoading(false);
+                setIsValidating(false);
             }
         } else {
             setIsLoading(false);
+            setIsValidating(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -114,7 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+        <AuthContext.Provider value={{ user, token, login, logout, isLoading, isValidating }}>
             {children}
         </AuthContext.Provider>
     );

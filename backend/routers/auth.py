@@ -23,6 +23,7 @@ class Token(BaseModel):
 class UserOut(BaseModel):
     id: int
     email: str
+    subscription_status: str | None = None
     class Config:
         from_attributes = True
 
