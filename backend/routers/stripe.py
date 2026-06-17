@@ -38,6 +38,19 @@ def create_checkout_session(current_user: User = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/create-portal-session")
+def create_portal_session(current_user: User = Depends(get_current_user)):
+    if not current_user.stripe_customer_id:
+        raise HTTPException(status_code=400, detail="No stripe customer found")
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=current_user.stripe_customer_id,
+            return_url=f"{frontend_url}/bankroll"
+        )
+        return {"url": session.url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()

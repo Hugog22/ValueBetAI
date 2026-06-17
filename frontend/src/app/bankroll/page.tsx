@@ -179,6 +179,26 @@ export default function BankrollPage() {
         }
     };
 
+    const handleManageSubscription = async () => {
+        if (!token) return;
+        try {
+            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+            const res = await fetch(`${API}/api/stripe/create-portal-session`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                alert("Error al abrir el portal de suscripción. Asegúrate de tenerlo activado en Stripe.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error de conexión con el servidor de pagos.");
+        }
+    };
+
 
 
     const getSelectionLabel = (bet: BetRecord) => {
@@ -216,6 +236,7 @@ export default function BankrollPage() {
                             {user && (
                                 <div className="flex items-center gap-2 md:gap-4 border-l border-black/10 pl-4 md:pl-8 ml-2 md:ml-0">
                                     <span className="text-[10px] uppercase tracking-widest font-bold text-[#64748B] truncate max-w-[80px] md:max-w-none">{user.email}</span>
+                                    <button onClick={handleManageSubscription} className="text-[10px] uppercase tracking-widest font-bold text-[#064E3B] hover:opacity-70 transition-colors">Suscripción</button>
                                     <button onClick={logout} className="text-[10px] uppercase tracking-widest font-bold text-red-600 hover:opacity-70 transition-colors">Salir</button>
                                 </div>
                             )}
