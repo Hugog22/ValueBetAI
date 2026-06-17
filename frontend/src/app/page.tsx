@@ -307,7 +307,7 @@ export default function LandingPage() {
               
               <div className="text-2xl font-editorial font-bold mb-2">Pro</div>
               <div className="flex items-baseline gap-1 mb-8">
-                <span className="text-5xl font-bold text-white">9€</span>
+                <span className="text-5xl font-bold text-white">9,99€</span>
                 <span className="text-[#94a3b8]">/mes</span>
               </div>
 

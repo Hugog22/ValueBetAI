@@ -98,6 +98,9 @@ app.include_router(bets_router)
 app.include_router(auth_router)
 app.include_router(admin_router)
 
+from routers.stripe import router as stripe_router
+app.include_router(stripe_router)
+
 
 # ---------------------------------------------------------------------------
 # Health / Keep-Alive endpoint  ← UptimeRobot pings this every 10 min

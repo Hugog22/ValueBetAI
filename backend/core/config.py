@@ -23,6 +23,12 @@ class Settings(BaseSettings):
     # Feature Flags
     enable_club_leagues: bool = False
 
+    # Stripe
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_PRICE_ID: str = ""
+    FRONTEND_URL: str = "http://localhost:3000"
+
     # Sport key sent to The Odds API on every call.
     # Keeping it pinned to La Liga means 1 request = 1 competition.
     ODDS_SPORT: str = "soccer_spain_la_liga"

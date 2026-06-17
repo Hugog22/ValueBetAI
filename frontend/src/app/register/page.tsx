@@ -40,6 +40,22 @@ export default function RegisterPage() {
             if (loginRes.ok) {
                 const data = await loginRes.json();
                 login(data.access_token);
+                
+                // Trigger Stripe Checkout
+                const checkoutRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/stripe/create-checkout-session`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${data.access_token}`
+                    }
+                });
+                
+                if (checkoutRes.ok) {
+                    const checkoutData = await checkoutRes.json();
+                    window.location.href = checkoutData.url;
+                } else {
+                    // Fallback in case Stripe integration is down
+                    router.push('/dashboard');
+                }
             } else {
                 router.push('/login');
             }

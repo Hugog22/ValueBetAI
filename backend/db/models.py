@@ -11,6 +11,11 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     bankroll = Column(Float, default=1000.0)
+    
+    # Stripe integration
+    stripe_customer_id = Column(String, unique=True, index=True, nullable=True)
+    subscription_status = Column(String, nullable=True) # e.g., 'active', 'canceled', 'past_due'
+    subscription_end_date = Column(DateTime, nullable=True)
 
     bets = relationship("Bet", back_populates="user")
 
