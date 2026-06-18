@@ -27,7 +27,15 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
     STRIPE_PRICE_ID: str = ""
-    FRONTEND_URL: str = "https://value-bet-ai.vercel.app"
+    FRONTEND_URL: str = "http://localhost:5173"
+
+    # Email / SMTP Settings
+    SMTP_SERVER: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    EMAILS_FROM_EMAIL: str = "info@tuempresa.com"
+    EMAILS_FROM_NAME: str = "Value Betting API"
 
     # Sport key sent to The Odds API on every call.
     # Keeping it pinned to La Liga means 1 request = 1 competition.

@@ -1,39 +1,41 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [message, setMessage] = useState('');
     const [error, setError] = useState('');
-    const { login } = useAuth();
-    const router = useRouter();
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        try {
-            const formData = new FormData();
-            formData.append('username', email);
-            formData.append('password', password);
+        setMessage('');
+        setIsLoading(true);
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/auth/login`, {
+        try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/auth/forgot-password`, {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email })
             });
 
+            const data = await res.json();
+            
             if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.detail || 'Error al iniciar sesión');
+                throw new Error(data.detail || 'Error al procesar la solicitud');
             }
 
-            const data = await res.json();
-            login(data.access_token);
+            setMessage(data.message || 'Si el email existe, se ha enviado un enlace de recuperación.');
+            setEmail('');
         } catch (err: any) {
-            setError(err.message || 'Error al iniciar sesión');
+            setError(err.message || 'Error de conexión');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -44,11 +46,11 @@ export default function LoginPage() {
             <div className="absolute top-0 right-0 w-1/2 h-full bg-[#064E3B]/[0.02] -skew-x-12 transform origin-top-right"></div>
             
             {/* Back Button */}
-            <Link href="/" className="absolute top-8 left-8 flex items-center gap-2 text-[#64748B] hover:text-[#1A1C1E] transition-colors z-20 group">
+            <Link href="/login" className="absolute top-8 left-8 flex items-center gap-2 text-[#64748B] hover:text-[#1A1C1E] transition-colors z-20 group">
                 <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                <span className="text-xs font-bold uppercase tracking-wider">Volver</span>
+                <span className="text-xs font-bold uppercase tracking-wider">Volver a Login</span>
             </Link>
             
             <div className="max-w-md w-full z-10">
@@ -62,10 +64,10 @@ export default function LoginPage() {
                         </h1>
                     </Link>
                     <h2 className="mt-8 text-4xl font-editorial font-bold text-[#1A1C1E]">
-                        Bienvenido de <span className="italic font-light">nuevo</span>
+                        Recuperar <span className="italic font-light">Acceso</span>
                     </h2>
                     <p className="mt-4 text-[10px] uppercase tracking-[0.3em] font-bold text-[#64748B]">
-                        Identificación de inversor requerida
+                        Introduce tu correo electrónico
                     </p>
                 </div>
 
@@ -76,12 +78,17 @@ export default function LoginPage() {
                                 {error}
                             </div>
                         )}
+                        {message && (
+                            <div className="bg-green-50 border border-green-100 text-green-700 px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest text-center" role="alert">
+                                {message}
+                            </div>
+                        )}
 
                         <div className="space-y-6">
                             <div>
-                                <label className="text-[10px] uppercase tracking-[0.2em] font-black text-[#64748B] block mb-2 ml-1">Credencial de Acceso (Email)</label>
+                                <label className="text-[10px] uppercase tracking-[0.2em] font-black text-[#64748B] block mb-2 ml-1">Correo Electrónico</label>
                                 <input
-                                    id="email-address"
+                                    id="email"
                                     name="email"
                                     type="email"
                                     required
@@ -91,43 +98,23 @@ export default function LoginPage() {
                                     onChange={(e) => setEmail(e.target.value)}
                                 />
                             </div>
-                            <div>
-                                <div className="flex justify-between items-center mb-2 ml-1">
-                                    <label className="text-[10px] uppercase tracking-[0.2em] font-black text-[#64748B] block">Clave de Seguridad</label>
-                                    <Link href="/forgot-password" className="text-[10px] uppercase tracking-[0.1em] font-bold text-[#064E3B] hover:underline">¿Olvidaste tu contraseña?</Link>
-                                </div>
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    required
-                                    className="appearance-none block w-full px-5 py-4 bg-[#F8F9FA] border border-[#E5E7EB] placeholder-[#94A3B8] text-[#1A1C1E] rounded-2xl focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B] transition-all font-medium"
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                />
-                            </div>
                         </div>
 
                         <div className="pt-4">
                             <button
                                 type="submit"
-                                className="w-full flex justify-center items-center py-5 px-4 bg-[#064E3B] text-white text-xs uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#043327] shadow-xl shadow-[#064E3B]/20 transition-all active:scale-95 group"
+                                disabled={isLoading}
+                                className="w-full flex justify-center items-center py-5 px-4 bg-[#064E3B] text-white text-xs uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#043327] shadow-xl shadow-[#064E3B]/20 transition-all active:scale-95 group disabled:opacity-70 disabled:cursor-not-allowed"
                             >
-                                Verificar Credenciales
-                                <svg className="w-4 h-4 ml-3 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                </svg>
+                                {isLoading ? 'Enviando...' : 'Enviar Enlace'}
+                                {!isLoading && (
+                                    <svg className="w-4 h-4 ml-3 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                    </svg>
+                                )}
                             </button>
                         </div>
                     </form>
-                    
-                    <div className="mt-8 text-center">
-                        <Link href="/register" className="text-[10px] uppercase tracking-[0.2em] font-black text-[#64748B] hover:text-[#064E3B] transition-colors inline-flex items-center gap-2">
-                            <span>¿No tienes cuenta?</span>
-                            <span className="text-[#064E3B] border-b-2 border-[#FFD700]">Solicitar Membresía</span>
-                        </Link>
-                    </div>
                 </div>
 
                 <p className="mt-12 text-center text-[#94A3B8] text-[9px] uppercase tracking-[0.4em] font-medium">
