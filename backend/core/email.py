@@ -10,9 +10,12 @@ def send_email(to_email: str, subject: str, html_content: str):
     Sends an email using the SMTP settings configured in .env.
     This function is synchronous and should be called via BackgroundTasks in FastAPI.
     """
+    # --- Diagnostic logging (visible in HF logs) ---
+    logger.info(f"📧 [email] Attempting to send email to: {to_email}")
+    logger.info(f"📧 [email] SMTP_SERVER='{settings.SMTP_SERVER}' SMTP_PORT={settings.SMTP_PORT} SMTP_USER='{settings.SMTP_USER}' PASSWORD_SET={'yes' if settings.SMTP_PASSWORD else 'NO'}")
+
     if not settings.SMTP_SERVER or not settings.SMTP_USER:
-        logger.warning("SMTP settings not configured. Email not sent.")
-        logger.info(f"Subject: {subject}\nTo: {to_email}\nBody: {html_content}")
+        logger.warning("⚠️ [email] SMTP_SERVER or SMTP_USER is empty — email NOT sent. Check Hugging Face Secrets.")
         return
 
     msg = EmailMessage()
@@ -23,14 +26,20 @@ def send_email(to_email: str, subject: str, html_content: str):
     msg.add_alternative(html_content, subtype='html')
 
     try:
-        with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+        logger.info(f"📧 [email] Connecting to SMTP {settings.SMTP_SERVER}:{settings.SMTP_PORT}...")
+        with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=15) as server:
+            server.ehlo()
             server.starttls()
-            if settings.SMTP_PASSWORD:
-                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            server.ehlo()
+            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
             server.send_message(msg)
-        logger.info(f"Email sent successfully to {to_email}: {subject}")
+        logger.info(f"✅ [email] Email sent successfully to {to_email}: {subject}")
+    except smtplib.SMTPAuthenticationError as e:
+        logger.error(f"❌ [email] Authentication failed for {settings.SMTP_USER}. Check SMTP_PASSWORD. Error: {e}")
+    except smtplib.SMTPConnectError as e:
+        logger.error(f"❌ [email] Cannot connect to SMTP server {settings.SMTP_SERVER}:{settings.SMTP_PORT}. Error: {e}")
     except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {e}")
+        logger.error(f"❌ [email] Failed to send email to {to_email}: {type(e).__name__}: {e}")
 
 def send_welcome_email(email_to: str):
     """Sends a welcome email upon registration."""
