@@ -8,6 +8,7 @@ import Link from 'next/link';
 export default function RegisterPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [error, setError] = useState('');
     const { login } = useAuth();
     const router = useRouter();
@@ -15,6 +16,11 @@ export default function RegisterPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+
+        if (!acceptedTerms) {
+            setError('Debes aceptar los Términos y Condiciones para continuar.');
+            return;
+        }
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/auth/register`, {
                 method: 'POST',
@@ -132,6 +138,31 @@ export default function RegisterPage() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
+                            </div>
+                        </div>
+
+                        <div className="flex items-start mt-4 mb-2">
+                            <div className="flex items-center h-5">
+                                <input
+                                    id="terms"
+                                    name="terms"
+                                    type="checkbox"
+                                    checked={acceptedTerms}
+                                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                                    className="w-4 h-4 rounded border-[#E5E7EB] text-[#064E3B] focus:ring-[#064E3B] bg-[#F8F9FA] transition-all cursor-pointer accent-[#064E3B]"
+                                />
+                            </div>
+                            <div className="ml-3 text-xs">
+                                <label htmlFor="terms" className="font-medium text-[#64748B] cursor-pointer">
+                                    He leído y acepto los{' '}
+                                    <Link href="/terminos" target="_blank" className="text-[#064E3B] hover:underline font-bold">
+                                        Términos y Condiciones
+                                    </Link>{' '}
+                                    y la{' '}
+                                    <Link href="/cookies" target="_blank" className="text-[#064E3B] hover:underline font-bold">
+                                        Política de Cookies
+                                    </Link>
+                                </label>
                             </div>
                         </div>
 
