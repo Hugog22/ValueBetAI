@@ -448,6 +448,9 @@ def train(is_auto=True):
         objective="multi:softprob", num_class=3, n_estimators=300,
         use_label_encoder=False, random_state=42, eval_metric="mlogloss", **best_1x2
     )
+    # Ensure sklearn's is_classifier() returns True for XGBClassifier,
+    # which is required by VotingClassifier._validate_estimators() in newer sklearn.
+    xgb_1x2._estimator_type = "classifier"
     lgb_1x2 = lgb.LGBMClassifier(
         objective="multiclass", num_class=3, n_estimators=300, 
         learning_rate=0.05, max_depth=4, random_state=42, verbose=-1,
@@ -494,6 +497,8 @@ def train(is_auto=True):
         objective="binary:logistic", n_estimators=300,
         use_label_encoder=False, random_state=42, eval_metric="logloss", **best_ou25
     )
+    # Same fix as 1X2: ensure sklearn sees XGBClassifier as a classifier.
+    xgb_ou._estimator_type = "classifier"
     lgb_ou = lgb.LGBMClassifier(
         objective="binary", n_estimators=300, learning_rate=0.05, 
         max_depth=4, random_state=42, verbose=-1,
