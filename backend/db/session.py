@@ -23,6 +23,7 @@ else:
 
     if is_pooler:
         # Use NullPool when using Supabase transaction pooler (PgBouncer)
+        connect_args["prepare_threshold"] = None
         engine = create_engine(
             DATABASE_URL,
             poolclass=NullPool,

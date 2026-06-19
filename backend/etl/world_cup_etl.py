@@ -82,7 +82,11 @@ def _get_or_create_team(db: Session, name: str):
             _TEAM_CACHE[_normalize_name(t.name)] = t
 
     if norm in _TEAM_CACHE:
-        return _TEAM_CACHE[norm]
+        t = _TEAM_CACHE[norm]
+        if t not in db:
+            t = db.merge(t)
+            _TEAM_CACHE[norm] = t
+        return t
         
     t = Team(name=name)
     db.add(t)
