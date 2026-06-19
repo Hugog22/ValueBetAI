@@ -301,6 +301,39 @@ FEATURES = [
 ]
 
 
+from sklearn.base import ClassifierMixin, BaseEstimator
+
+
+class _SoftVoter(ClassifierMixin, BaseEstimator):
+    """Soft-voting ensemble that completely avoids sklearn's sub-estimator
+    type-validation inside VotingClassifier.  Inheriting from ClassifierMixin
+    means sklearn's is_classifier() always returns True for this wrapper,
+    while the individual sub-estimators are never inspected by sklearn."""
+
+    def __init__(self, estimators):
+        # estimators: list of (name, estimator) tuples — same API as VotingClassifier
+        self.estimators = estimators
+
+    def fit(self, X, y, sample_weight=None):
+        self.classes_ = np.unique(y)
+        self._fitted = []
+        for name, est in self.estimators:
+            try:
+                est.fit(X, y, sample_weight=sample_weight)
+            except TypeError:
+                est.fit(X, y)
+            self._fitted.append((name, est))
+        return self
+
+    def predict_proba(self, X):
+        probs = np.array([est.predict_proba(X) for _, est in self._fitted])
+        return np.mean(probs, axis=0)
+
+    def predict(self, X):
+        proba = self.predict_proba(X)
+        return self.classes_[np.argmax(proba, axis=1)]
+
+
 def make_objective_1x2(X: pd.DataFrame, y: np.ndarray, tscv):
     import xgboost as xgb
     from sklearn.metrics import log_loss
@@ -349,7 +382,7 @@ def train(is_auto=True):
     import xgboost as xgb
     import lightgbm as lgb
     import optuna
-    from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+    from sklearn.ensemble import RandomForestClassifier
     from sklearn.calibration import CalibratedClassifierCV
     from sklearn.model_selection import TimeSeriesSplit
     from sklearn.metrics import accuracy_score, log_loss
@@ -448,16 +481,17 @@ def train(is_auto=True):
         objective="multi:softprob", num_class=3, n_estimators=300,
         use_label_encoder=False, random_state=42, eval_metric="mlogloss", **best_1x2
     )
-    # Ensure sklearn's is_classifier() returns True for XGBClassifier,
-    # which is required by VotingClassifier._validate_estimators() in newer sklearn.
-    xgb_1x2._estimator_type = "classifier"
     lgb_1x2 = lgb.LGBMClassifier(
         objective="multiclass", num_class=3, n_estimators=300, 
         learning_rate=0.05, max_depth=4, random_state=42, verbose=-1,
     )
     rf_1x2 = RandomForestClassifier(n_estimators=300, max_depth=6, random_state=42)
-    
-    ensemble_1x2 = VotingClassifier(estimators=[('xgb', xgb_1x2), ('lgb', lgb_1x2), ('rf', rf_1x2)], voting='soft')
+
+    # Use our own _SoftVoter (ClassifierMixin subclass) instead of sklearn's
+    # VotingClassifier, which internally calls is_classifier() on each sub-
+    # estimator.  XGBClassifier may lack the _estimator_type attribute in some
+    # XGBoost/sklearn version combinations, causing that check to fail.
+    ensemble_1x2 = _SoftVoter(estimators=[('xgb', xgb_1x2), ('lgb', lgb_1x2), ('rf', rf_1x2)])
 
     cv_scores = []
     for tr, va in tscv.split(X):
@@ -497,15 +531,13 @@ def train(is_auto=True):
         objective="binary:logistic", n_estimators=300,
         use_label_encoder=False, random_state=42, eval_metric="logloss", **best_ou25
     )
-    # Same fix as 1X2: ensure sklearn sees XGBClassifier as a classifier.
-    xgb_ou._estimator_type = "classifier"
     lgb_ou = lgb.LGBMClassifier(
         objective="binary", n_estimators=300, learning_rate=0.05, 
         max_depth=4, random_state=42, verbose=-1,
     )
     rf_ou = RandomForestClassifier(n_estimators=300, max_depth=6, random_state=42)
-    
-    ensemble_ou25 = VotingClassifier(estimators=[('xgb', xgb_ou), ('lgb', lgb_ou), ('rf', rf_ou)], voting='soft')
+
+    ensemble_ou25 = _SoftVoter(estimators=[('xgb', xgb_ou), ('lgb', lgb_ou), ('rf', rf_ou)])
 
     cv_ou25 = []
     for tr, va in tscv.split(X):
