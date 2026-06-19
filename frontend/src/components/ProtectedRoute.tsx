@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-    const { user, token, isLoading, isValidating } = useAuth();
+    const { user, token, isLoading, isValidating, logout } = useAuth();
     const router = useRouter();
     const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
 
@@ -18,11 +18,9 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     const handleCheckout = async () => {
         setIsCheckoutLoading(true);
         try {
-            const checkoutRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/stripe/create-checkout-session`, {
+            const checkoutRes = await fetch(`/api/proxy/stripe/create-checkout-session`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                
             });
             if (checkoutRes.ok) {
                 const checkoutData = await checkoutRes.json();
@@ -72,10 +70,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
                     </button>
                     
                     <div className="mt-6 text-center">
-                        <button onClick={() => {
-                            localStorage.removeItem('auth_token');
-                            window.location.href = '/login';
-                        }} className="text-[10px] uppercase tracking-[0.2em] font-black text-[#64748B] hover:text-[#064E3B] transition-colors inline-flex items-center gap-2">
+                        <button onClick={() => logout()} className="text-[10px] uppercase tracking-[0.2em] font-black text-[#64748B] hover:text-[#064E3B] transition-colors inline-flex items-center gap-2">
                             <span>¿Usar otra cuenta?</span>
                             <span className="text-[#064E3B] border-b-2 border-[#FFD700]">Cerrar sesión</span>
                         </button>

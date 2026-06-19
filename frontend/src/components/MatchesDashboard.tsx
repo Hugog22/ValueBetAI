@@ -14,7 +14,7 @@ import { getFlag, getEsName } from '@/utils/translations';
 // Safelist for Tailwind JIT (backend-generated classes)
 const _tailwindSafelist = 'bg-green-600 bg-yellow-400 bg-yellow-600 bg-orange-500 bg-red-600 bg-red-900 text-white text-black font-bold font-black';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+const API = '/api/proxy';
 
 // ── Sport Config ─────────────────────────────────────────────────────────────
 
@@ -138,13 +138,20 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
   // UI state
   const [filterRisk, setFilterRisk] = useState<string>('all');
   const [minEV,      setMinEV]      = useState<number>(0);
-  const [bankroll,   setBankroll]   = useState<number>(1000);
+  const [bankroll,   setBankroll]   = useState<number>(0);
 
   // Modals state
   const [activeBet, setActiveBet] = useState<{
-    matchId: number; homeTeam: string; awayTeam: string;
-    market: string; outcome: string; label: string;
-    odds: number; probability: number; ev: number;
+    matchId: number;
+    homeTeam: string;
+    awayTeam: string;
+    market: string;
+    outcome: string;
+    label: string;
+    odds: number;
+    probability: number;
+    ev: number;
+    bookmaker: string;
   } | null>(null);
   const [activeOptionsMatch, setActiveOptionsMatch] = useState<Match | null>(null);
   const [activeAnalysisMatch, setActiveAnalysisMatch] = useState<Match | null>(null);
@@ -152,15 +159,21 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
   // Fetch bankroll
   useEffect(() => {
     if (!token) return;
-    fetch(`${API}/api/bankroll/stats`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => setBankroll(d.current_bankroll ?? 1000))
-      .catch(() => {});
+    fetch(`${API}/bankroll/stats`, { headers: {} })
+      .then(r => {
+        if (!r.ok) throw new Error("Failed to fetch bankroll");
+        return r.json();
+      })
+      .then(d => setBankroll(d.current_bankroll ?? 0))
+      .catch((e) => {
+        console.error("Error fetching bankroll", e);
+        setBankroll(0);
+      });
   }, [token]);
 
   // Fetch all parlays from API
   useEffect(() => {
-    fetch(`${API}/api/sports/all_parlays`)
+    fetch(`${API}/sports/all_parlays`)
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) setAllParlays(data);
@@ -182,7 +195,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
     setSportLoading(true);
 
     try {
-      const res = await fetch(`${API}/api/matches/${sport}/jornada`);
+      const res = await fetch(`${API}/matches/${sport}/jornada`);
       if (!res.ok) return;
       const data = await res.json();
       const matches: Match[] = Array.isArray(data) ? data : (data?.data ?? []);
@@ -201,6 +214,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
     setActiveBet({
       matchId, homeTeam, awayTeam,
       market:      pick.market,
+      bookmaker:   (pick as any).bookmaker || 'Bet365',
       outcome:     pick.outcome,
       label:       pick.label,
       odds:        pick.bookmaker_odds ?? pick.bookmakerOdds ?? 1.0,

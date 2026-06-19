@@ -78,7 +78,7 @@ def get_system_stats(
     Returns global system performance based on the AI's predictions
     vs actual finished match results. Only accessible to the admin.
     """
-    if current_user.email != ADMIN_EMAIL:
+    if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permisos para ver esta página."
@@ -143,7 +143,7 @@ def get_predictions_detail(
     (default: 7). Shows won/lost/pending per prediction with PnL.
     Only accessible to the admin.
     """
-    if current_user.email != ADMIN_EMAIL:
+    if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permisos para ver esta página."
@@ -251,7 +251,7 @@ def get_training_report(
     Returns the latest training report log as plain text.
     Only accessible to the admin.
     """
-    if current_user.email != ADMIN_EMAIL:
+    if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permisos para ver esta página."
@@ -307,7 +307,7 @@ def trigger_duplicate_cleanup(
     Moved from startup background task to manual trigger to prevent
     OOM memory spikes on Render free tier.
     """
-    if current_user.email != ADMIN_EMAIL:
+    if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permisos para ver esta página."
@@ -345,7 +345,7 @@ def get_wc_team_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.email != ADMIN_EMAIL:
+    if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Forbidden")
         
     # Query WC teams and their basic stats
@@ -384,7 +384,7 @@ def get_wc_team_stats(
 @router.post("/retrain-world-cup")
 def retrain_world_cup(current_user: User = Depends(get_current_user)):
     """Manually trigger World Cup AI retraining."""
-    if current_user.email != ADMIN_EMAIL:
+    if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Forbidden")
     
     import sys, os, importlib

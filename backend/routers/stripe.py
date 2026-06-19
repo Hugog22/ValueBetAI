@@ -51,20 +51,29 @@ def create_portal_session(current_user: User = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/verify-session")
+def verify_session(session_id: str, current_user: User = Depends(get_current_user)):
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        if session.payment_status == 'paid':
+            return {"status": "paid", "subscription_status": "active"}
+        else:
+            return {"status": "unpaid", "subscription_status": "inactive"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.post("/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()
     sig_header = request.headers.get('stripe-signature')
 
     try:
-        if webhook_secret:
-            event = stripe.Webhook.construct_event(
-                payload, sig_header, webhook_secret
-            )
-        else:
-            import json
-            data = json.loads(payload)
-            event = stripe.Event.construct_from(data, stripe.api_key)
+        if not webhook_secret:
+            raise HTTPException(status_code=503, detail="Stripe webhook secret not configured")
+        
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, webhook_secret
+        )
             
     except ValueError as e:
         raise HTTPException(status_code=400, detail="Invalid payload")

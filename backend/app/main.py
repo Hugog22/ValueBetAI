@@ -86,9 +86,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+from core.config import settings
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[settings.FRONTEND_URL, "https://value-bet-ai.vercel.app", "http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -210,8 +212,11 @@ def get_super_boosts():
 # Raw market data endpoint (on-demand DB query — low frequency)
 # ---------------------------------------------------------------------------
 
+from db.models import User
+from routers.auth import get_current_user
+
 @app.get("/api/matches/{match_id}/all-markets")
-def get_match_all_markets(match_id: int, db: Session = Depends(get_db)):
+def get_match_all_markets(match_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     from db.models import MarketOdds
     odds = db.query(MarketOdds).filter(MarketOdds.match_id == match_id).all()
     if not odds:

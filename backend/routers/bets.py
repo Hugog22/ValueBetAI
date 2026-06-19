@@ -69,9 +69,13 @@ def place_virtual_bet(
         if not match:
             raise HTTPException(status_code=404, detail="Match not found")
 
-        # Safe bankroll access (handles missing column in older DB schemas)
+        # Use SELECT FOR UPDATE to prevent race conditions (HIGH-B2)
+        user = db.query(User).filter(User.id == current_user.id).with_for_update().first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
         try:
-            current_bankroll = float(current_user.bankroll or 0) or 1000.0
+            current_bankroll = float(user.bankroll or 0) or 1000.0
         except Exception:
             current_bankroll = 1000.0
 
@@ -94,7 +98,7 @@ def place_virtual_bet(
 
         # Deduct stake immediately from bankroll
         try:
-            current_user.bankroll = current_bankroll - bet_in.stake
+            user.bankroll = current_bankroll - bet_in.stake
         except Exception:
             pass  # If column missing, skip — still record the bet
 
@@ -161,12 +165,17 @@ def get_bankroll_stats(
         elif bet.status == "Void":
             pass # Refunded, no action needed on profit
             
-        # Collect recent bets mapping team names
+    # Separate recent bets for detailed UI representation
+    # Sort all bets descending by ID first
+    sorted_data = sorted(all_bets_data, key=lambda x: x[0].id, reverse=True)
+    recent_data = sorted_data[:100]
+
+    for bet, match in recent_data:
         res = BetResponse(
             id=bet.id,
             match_id=bet.match_id,
-            home_team=match.home_team.name,
-            away_team=match.away_team.name,
+            home_team=match.home_team.name if match.home_team else "?",
+            away_team=match.away_team.name if match.away_team else "?",
             bookmaker=bet.bookmaker,
             market=bet.market,
             selection=bet.selection,
@@ -182,7 +191,6 @@ def get_bankroll_stats(
             risk_bg_class="bg-yellow-400 text-black font-bold"
         )
         
-        # Try to find risk if it's a recent match we can re-evaluate
         try:
             eval_data = _evaluate_match(match, db)
             risk = eval_data["bestPick"]["risk"]
@@ -194,16 +202,9 @@ def get_bankroll_stats(
 
         recent_bets.append(res)
     
-    # Ensure they are sorted by recency
-    recent_bets.sort(key=lambda x: x.id, reverse=True)
-    
     total_resolved = won_bets + lost_bets
     hit_rate = (won_bets / total_resolved * 100) if total_resolved > 0 else 0.0
     yield_percent = (net_profit / total_staked * 100) if total_staked > 0 else 0.0
-    
-    # ROI can refer to return on starting bankroll, but without a defined starting bank, Yield is usually what users mean by ROI. 
-    # Yield is Net Profit / Total Staked * 100
-    # Let's align ROI to Yield here as is common in betting (unless a specific initial Bankroll is given)
     roi_percent = yield_percent
     
     return BankrollStats(
@@ -216,7 +217,7 @@ def get_bankroll_stats(
         won_bets=won_bets,
         lost_bets=lost_bets,
         current_bankroll=current_user.bankroll or 1000.0,
-        recent_bets=recent_bets[:100]  # Return last 100 for UI (HF 16GB server)
+        recent_bets=recent_bets
     )
 
 
@@ -230,6 +231,9 @@ def manually_settle_bets(
     Useful for testing and forcing an immediate settlement without waiting
     for the hourly scheduler job.
     """
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden")
+        
     from core.bet_settler import settle_pending_bets
     try:
         summary = settle_pending_bets()

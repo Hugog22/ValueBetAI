@@ -70,16 +70,24 @@ def _normalize_name(name: str) -> str:
     return ascii_name.lower().strip()
 
 
+_TEAM_CACHE = {}
+
 def _get_or_create_team(db: Session, name: str):
     from db.models import Team
     norm = _normalize_name(name)
-    teams = db.query(Team).all()
-    for t in teams:
-        if _normalize_name(t.name) == norm:
-            return t
+    
+    # Load cache if empty
+    if not _TEAM_CACHE:
+        for t in db.query(Team).all():
+            _TEAM_CACHE[_normalize_name(t.name)] = t
+
+    if norm in _TEAM_CACHE:
+        return _TEAM_CACHE[norm]
+        
     t = Team(name=name)
     db.add(t)
     db.flush()
+    _TEAM_CACHE[norm] = t
     return t
 
 

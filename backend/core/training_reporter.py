@@ -243,7 +243,7 @@ def write_training_report(
 def _write_lines(lines: list[str]) -> None:
     """Overwrite lines in the training report log file."""
     text = "\n".join(lines) + "\n"
-    with open(REPORT_PATH, "w", encoding="utf-8") as f:
+    with open(REPORT_PATH, "a", encoding="utf-8") as f:
         f.write(text)
     logger.info(f"📝 Training report written → {REPORT_PATH}")
 

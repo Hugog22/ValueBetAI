@@ -16,13 +16,12 @@ export default function LoginPage() {
         e.preventDefault();
         setError('');
         try {
-            const formData = new FormData();
-            formData.append('username', email);
-            formData.append('password', password);
-
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/auth/login`, {
+            const res = await fetch(`/api/auth/login`, {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: email, password })
             });
 
             if (!res.ok) {
@@ -30,8 +29,7 @@ export default function LoginPage() {
                 throw new Error(errData.detail || 'Error al iniciar sesión');
             }
 
-            const data = await res.json();
-            login(data.access_token);
+            login();
         } catch (err: any) {
             setError(err.message || 'Error al iniciar sesión');
         }

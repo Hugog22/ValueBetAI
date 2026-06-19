@@ -7,6 +7,7 @@ interface BetModalProps {
   homeTeam: string;
   awayTeam: string;
   market: string;
+  bookmaker: string;
   outcome: string;
   label: string;
   odds: number;
@@ -18,10 +19,10 @@ interface BetModalProps {
   onSuccess: (newBankroll: number) => void;
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+const API = '/api/proxy';
 
 export default function BetModal({
-  matchId, homeTeam, awayTeam, market, outcome, label,
+  matchId, homeTeam, awayTeam, market, bookmaker, outcome, label,
   odds, probability, ev, token, currentBankroll, onClose, onSuccess
 }: BetModalProps) {
   const [stake, setStake] = useState<string>('10');
@@ -50,7 +51,7 @@ export default function BetModal({
     setError(null);
 
     try {
-      const res = await fetch(`${API}/api/bets`, {
+      const res = await fetch(`${API}/bets`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +59,7 @@ export default function BetModal({
         },
         body: JSON.stringify({
           match_id: matchId,
-          bookmaker: 'Bet365',
+          bookmaker: bookmaker,
           market,
           selection: outcome,
           odds_taken: odds,

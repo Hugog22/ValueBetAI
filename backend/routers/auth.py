@@ -32,6 +32,7 @@ class UserOut(BaseModel):
     id: int
     email: str
     subscription_status: str | None = None
+    is_admin: bool = False
     class Config:
         from_attributes = True
 
@@ -45,7 +46,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if payload is None:
         raise credentials_exception
     email: str = payload.get("sub")
-    if email is None:
+    if email is None or email.startswith("reset:"):
         raise credentials_exception
     user = db.query(User).filter(User.email == email).first()
     if user is None:
@@ -57,6 +58,9 @@ def register(user_in: UserCreate, background_tasks: BackgroundTasks, db: Session
     db_user = db.query(User).filter(User.email == user_in.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
+        
+    if len(user_in.password) < 8:
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres.")
     
     hashed_password = get_password_hash(user_in.password)
     new_user = User(email=user_in.email, hashed_password=hashed_password)
@@ -100,6 +104,9 @@ def forgot_password(req: ForgotPassword, background_tasks: BackgroundTasks, db: 
         data={"sub": f"reset:{user.email}"}, expires_delta=reset_token_expires
     )
     
+    user.reset_token_hash = get_password_hash(reset_token)
+    db.commit()
+    
     background_tasks.add_task(send_reset_password_email, user.email, reset_token)
     
     return {"message": "Si el email existe, se ha enviado un enlace."}
@@ -119,7 +126,11 @@ def reset_password(req: ResetPassword, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
         
+    if not user.reset_token_hash or not verify_password(req.token, user.reset_token_hash):
+        raise HTTPException(status_code=400, detail="Token inválido o ya utilizado.")
+        
     user.hashed_password = get_password_hash(req.new_password)
+    user.reset_token_hash = None
     db.commit()
     
     return {"message": "Contraseña actualizada correctamente."}

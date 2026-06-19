@@ -11,6 +11,8 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     bankroll = Column(Float, default=1000.0)
+    is_admin = Column(Boolean, default=False)
+    reset_token_hash = Column(String, nullable=True)
     
     # Stripe integration
     stripe_customer_id = Column(String, unique=True, index=True, nullable=True)

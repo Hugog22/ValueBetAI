@@ -25,6 +25,11 @@ function ResetPasswordForm() {
             return;
         }
 
+        if (password.length < 8) {
+            setError('La contraseña debe tener al menos 8 caracteres.');
+            return;
+        }
+
         if (password !== confirmPassword) {
             setError('Las contraseñas no coinciden.');
             return;
@@ -33,7 +38,7 @@ function ResetPasswordForm() {
         setIsLoading(true);
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/auth/reset-password`, {
+            const res = await fetch(`/api/proxy/auth/reset-password`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

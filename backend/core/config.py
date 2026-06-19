@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     FOOTBALL_DATA_API_KEY: str = ""  # football-data.org — World Cup data (set via HF Secret)
     SOFASCORE_RAPIDAPI_KEY: str = ""
     SOFASCORE_RAPIDAPI_HOST: str = "sofascore6.p.rapidapi.com"
-    SECRET_KEY: str = "supersecret_change_me_in_production"
+    SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 days for convenience
 

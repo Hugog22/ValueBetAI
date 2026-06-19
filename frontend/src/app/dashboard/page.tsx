@@ -11,7 +11,7 @@
 import Navbar from '@/components/Navbar';
 import MatchesDashboard from '@/components/MatchesDashboard';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+const API = '/api/proxy';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,9 +38,9 @@ async function fetchJSON<T>(url: string, fallback: T): Promise<T> {
 export default async function Home() {
   // Fetch World Cup, LaLiga + all CombinAIas in parallel
   const [worldCupMatches, matches, allParlays] = await Promise.all([
-    fetchJSON<object[]>(`${API}/api/matches/worldcup/jornada`, []),
-    fetchJSON<object[]>(`${API}/api/matches/jornada`, []),
-    fetchJSON<object[]>(`${API}/api/sports/all_parlays`, []),
+    fetchJSON<object[]>(`${API}/matches/worldcup/jornada`, []),
+    fetchJSON<object[]>(`${API}/matches/jornada`, []),
+    fetchJSON<object[]>(`${API}/sports/all_parlays`, []),
   ]);
 
   const initialWorldCupMatches = Array.isArray(worldCupMatches)

@@ -7,12 +7,13 @@ interface User {
     id: number;
     email: string;
     subscription_status?: string | null;
+    is_admin?: boolean;
 }
 
 interface AuthContextType {
     user: User | null;
     token: string | null;
-    login: (token: string, redirect?: boolean) => void;
+    login: (redirect?: boolean) => void;
     logout: () => void;
     isLoading: boolean;
     isValidating: boolean;
@@ -20,106 +21,49 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/**
- * Decode the payload of a JWT token without verifying the signature.
- * The signature is always verified server-side on every protected request.
- * This is safe for client-side UX purposes (extracting email / user id).
- */
-function parseJwtPayload(token: string): { sub?: string; id?: number } | null {
-    try {
-        const parts = token.split('.');
-        if (parts.length !== 3) return null;
-        // Base64url → Base64 → JSON
-        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-        const json = atob(base64);
-        return JSON.parse(json);
-    } catch {
-        return null;
-    }
-}
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
-    const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isValidating, setIsValidating] = useState(true);
     const router = useRouter();
 
-    /**
-     * Silently verify the token server-side without blocking the UI.
-     * If invalid/expired, logs out the user gracefully.
-     */
-    const validateTokenInBackground = async (authToken: string) => {
+    const fetchUser = async () => {
         setIsValidating(true);
         try {
-            const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/auth/me`,
-                { headers: { Authorization: `Bearer ${authToken}` } }
-            );
+            const response = await fetch('/api/proxy/auth/me');
             if (response.ok) {
                 const userData = await response.json();
-                // Update with full server data (e.g. confirmed id, subscription_status)
                 setUser(userData);
             } else {
-                // Token rejected by server (expired, revoked) — logout
-                logout();
+                setUser(null);
             }
         } catch {
-            // Network error — keep user logged in locally, retry will happen later
-            console.warn('[AuthContext] Background token validation failed (network). Keeping session.');
+            console.warn('[AuthContext] Network error fetching user');
         } finally {
+            setIsLoading(false);
             setIsValidating(false);
         }
     };
 
     useEffect(() => {
-        const storedToken = localStorage.getItem('auth_token');
-        if (storedToken) {
-            // Fast-path: decode locally and set user immediately so the app
-            // renders without waiting for a network round-trip.
-            const payload = parseJwtPayload(storedToken);
-            if (payload?.sub) {
-                setToken(storedToken);
-                setUser({ id: payload.id ?? 0, email: payload.sub });
-                setIsLoading(false);
-                // Validate in background — logs out silently if token expired
-                validateTokenInBackground(storedToken);
-            } else {
-                // Malformed token — clear it
-                localStorage.removeItem('auth_token');
-                setIsLoading(false);
-                setIsValidating(false);
-            }
-        } else {
-            setIsLoading(false);
-            setIsValidating(false);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        fetchUser();
     }, []);
 
-
-    const login = (newToken: string, redirect: boolean = true) => {
-        localStorage.setItem('auth_token', newToken);
-        setToken(newToken);
-
-        // Decode immediately — no extra network call needed
-        const payload = parseJwtPayload(newToken);
-        if (payload?.sub) {
-            setUser({ id: payload.id ?? 0, email: payload.sub });
-        }
-
+    const login = async (redirect: boolean = true) => {
+        setIsLoading(true);
+        await fetchUser();
         if (redirect) {
             router.push('/dashboard');
         }
-        validateTokenInBackground(newToken);
     };
 
-    const logout = () => {
-        localStorage.removeItem('auth_token');
-        setToken(null);
+    const logout = async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
         setUser(null);
         router.push('/login');
     };
+
+    const token = user ? "active" : null;
 
     return (
         <AuthContext.Provider value={{ user, token, login, logout, isLoading, isValidating }}>

@@ -22,7 +22,7 @@ export default function RegisterPage() {
             return;
         }
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/auth/register`, {
+            const res = await fetch(`/api/proxy/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -38,21 +38,20 @@ export default function RegisterPage() {
             formData.append('username', email);
             formData.append('password', password);
 
-            const loginRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/auth/login`, {
+            const loginRes = await fetch(`/api/auth/login`, {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: email, password })
             });
 
             if (loginRes.ok) {
-                const data = await loginRes.json();
-                login(data.access_token, false); // Don't redirect to dashboard yet
+                await login(false); // Don't redirect to dashboard yet
                 
                 // Trigger Stripe Checkout
-                const checkoutRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/stripe/create-checkout-session`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${data.access_token}`
-                    }
+                const checkoutRes = await fetch(`/api/proxy/stripe/create-checkout-session`, {
+                    method: 'POST'
                 });
                 
                 if (checkoutRes.ok) {
@@ -61,8 +60,8 @@ export default function RegisterPage() {
                 } else {
                     const errData = await checkoutRes.text();
                     alert(`Error conectando con Stripe: ${errData}`);
-                    // Fallback in case Stripe integration is down
-                    router.push('/dashboard');
+                    // Do not allow access to dashboard if payment failed
+                    router.push('/login');
                 }
             } else {
                 router.push('/login');

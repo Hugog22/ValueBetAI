@@ -87,32 +87,24 @@ export default function BankrollPage() {
 
     useEffect(() => {
         if (!token) return;
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/api/bankroll/stats`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
+        fetch(`/api/proxy/bankroll/stats`)
             .then(res => res.json())
             .then(data => setStats(data))
             .catch(err => console.error("Error fetching bankroll", err));
             
-        if (user?.email === 'hugodesax123@gmail.com') {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
-            fetch(`${API}/api/admin/system-stats`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
+        if (user?.is_admin) {
+            const API = '/api/proxy';
+            fetch(`${API}/admin/system-stats`)
                 .then(res => res.json())
                 .then(data => setAdminStats(data))
                 .catch(err => console.error("Error fetching admin stats", err));
                 
-            fetch(`${API}/api/admin/wc-team-stats`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
+            fetch(`${API}/admin/wc-team-stats`)
                 .then(res => res.json())
                 .then(data => setWcTeamStats(data))
                 .catch(err => console.error("Error fetching team stats", err));
                 
-            fetch(`${API}/api/admin/wc-players`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
+            fetch(`${API}/admin/wc-players`)
                 .then(res => res.json())
                 .then(data => setWcPlayers(data))
                 .catch(err => console.error("Error fetching players", err));
@@ -123,10 +115,8 @@ export default function BankrollPage() {
         if (!token) return;
         setPredictionModal(prev => ({ ...prev, open: true, data: null, loading: true, days }));
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
-            const res = await fetch(`${API}/api/admin/predictions-detail?days=${days}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const API = '/api/proxy';
+            const res = await fetch(`${API}/admin/predictions-detail?days=${days}`);
             const data = await res.json();
             setPredictionModal(prev => ({ ...prev, data, loading: false }));
         } catch (err) {
@@ -142,10 +132,8 @@ export default function BankrollPage() {
         if (!token) return;
         setTrainingModal({ open: true, report: "", loading: true });
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
-            const res = await fetch(`${API}/api/admin/training-report`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const API = '/api/proxy';
+            const res = await fetch(`${API}/admin/training-report`);
             const text = await res.text();
             setTrainingModal({ open: true, report: text, loading: false });
         } catch (err) {
@@ -160,10 +148,10 @@ export default function BankrollPage() {
         if (!token) return;
         setIsRetraining(true);
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
-            const res = await fetch(`${API}/api/admin/retrain-world-cup`, {
+            const API = '/api/proxy';
+            const res = await fetch(`${API}/admin/retrain-world-cup`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+                
             });
             const data = await res.json();
             if (res.ok) {
@@ -182,10 +170,10 @@ export default function BankrollPage() {
     const handleManageSubscription = async () => {
         if (!token) return;
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
-            const res = await fetch(`${API}/api/stripe/create-portal-session`, {
+            const API = '/api/proxy';
+            const res = await fetch(`${API}/stripe/create-portal-session`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+                
             });
             const data = await res.json();
             if (data.url) {
@@ -298,7 +286,7 @@ export default function BankrollPage() {
                             </div>
 
                             {/* ADMIN SYSTEM STATS */}
-                            {user?.email === 'hugodesax123@gmail.com' && adminStats && (
+                            {user?.is_admin && adminStats && (
                                 <div className="mb-20">
                                     <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6 md:gap-0">
                                         <div>
