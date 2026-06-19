@@ -181,8 +181,16 @@ def sync_finished_match_statistics() -> int:
         if not wc_team_names:
             logger.warning("[match_stats_etl] world_cup_squads.json not found, cannot filter WC matches")
             return 0
-            
-        wc_teams = db.query(Team).filter(Team.name.in_(wc_team_names)).all()
+
+        # Build a broader candidate set: canonical names from the JSON + any alias keys
+        # that resolve to one of those names (e.g. "USA" → "United States").
+        wc_canonical_set = set(wc_team_names)
+        wc_candidate_names = set(wc_team_names)
+        for alias_key, canonical in TEAM_ALIASES.items():
+            if canonical in wc_canonical_set:
+                wc_candidate_names.add(alias_key)
+
+        wc_teams = db.query(Team).filter(Team.name.in_(wc_candidate_names)).all()
         wc_team_ids = [t.id for t in wc_teams]
         
         now = datetime.utcnow()

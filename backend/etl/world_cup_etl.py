@@ -238,8 +238,18 @@ def update_world_cup_team_stats(db: Session):
     if not wc_team_names:
         logger.warning("[world_cup_etl] world_cup_squads.json not found, skipping stats update")
         return
-        
-    teams = db.query(Team).filter(Team.name.in_(wc_team_names)).all()
+
+    # Build a broader candidate set: include the canonical names from the JSON *and*
+    # any alias keys that resolve to one of those canonical names.  This ensures that
+    # teams stored under a variant name (e.g. "USA" in the DB instead of "United States")
+    # are still picked up correctly.
+    wc_canonical_set = set(wc_team_names)
+    wc_candidate_names = set(wc_team_names)
+    for alias_key, canonical in TEAM_ALIASES.items():
+        if canonical in wc_canonical_set:
+            wc_candidate_names.add(alias_key)
+
+    teams = db.query(Team).filter(Team.name.in_(wc_candidate_names)).all()
     
     for team in teams:
         # Get all finished matches for this team

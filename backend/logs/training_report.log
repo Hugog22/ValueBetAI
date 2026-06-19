@@ -34,3 +34,39 @@
   Los modelos actualizados se usarán en las próximas predicciones automáticamente.
   Si la exactitud bajó significativamente, considera revisar los datos de entrenamiento.
 ========================================================================
+
+========================================================================
+  INFORME DE ENTRENAMIENTO MANUAL — 2026-06-19 17:41:03 (Madrid)
+  Modelo: World Cup — XGBoost Ensemble
+========================================================================
+  ✅ ESTADO: EXITOSO
+  📊 Datos de entrenamiento: 4,942 partidos
+
+  ─── Modelo 1X2 (Victoria Local / Empate / Visitante) ───
+  📈 Exactitud CV: 72.96%  (antes: 72.22%, cambio: +0.74%) ✅ MEJORA
+  🔧 Hiperparámetros seleccionados por Optuna:
+  • max_depth: 3  ← [sin cambio]
+  • learning_rate: 0.07265157908203254 → 0.06273845743492723  (↓ bajó)
+    📌 Velocidad de aprendizaje del gradient boosting. Valores más bajos (<0.01) hacen el modelo más conservador y menos propenso a sobreajustarse, pero requieren más árboles. Valores más altos (>0.05) aprenden más rápido pero pueden sobreajustarse.
+  • subsample: 0.9520189677192585 → 0.9140143542097238  (↓ bajó)
+    📌 Fracción de datos usada para entrenar cada árbol. Valores <1.0 añaden aleatoriedad y reducen sobreajuste (regularización estocástica).
+  • colsample_bytree: 0.9980084946806067 → 0.9293391204964447  (↓ bajó)
+    📌 Fracción de variables (features) usada por árbol. Reducir este valor mejora la diversidad del ensemble y reduce sobreajuste.
+
+  ─── Modelo Over/Under 2.5 ───
+  📉 Log-Loss CV: 0.6955  (antes: 0.6860, cambio: +0.0095)
+  🔧 Hiperparámetros seleccionados por Optuna:
+  • max_depth: 3  ← [sin cambio]
+  • learning_rate: 0.03652466997117063 → 0.03273183958041943  (↓ bajó)
+    📌 Velocidad de aprendizaje del gradient boosting. Valores más bajos (<0.01) hacen el modelo más conservador y menos propenso a sobreajustarse, pero requieren más árboles. Valores más altos (>0.05) aprenden más rápido pero pueden sobreajustarse.
+  • subsample: 0.956801292970232 → 0.6696937807139111  (↓ bajó)
+    📌 Fracción de datos usada para entrenar cada árbol. Valores <1.0 añaden aleatoriedad y reducen sobreajuste (regularización estocástica).
+  • colsample_bytree: 0.7186603718864079 → 0.9673615987664642  (↑ aumentó)
+    📌 Fracción de variables (features) usada por árbol. Reducir este valor mejora la diversidad del ensemble y reduce sobreajuste.
+  📈 1X2 CV Accuracy: 72.96%  (antes: 72.22%, cambio: +0.74%)
+  📉 O/U 2.5 CV Log-Loss: 0.6955
+
+  💡 RESUMEN:
+  Los modelos actualizados se usarán en las próximas predicciones automáticamente.
+  Si la exactitud bajó significativamente, considera revisar los datos de entrenamiento.
+========================================================================
