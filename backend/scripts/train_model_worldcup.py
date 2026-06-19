@@ -502,20 +502,11 @@ def train(is_auto=True):
         cv_scores.append(accuracy_score(y_1x2[va], preds))
     logger.info(f"1X2 Ensemble CV accuracy: {np.mean(cv_scores):.4f}")
 
-    # Train the final ensemble on the full training split, then calibrate with
-    # cv="prefit" so CalibratedClassifierCV only fits the sigmoid layer on the
-    # held-out 20% — this avoids the XGBClassifier is_classifier() check that
-    # fires when sklearn tries to clone/re-fit sub-estimators internally.
-    split_idx = max(1, int(len(X) * 0.80))
-    w_full = compute_sample_weights(df.iloc[:split_idx], wc_stats)
-    try:
-        ensemble_1x2.fit(X.iloc[:split_idx], y_1x2[:split_idx], sample_weight=w_full)
-    except TypeError:
-        ensemble_1x2.fit(X.iloc[:split_idx], y_1x2[:split_idx])
-
-    # Calibrate on the held-out 20% using the already-fitted ensemble
-    cal_1x2 = CalibratedClassifierCV(ensemble_1x2, cv="prefit", method="sigmoid")
-    cal_1x2.fit(X.iloc[split_idx:], y_1x2[split_idx:])
+    # Now calibrate using cv=3.  _SoftVoter is a proper ClassifierMixin so
+    # sklearn can clone it and its sub-estimators without any type-check errors.
+    # cv=3 is used because cv="prefit" is not available in older sklearn builds.
+    cal_1x2 = CalibratedClassifierCV(ensemble_1x2, cv=3, method="sigmoid")
+    cal_1x2.fit(X, y_1x2)
     joblib.dump(cal_1x2, os.path.join(MODELS_DIR, "wc_1x2_xgb.pkl"))
 
     # ── MODEL B: O/U 2.5 ─────────────────────────────────────────────────────
@@ -547,14 +538,9 @@ def train(is_auto=True):
         cv_ou25.append(log_loss(y_ou25[va], probs))
     logger.info(f"O/U 2.5 Ensemble CV LogLoss: {np.mean(cv_ou25):.4f}")
 
-    # Same prefit calibration pattern as 1X2 — avoids XGBClassifier classifier check
-    try:
-        ensemble_ou25.fit(X.iloc[:split_idx], y_ou25[:split_idx], sample_weight=w_full)
-    except TypeError:
-        ensemble_ou25.fit(X.iloc[:split_idx], y_ou25[:split_idx])
-
-    cal_ou25 = CalibratedClassifierCV(ensemble_ou25, cv="prefit", method="sigmoid")
-    cal_ou25.fit(X.iloc[split_idx:], y_ou25[split_idx:])
+    # Same cv=3 calibration as 1X2.
+    cal_ou25 = CalibratedClassifierCV(ensemble_ou25, cv=3, method="sigmoid")
+    cal_ou25.fit(X, y_ou25)
     joblib.dump(cal_ou25, os.path.join(MODELS_DIR, "wc_ou25_xgb.pkl"))
 
     wc_matches_used = sum(s["matches"] for s in wc_stats.values()) // 2
