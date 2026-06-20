@@ -393,11 +393,32 @@ export default function LandingPage() {
 
       </main>
 
-      <footer className="border-t border-white/5 bg-[#051209] py-12 text-center text-sm text-[#64748B]">
-        <div className="mb-4 text-xl font-editorial font-bold text-white">
-          ValueBet AI<span className="text-[#C0FF00]">.</span>
+      <footer className="border-t border-white/5 bg-[#051209] py-12 text-center text-sm text-[#64748B] px-6">
+        <div className="max-w-4xl mx-auto flex flex-col items-center">
+          <div className="mb-4 text-xl font-editorial font-bold text-white">
+            ValueBet AI<span className="text-[#C0FF00]">.</span>
+          </div>
+          
+          <div className="mb-6 space-y-2 text-xs text-[#64748B]/70 max-w-3xl">
+            <p>
+              <strong className="text-[#64748B]">Descargo de responsabilidad:</strong> ValueBet AI es una herramienta de análisis estadístico e información deportiva. No somos una casa de apuestas, no organizamos juegos de azar ni gestionamos fondos de terceros. 
+            </p>
+            <p>
+              Las apuestas deportivas conllevan un alto riesgo económico y pueden causar adicción. No garantizamos rentabilidades futuras ni nos hacemos responsables de posibles pérdidas económicas derivadas del uso de nuestra plataforma. Utiliza esta información únicamente con fines orientativos.
+            </p>
+            <p className="font-semibold text-[#94a3b8]">
+              Juega con responsabilidad. +18
+            </p>
+          </div>
+
+          <div className="flex gap-4 mb-8 text-xs underline decoration-white/20 underline-offset-4">
+            <a href="/terminos" className="hover:text-white transition-colors">Términos y Condiciones</a>
+            <a href="/privacidad" className="hover:text-white transition-colors">Política de Privacidad</a>
+            <a href="/cookies" className="hover:text-white transition-colors">Política de Cookies</a>
+          </div>
+
+          <p>© 2026 ValueBet AI. Todos los derechos reservados.</p>
         </div>
-        <p>© 2026 ValueBet AI. Todos los derechos reservados.</p>
       </footer>
     </div>
   );
