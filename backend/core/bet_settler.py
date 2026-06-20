@@ -5,7 +5,7 @@ Automated settlement of pending bets based on match results.
 
 This module is called by the scheduler (hourly) and by the ETL pipeline
 after each data sync. It resolves Pending bets for Finished matches and
-adjusts the user's bankroll accordingly.
+updates their status (Won, Lost, Void). No virtual bankroll is maintained.
 
 Settlement logic:
   1x2 market  — "Home" wins if home_goals > away_goals
@@ -13,11 +13,6 @@ Settlement logic:
                 "Draw" wins if home_goals == away_goals
   ou25 market — "Over 2.5" wins if total_goals > 2
                 "Under 2.5" wins if total_goals <= 2
-
-Bankroll:
-  - Stake was already deducted when the bet was placed.
-  - On Win: add back stake + profit  (= stake * odds_taken)
-  - On Loss: nothing to do (stake already deducted)
 """
 
 import logging
@@ -117,28 +112,12 @@ def settle_pending_bets() -> dict:
 
                 if outcome == "Won":
                     summary["won"] += 1
-                    # Return stake + profit to user's bankroll
                     payout = round(float(bet.stake) * float(bet.odds_taken), 2)
                     summary["bankroll_credited"] += payout
-                    try:
-                        user = db.query(User).filter(User.id == bet.user_id).first()
-                        if user:
-                            current = float(user.bankroll or 0)
-                            user.bankroll = round(current + payout, 2)
-                    except Exception as e:
-                        logger.warning(f"⚠️  Could not update bankroll for user {bet.user_id}: {e}")
 
                 elif outcome == "Void":
                     summary["void"] += 1
-                    # Refund the stake
-                    try:
-                        user = db.query(User).filter(User.id == bet.user_id).first()
-                        if user:
-                            current = float(user.bankroll or 0)
-                            user.bankroll = round(current + float(bet.stake), 2)
-                            summary["bankroll_credited"] += float(bet.stake)
-                    except Exception as e:
-                        logger.warning(f"⚠️  Could not refund void bet for user {bet.user_id}: {e}")
+                    # Void bets are excluded from PnL calculations
                 else:
                     summary["lost"] += 1
 

@@ -653,12 +653,10 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
         <BetModal
           {...activeBet}
           token={token}
-          currentBankroll={bankroll}
           onClose={() => setActiveBet(null)}
-          onSuccess={(newBankroll) => {
-            setBankroll(newBankroll);
+          onSuccess={(betId) => {
             setActiveBet(null);
-            alert(`✅ Apuesta registrada. Bankroll actualizado: ${newBankroll.toFixed(2)} €`);
+            alert(`✅ Apuesta realizada con éxito. ID: ${betId}`);
           }}
         />
       )}

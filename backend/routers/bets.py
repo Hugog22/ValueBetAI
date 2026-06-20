@@ -54,7 +54,7 @@ class BankrollStats(BaseModel):
     total_bets: int
     won_bets: int
     lost_bets: int
-    current_bankroll: float
+    pending_bets: int
     recent_bets: List[BetResponse]
 
 @router.post("/bets")
@@ -63,26 +63,14 @@ def place_virtual_bet(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Simulate a bet on a given match."""
+    """Register a bet for tracking purposes (no virtual capital limit)."""
     try:
         match = db.query(Match).filter(Match.id == bet_in.match_id).first()
         if not match:
             raise HTTPException(status_code=404, detail="Match not found")
 
-        # Use SELECT FOR UPDATE to prevent race conditions (HIGH-B2)
-        user = db.query(User).filter(User.id == current_user.id).with_for_update().first()
-        if not user:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
-
-        try:
-            current_bankroll = float(user.bankroll or 0) or 1000.0
-        except Exception:
-            current_bankroll = 1000.0
-
         if bet_in.stake <= 0:
             raise HTTPException(status_code=400, detail="El stake debe ser mayor que 0")
-        if bet_in.stake > current_bankroll:
-            raise HTTPException(status_code=400, detail=f"Saldo insuficiente. Disponible: {current_bankroll:.2f} \u20ac")
 
         # Check if the user already has a bet for this match
         existing_bet = db.query(Bet).filter(
@@ -95,12 +83,6 @@ def place_virtual_bet(
                 status_code=400, 
                 detail="Ya tienes una posición abierta para este partido en tu portfolio."
             )
-
-        # Deduct stake immediately from bankroll
-        try:
-            user.bankroll = current_bankroll - bet_in.stake
-        except Exception:
-            pass  # If column missing, skip — still record the bet
 
         new_bet = Bet(
             user_id=current_user.id,
@@ -117,11 +99,9 @@ def place_virtual_bet(
         db.commit()
         db.refresh(new_bet)
 
-        new_bankroll = current_bankroll - bet_in.stake
         return {
             "status": "success",
-            "bet_id": new_bet.id,
-            "new_bankroll": round(new_bankroll, 2)
+            "bet_id": new_bet.id
         }
     except HTTPException:
         raise
@@ -206,6 +186,7 @@ def get_bankroll_stats(
     hit_rate = (won_bets / total_resolved * 100) if total_resolved > 0 else 0.0
     yield_percent = (net_profit / total_staked * 100) if total_staked > 0 else 0.0
     roi_percent = yield_percent
+    pending_bets = len(all_bets_data) - won_bets - lost_bets
     
     return BankrollStats(
         total_staked=round(total_staked, 2),
@@ -216,7 +197,7 @@ def get_bankroll_stats(
         total_bets=len(all_bets_data),
         won_bets=won_bets,
         lost_bets=lost_bets,
-        current_bankroll=current_user.bankroll or 1000.0,
+        pending_bets=pending_bets,
         recent_bets=recent_bets
     )
 

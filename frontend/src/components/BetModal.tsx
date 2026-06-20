@@ -14,16 +14,15 @@ interface BetModalProps {
   probability: number;
   ev: number;
   token: string;
-  currentBankroll: number;
   onClose: () => void;
-  onSuccess: (newBankroll: number) => void;
+  onSuccess: (betId: number) => void;
 }
 
 const API = '/api/proxy';
 
 export default function BetModal({
   matchId, homeTeam, awayTeam, market, bookmaker, outcome, label,
-  odds, probability, ev, token, currentBankroll, onClose, onSuccess
+  odds, probability, ev, token, onClose, onSuccess
 }: BetModalProps) {
   const [stake, setStake] = useState<string>('10');
   const [loading, setLoading] = useState(false);
@@ -32,7 +31,6 @@ export default function BetModal({
   const stakeNum = parseFloat(stake) || 0;
   const potentialReturn = stakeNum * odds;
   const potentialProfit = potentialReturn - stakeNum;
-  const remainingBankroll = currentBankroll - stakeNum;
 
   // Quick stake buttons
   const quickStakes = [5, 10, 25, 50];
@@ -45,7 +43,6 @@ export default function BetModal({
 
   const handleSubmit = async () => {
     if (stakeNum <= 0) { setError('Introduce un stake mayor que 0'); return; }
-    if (stakeNum > currentBankroll) { setError(`Saldo insuficiente. Disponible: ${currentBankroll.toFixed(2)} €`); return; }
 
     setLoading(true);
     setError(null);
@@ -90,7 +87,7 @@ export default function BetModal({
         return;
       }
 
-      onSuccess(data.new_bankroll ?? (currentBankroll - stakeNum));
+      onSuccess(data.bet_id);
     } catch {
       setError('Error de red. Inténtalo de nuevo.');
     } finally {
@@ -141,11 +138,6 @@ export default function BetModal({
             </div>
           </div>
 
-          {/* Bankroll display */}
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-[#64748B] font-medium">Bankroll disponible</span>
-            <span className="font-editorial font-bold text-[#064E3B] text-lg">{currentBankroll.toFixed(2)} €</span>
-          </div>
 
           {/* Stake input */}
           <div>
@@ -176,17 +168,11 @@ export default function BetModal({
                   {q} €
                 </button>
               ))}
-              <button
-                onClick={() => { setStake(String(Math.floor(currentBankroll))); setError(null); }}
-                className="flex-1 py-2 rounded-xl text-xs font-bold border border-[#E5E7EB] hover:border-red-400 hover:text-red-500 transition-all"
-              >
-                MAX
-              </button>
             </div>
           </div>
 
           {/* Return preview */}
-          {stakeNum > 0 && stakeNum <= currentBankroll && (
+          {stakeNum > 0 && (
             <div className="bg-[#064E3B]/5 border border-[#064E3B]/20 rounded-2xl p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-[#64748B]">Retorno potencial</span>
@@ -195,12 +181,6 @@ export default function BetModal({
               <div className="flex justify-between text-sm">
                 <span className="text-[#64748B]">Beneficio neto</span>
                 <span className="font-bold text-[#064E3B]">+{potentialProfit.toFixed(2)} €</span>
-              </div>
-              <div className="flex justify-between text-sm border-t border-[#064E3B]/10 pt-2">
-                <span className="text-[#64748B]">Bankroll tras apuesta</span>
-                <span className={`font-bold ${remainingBankroll < 20 ? 'text-red-500' : 'text-[#1A1C1E]'}`}>
-                  {remainingBankroll.toFixed(2)} €
-                </span>
               </div>
             </div>
           )}
@@ -214,7 +194,7 @@ export default function BetModal({
           {/* CTA */}
           <button
             onClick={handleSubmit}
-            disabled={loading || stakeNum <= 0 || stakeNum > currentBankroll}
+            disabled={loading || stakeNum <= 0}
             className="w-full bg-[#064E3B] text-white py-4 rounded-xl font-bold text-sm tracking-wide hover:bg-[#065f46] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
@@ -228,8 +208,8 @@ export default function BetModal({
           </button>
 
           <p className="text-center text-[10px] text-[#94a3b8] leading-relaxed">
-            Esta es una simulación virtual. El stake se descuenta de tu bankroll inmediatamente.<br />
-            Los resultados se liquidan automáticamente cada hora.
+            Registro de seguimiento personal. La apuesta queda guardada en tu historial.<br />
+            Los resultados se liquidan automáticamente cuando finaliza el partido.
           </p>
         </div>
       </div>

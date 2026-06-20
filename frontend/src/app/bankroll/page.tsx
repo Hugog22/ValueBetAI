@@ -12,7 +12,7 @@ interface BankrollStats {
     total_pnl: number;
     roi: number;
     win_rate: number;
-    current_bankroll: number;
+    pending_bets: number;
     recent_bets: BetRecord[];
 }
 
@@ -236,13 +236,13 @@ export default function BankrollPage() {
                     <div className="mb-16">
                         <div className="flex items-center gap-3 mb-6">
                             <span className="h-px w-8 bg-[#FFD700]"></span>
-                            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#64748B]">Auditoría de Inversión</span>
+                            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#64748B]">Registro de Apuestas</span>
                         </div>
                         <h1 className="text-6xl font-editorial text-[#1A1C1E] leading-tight font-bold mb-6">
-                            Mi Perfil <span className="italic font-light">Digital</span>
+                            Mi Historial <span className="italic font-light">de Apuestas</span>
                         </h1>
                         <p className="text-[#64748B] text-lg font-medium max-w-2xl leading-relaxed">
-                            Seguimiento avanzado de posiciones algorítmicas y análisis de rendimiento para decisiones de inversión inteligente.
+                            Seguimiento personal de apuestas reales. Registra tus jugadas, analiza tu rendimiento y optimiza tu estrategia con datos precisos.
                         </p>
                     </div>
 
@@ -256,21 +256,21 @@ export default function BankrollPage() {
                             {/* KPI GRID */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-20">
                                 <div className="bg-[#064E3B] p-8 rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.02)]">
-                                    <div className="text-[10px] font-bold text-white/70 uppercase tracking-[0.2em] mb-4">Capital (Bankroll)</div>
+                                    <div className="text-[10px] font-bold text-white/70 uppercase tracking-[0.2em] mb-4">Apuestas Pendientes</div>
                                     <div className="text-4xl font-editorial font-bold text-white">
-                                        {(stats.current_bankroll ?? 1000).toFixed(2)} <span className="text-sm font-sans font-medium opacity-60">€</span>
+                                        {stats.pending_bets ?? 0} <span className="text-sm font-sans font-medium opacity-60">bets</span>
                                     </div>
                                 </div>
                                 <div className="bg-white p-8 rounded-[2rem] border border-[#E5E7EB] shadow-[0_10px_30px_rgba(0,0,0,0.02)]">
-                                    <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.2em] mb-4">Volumen Total</div>
+                                    <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.2em] mb-4">Total Apostado</div>
                                     <div className="text-4xl font-editorial font-bold text-[#1A1C1E]">
-                                        {(stats.total_staked || 0).toFixed(2)} <span className="text-sm font-sans font-medium text-[#64748B]">u.</span>
+                                        {(stats.total_staked || 0).toFixed(2)} <span className="text-sm font-sans font-medium text-[#64748B]">€</span>
                                     </div>
                                 </div>
                                 <div className="bg-white p-8 rounded-[2rem] border border-[#E5E7EB] shadow-[0_10px_30px_rgba(0,0,0,0.02)]">
                                     <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-[0.2em] mb-4">PnL Neto</div>
                                     <div className={`text-4xl font-editorial font-bold ${(stats.total_pnl ?? 0) >= 0 ? 'text-[#064E3B]' : 'text-red-600'}`}>
-                                        {(stats.total_pnl ?? 0) >= 0 ? '+' : ''}{(stats.total_pnl ?? 0).toFixed(2)} <span className="text-sm font-sans font-medium opacity-60">u.</span>
+                                        {(stats.total_pnl ?? 0) >= 0 ? '+' : ''}{(stats.total_pnl ?? 0).toFixed(2)} <span className="text-sm font-sans font-medium opacity-60">€</span>
                                     </div>
                                 </div>
                                 <div className="bg-white p-8 rounded-[2rem] border border-[#E5E7EB] shadow-[0_10px_30px_rgba(0,0,0,0.02)]">
@@ -485,7 +485,7 @@ export default function BankrollPage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-8 py-6">
-                                                        <div className="text-sm font-bold text-[#1A1C1E] mb-1">{bet.stake} <span className="text-[10px] font-medium opacity-50">u.</span></div>
+                                                        <div className="text-sm font-bold text-[#1A1C1E] mb-1">{bet.stake} <span className="text-[10px] font-medium opacity-50">€</span></div>
                                                         <div className="inline-block px-2 py-0.5 bg-[#F1F3F5] text-[#1A1C1E] text-[10px] font-black rounded-lg">{bet.odds_taken.toFixed(2)}</div>
                                                     </td>
                                                     <td className="px-8 py-6">
