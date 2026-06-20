@@ -44,27 +44,31 @@ async def lifespan(app: FastAPI):
         logger.info("🚀 Starting Value Betting API…")
         Base.metadata.create_all(bind=engine)
 
-        # Warm the cache synchronously before the server accepts requests.
-        # This ensures that when the API is available, all matches are already loaded.
-        logger.info("🔄 Running prediction cache warm-up synchronously…")
-        
-        # Step 1: Clean duplicate teams/matches in the DB
-        try:
-            from scripts.fix_duplicate_teams import fix_duplicate_teams
-            from db.session import SessionLocal
-            with SessionLocal() as db:
-                logger.info("🧹 Ejecutando limpieza de equipos duplicados en el arranque...")
-                fix_duplicate_teams()
-                logger.info("✅ Limpieza de duplicados completada.")
-        except Exception as e:
-            logger.error(f"⚠️ Failed to clean duplicates: {e}")
+        # Warm the cache in a background thread so we don't block the server startup.
+        # This prevents Hugging Face Spaces from timing out while waiting for port 7860 to bind.
+        def startup_tasks():
+            # Step 1: Clean duplicate teams/matches in the DB
+            try:
+                from scripts.fix_duplicate_teams import fix_duplicate_teams
+                from db.session import SessionLocal
+                with SessionLocal() as db:
+                    logger.info("🧹 Ejecutando limpieza de equipos duplicados en el arranque...")
+                    fix_duplicate_teams()
+                    logger.info("✅ Limpieza de duplicados completada.")
+            except Exception as e:
+                logger.error(f"⚠️ Failed to clean duplicates: {e}")
 
-        # Step 2: Warm the prediction cache
-        try:
-            refresh_cache()
-            logger.info("✅ Cache warm-up completada.")
-        except Exception as e:
-            logger.warning(f"⚠️  Startup cache warm-up failed: {e}")
+            # Step 2: Warm the prediction cache
+            try:
+                logger.info("🔄 Running prediction cache warm-up in background...")
+                refresh_cache()
+                logger.info("✅ Cache warm-up completada.")
+            except Exception as e:
+                logger.warning(f"⚠️  Startup cache warm-up failed: {e}")
+
+        import threading
+        startup_thread = threading.Thread(target=startup_tasks, daemon=True)
+        startup_thread.start()
 
         start_scheduler()
         yield
