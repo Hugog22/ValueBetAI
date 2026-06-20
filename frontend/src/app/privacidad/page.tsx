@@ -78,7 +78,7 @@ export default function PrivacidadPage() {
                     <section>
                         <h2 className="text-xl font-bold text-white mb-4">8. Contacto</h2>
                         <p>
-                            Si tienes alguna pregunta sobre esta Política de Privacidad o sobre nuestras prácticas de protección de datos, por favor contáctanos en: <strong>soporte@valuebet.ai</strong>
+                            Si tienes alguna pregunta sobre esta Política de Privacidad o sobre nuestras prácticas de protección de datos, por favor contáctanos en: <strong>valuebetai@outlook.es</strong>
                         </p>
                     </section>
 
