@@ -16,6 +16,8 @@ frontend_url = settings.FRONTEND_URL.strip() if settings.FRONTEND_URL else "http
 
 router = APIRouter(prefix="/api/stripe", tags=["Stripe"])
 
+TRIAL_PERIOD_DAYS = 7
+
 @router.post("/create-checkout-session")
 def create_checkout_session(current_user: User = Depends(get_current_user)):
     if not price_id:
@@ -29,6 +31,9 @@ def create_checkout_session(current_user: User = Depends(get_current_user)):
                 'quantity': 1,
             }],
             mode='subscription',
+            subscription_data={
+                'trial_period_days': TRIAL_PERIOD_DAYS,
+            },
             success_url=f"{frontend_url}/success?session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{frontend_url}/register",
             client_reference_id=str(current_user.id),
@@ -55,8 +60,11 @@ def create_portal_session(current_user: User = Depends(get_current_user)):
 def verify_session(session_id: str, current_user: User = Depends(get_current_user)):
     try:
         session = stripe.checkout.Session.retrieve(session_id)
-        if session.payment_status == 'paid':
+        if session.payment_status == 'paid' or session.status == 'complete':
             return {"status": "paid", "subscription_status": "active"}
+        elif session.status == 'complete':
+            # Trial period — no payment yet but subscription is active in trial
+            return {"status": "trialing", "subscription_status": "trialing"}
         else:
             return {"status": "unpaid", "subscription_status": "inactive"}
     except Exception as e:
@@ -90,8 +98,22 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             user = db.query(User).filter(User.id == int(user_id)).first()
             if user:
                 user.stripe_customer_id = customer_id
-                user.subscription_status = 'active'
+                # For trials, subscription starts as 'trialing'; for direct subs, 'active'
+                subscription_status = getattr(session, 'subscription', None)
+                user.subscription_status = 'trialing' if session.get('subscription') else 'active'
                 db.commit()
+
+    elif event['type'] == 'customer.subscription.created':
+        subscription = event['data']['object']
+        customer_id = subscription.customer
+        sub_status = subscription.status  # 'trialing', 'active', etc.
+        user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
+        if user:
+            user.subscription_status = sub_status
+            period_end = getattr(subscription, 'current_period_end', None)
+            if period_end:
+                user.subscription_end_date = datetime.utcfromtimestamp(period_end)
+            db.commit()
 
     elif event['type'] == 'customer.subscription.deleted':
         subscription = event['data']['object']
@@ -104,10 +126,10 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event['type'] == 'customer.subscription.updated':
         subscription = event['data']['object']
         customer_id = subscription.customer
-        status = subscription.status
+        sub_status = subscription.status
         user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
         if user:
-            user.subscription_status = status
+            user.subscription_status = sub_status
             
             # Save the end date of the current billing period (or cancellation date)
             period_end = getattr(subscription, 'current_period_end', None)

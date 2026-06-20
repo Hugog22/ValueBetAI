@@ -41,8 +41,8 @@ export default function LandingPage() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center gap-6">
-            <Link href="/login" className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#C0FF00] text-[#051209] font-bold text-lg hover:bg-[#a3d900] transition-colors shadow-[0_0_30px_rgba(192,255,0,0.3)] flex items-center justify-center gap-2">
-              Comenzar <span className="text-xl">→</span>
+            <Link href="/register" className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#C0FF00] text-[#051209] font-bold text-lg hover:bg-[#a3d900] transition-colors shadow-[0_0_30px_rgba(192,255,0,0.3)] flex items-center justify-center gap-2">
+              Empezar gratis <span className="text-xl">→</span>
             </Link>
             <a href="#producto" className="w-full sm:w-auto px-8 py-4 rounded-full border border-white/10 text-white font-bold text-lg hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
               Ver ejemplo
@@ -306,6 +306,16 @@ export default function LandingPage() {
               </div>
               
               <div className="text-2xl font-editorial font-bold mb-2">Pro</div>
+
+              {/* 7-day trial banner */}
+              <div className="flex items-center gap-2 bg-[#064E3B]/40 border border-[#064E3B] rounded-xl px-4 py-3 mb-6">
+                <div className="w-2 h-2 rounded-full bg-[#C0FF00] animate-pulse shrink-0" />
+                <div>
+                  <p className="text-[#C0FF00] text-xs font-black uppercase tracking-widest">7 días GRATIS</p>
+                  <p className="text-[#94a3b8] text-[11px] mt-0.5">Después, 9,99€/mes. Cancela cuando quieras.</p>
+                </div>
+              </div>
+
               <div className="flex items-baseline gap-1 mb-8">
                 <span className="text-5xl font-bold text-white">9,99€</span>
                 <span className="text-[#94a3b8]">/mes</span>
@@ -329,8 +339,9 @@ export default function LandingPage() {
               </ul>
 
               <Link href="/register" className="block w-full py-4 rounded-xl bg-[#C0FF00] text-[#051209] font-bold text-center hover:bg-[#a3d900] transition-colors shadow-[0_0_20px_rgba(192,255,0,0.2)]">
-                Empezar ahora
+                Empezar 7 días gratis
               </Link>
+              <p className="text-center text-[#64748B] text-[10px] mt-3">Sin compromiso. Sin permanencia.</p>
             </div>
           </div>
         </section>
@@ -363,6 +374,12 @@ export default function LandingPage() {
               <h3 className="text-lg font-bold mb-2 text-white">¿Cada cuánto se actualiza el modelo?</h3>
               <p className="text-[#94a3b8] leading-relaxed text-sm">
                 El modelo se reentrena automáticamente después de cada ventana de partidos con los resultados más recientes. Los FIFA points se actualizan mensualmente.
+              </p>
+            </div>
+            <div className="border-t border-white/10 pt-6">
+              <h3 className="text-lg font-bold mb-2 text-white">¿Cómo funciona la prueba gratuita de 7 días?</h3>
+              <p className="text-[#94a3b8] leading-relaxed text-sm">
+                Al registrarte, obtienes acceso completo a todas las funcionalidades durante 7 días sin cargo alguno. Al finalizar el período de prueba, tu suscripción se renueva automáticamente por 9,99€/mes. Puedes cancelar en cualquier momento antes de que acabe la prueba y no se te cobrará nada.
               </p>
             </div>
             <div className="border-t border-white/10 pt-6">

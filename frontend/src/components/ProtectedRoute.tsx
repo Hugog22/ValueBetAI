@@ -43,7 +43,9 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
         );
     }
 
-    if (user?.subscription_status !== 'active') {
+    const isSubscribed = user?.subscription_status === 'active' || user?.subscription_status === 'trialing';
+
+    if (!isSubscribed) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-[#FCF9F1] px-4 text-center">
                 <div className="bg-white p-10 rounded-[2.5rem] border border-[#E5E7EB] shadow-[0_20px_50px_rgba(0,0,0,0.04)] max-w-md w-full">
@@ -61,7 +63,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
                         disabled={isCheckoutLoading}
                         className="w-full flex justify-center items-center py-4 px-4 bg-[#064E3B] text-white text-xs uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#043327] shadow-xl shadow-[#064E3B]/20 transition-all active:scale-95 group disabled:opacity-50"
                     >
-                        {isCheckoutLoading ? 'Cargando...' : 'Completar Suscripción'}
+                        {isCheckoutLoading ? 'Cargando...' : 'Activar Suscripción'}
                         {!isCheckoutLoading && (
                             <svg className="w-4 h-4 ml-3 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -80,5 +82,23 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
         );
     }
 
-    return <>{children}</>;
+    return (
+        <>
+            {user?.subscription_status === 'trialing' && (
+                <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-[#064E3B] to-[#0a7c5c] text-white py-3 px-6 flex items-center justify-center gap-4 shadow-[0_-4px_20px_rgba(6,78,59,0.3)]">
+                    <div className="w-2 h-2 rounded-full bg-[#C0FF00] animate-pulse shrink-0" />
+                    <p className="text-sm font-semibold">
+                        🎉 <span className="font-black">Prueba gratuita activa</span> — Disfruta de 7 días gratis. Tu primer cobro será al finalizar el período de prueba.
+                    </p>
+                    <button
+                        onClick={handleCheckout}
+                        className="ml-auto shrink-0 px-4 py-1.5 bg-[#C0FF00] text-[#051209] text-xs font-black uppercase tracking-widest rounded-full hover:bg-[#a3d900] transition-colors"
+                    >
+                        Gestionar
+                    </button>
+                </div>
+            )}
+            {children}
+        </>
+    );
 }

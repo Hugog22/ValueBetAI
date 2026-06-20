@@ -1,12 +1,6 @@
 name: Deploy Backend to Hugging Face Spaces
 
 on:
-  push:
-    branches:
-      - main
-      - master
-    paths:
-      - 'backend/**' # Solo se despliega si cambias algo dentro de la carpeta backend
   workflow_dispatch: # Permite ejecutarlo manualmente desde la pestaña Actions
 
 jobs:

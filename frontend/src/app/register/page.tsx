@@ -98,9 +98,10 @@ export default function RegisterPage() {
                     <h2 className="mt-8 text-4xl font-editorial font-bold text-[#1A1C1E]">
                         Nueva <span className="italic font-light">Cuenta</span>
                     </h2>
-                    <p className="mt-4 text-[10px] uppercase tracking-[0.3em] font-bold text-[#64748B]">
-                        Solicitud de membresía institucional
-                    </p>
+                    <div className="mt-4 inline-flex items-center gap-2 bg-[#064E3B] text-white px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-lg shadow-[#064E3B]/20">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00] animate-pulse"></div>
+                        7 días gratis — Sin tarjeta de crédito inicial
+                    </div>
                 </div>
 
                 <div className="bg-white p-10 rounded-[2.5rem] border border-[#E5E7EB] shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
@@ -170,11 +171,14 @@ export default function RegisterPage() {
                                 type="submit"
                                 className="w-full flex justify-center items-center py-5 px-4 bg-[#064E3B] text-white text-xs uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#043327] shadow-xl shadow-[#064E3B]/20 transition-all active:scale-95 group"
                             >
-                                Registrar Operador
+                                Empezar 7 días gratis
                                 <svg className="w-4 h-4 ml-3 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
                                 </svg>
                             </button>
+                            <p className="text-center text-[#94A3B8] text-[10px] mt-3 font-medium">
+                                Después del período de prueba, 9,99€/mes. Cancela cuando quieras.
+                            </p>
                         </div>
                     </form>
                     
