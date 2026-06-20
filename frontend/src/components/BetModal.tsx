@@ -148,7 +148,6 @@ export default function BetModal({
               <input
                 type="number"
                 min="1"
-                max={currentBankroll}
                 step="1"
                 value={stake}
                 onChange={e => { setStake(e.target.value); setError(null); }}
