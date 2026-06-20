@@ -100,7 +100,7 @@ export default function RegisterPage() {
                     </h2>
                     <div className="mt-4 inline-flex items-center gap-2 bg-[#064E3B] text-white px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-lg shadow-[#064E3B]/20">
                         <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00] animate-pulse"></div>
-                        7 días gratis — Sin tarjeta de crédito inicial
+                        7 días gratis — Cancela en cualquier momento
                     </div>
                 </div>
 
