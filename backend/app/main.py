@@ -44,8 +44,7 @@ async def lifespan(app: FastAPI):
         logger.info("🚀 Starting Value Betting API…")
         Base.metadata.create_all(bind=engine)
 
-        # Warm the cache in a background thread so we don't block the server startup.
-        # This prevents Hugging Face Spaces from timing out while waiting for port 7860 to bind.
+        # Warm the cache synchronously before the server starts accepting requests
         def startup_tasks():
             # Step 1: Clean duplicate teams/matches in the DB
             try:
@@ -60,15 +59,14 @@ async def lifespan(app: FastAPI):
 
             # Step 2: Warm the prediction cache
             try:
-                logger.info("🔄 Running prediction cache warm-up in background...")
+                logger.info("🔄 Running prediction cache warm-up synchronously...")
                 refresh_cache()
                 logger.info("✅ Cache warm-up completada.")
             except Exception as e:
                 logger.warning(f"⚠️  Startup cache warm-up failed: {e}")
 
-        import threading
-        startup_thread = threading.Thread(target=startup_tasks, daemon=True)
-        startup_thread.start()
+        # Ejecutar las tareas de arranque antes de iniciar el servidor
+        startup_tasks()
 
         start_scheduler()
         yield

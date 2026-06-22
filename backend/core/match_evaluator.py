@@ -150,11 +150,6 @@ def _build_all_markets(
         # Ignore Betfair lay odds, too confusing for regular users
         if row.market_key == "h2h_lay":
             continue
-            
-        # Only accept .5 lines for totals and spreads
-        if row.market_key in ("totals", "spreads") and row.point is not None:
-            if abs((row.point % 1) - 0.5) > 0.001:
-                continue
 
         key = (row.market_key, row.point)
         groups[key][row.outcome_name].append(row.price)
