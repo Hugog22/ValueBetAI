@@ -113,7 +113,7 @@ def sync_world_cup_odds() -> int:
         params = {
             "apiKey":     settings.ODDS_API_KEY,
             "regions":    "eu,uk",
-            "markets":    "h2h,totals,spreads",
+            "markets":    "h2h,totals,alternate_totals",
             "oddsFormat": "decimal",
         }
 

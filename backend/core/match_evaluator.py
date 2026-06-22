@@ -151,20 +151,15 @@ def _build_all_markets(
         if row.market_key == "h2h_lay":
             continue
 
-        # User's mental model: Totals must be .5, Spreads must be integers
-        if row.market_key == "totals" and row.point is not None:
-            if abs((row.point % 1) - 0.5) > 0.001:
-                continue
-                
-        if row.market_key == "spreads" and row.point is not None:
-            if abs(row.point % 1) > 0.001:
-                continue
+        # User's mental model: Remove spreads entirely, show all totals (integers + halves)
+        if row.market_key == "spreads":
+            continue
 
         key = (row.market_key, row.point)
         groups[key][row.outcome_name].append(row.price)
 
-    # Sort order: h2h first, then totals ascending by line, then spreads, then rest
-    _market_order = {"h2h": 0, "totals": 1, "spreads": 2}
+    # Sort order: h2h first, then totals ascending by line, then alternate_totals
+    _market_order = {"h2h": 0, "totals": 1, "alternate_totals": 2}
 
     def _sort_key(k):
         mkey, point = k
