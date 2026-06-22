@@ -151,15 +151,24 @@ def _build_all_markets(
         if row.market_key == "h2h_lay":
             continue
 
-        # User's mental model: Remove spreads entirely, show all totals (integers + halves)
+        # Skip Betfair lay odds
+        if row.market_key == "h2h_lay":
+            continue
+
+        # Skip spreads (handicap asiatico)
         if row.market_key == "spreads":
             continue
+
+        # For totals, only show classic .5 lines (1.5, 2.5, 3.5…)
+        if row.market_key in ("totals", "alternate_totals") and row.point is not None:
+            if abs((row.point % 1) - 0.5) > 0.001:
+                continue
 
         key = (row.market_key, row.point)
         groups[key][row.outcome_name].append(row.price)
 
-    # Sort order: h2h first, then totals ascending by line, then alternate_totals
-    _market_order = {"h2h": 0, "totals": 1, "alternate_totals": 2}
+    # Sort order: h2h first, then totals ascending by line
+    _market_order = {"h2h": 0, "totals": 1, "alternate_totals": 1}
 
     def _sort_key(k):
         mkey, point = k
