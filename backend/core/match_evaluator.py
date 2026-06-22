@@ -147,19 +147,11 @@ def _build_all_markets(
     from collections import defaultdict
     groups: dict = defaultdict(lambda: defaultdict(list))
     for row in rows:
-        # Ignore Betfair lay odds
-        if row.market_key == "h2h_lay":
-            continue
-
         # Skip Betfair lay odds
         if row.market_key == "h2h_lay":
             continue
 
-        # Skip spreads (handicap asiatico)
-        if row.market_key == "spreads":
-            continue
-
-        # For totals, only show classic .5 lines (1.5, 2.5, 3.5…)
+        # For totals (Más/Menos goles), only show classic .5 lines (1.5, 2.5, 3.5…)
         if row.market_key in ("totals", "alternate_totals") and row.point is not None:
             if abs((row.point % 1) - 0.5) > 0.001:
                 continue
@@ -167,8 +159,8 @@ def _build_all_markets(
         key = (row.market_key, row.point)
         groups[key][row.outcome_name].append(row.price)
 
-    # Sort order: h2h first, then totals ascending by line
-    _market_order = {"h2h": 0, "totals": 1, "alternate_totals": 1}
+    # Sort order: h2h first, totals, then spreads (handicap)
+    _market_order = {"h2h": 0, "totals": 1, "alternate_totals": 1, "spreads": 2}
 
     def _sort_key(k):
         mkey, point = k

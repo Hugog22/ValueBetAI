@@ -107,7 +107,8 @@ export default function AllOptionsModal({
                 const marketNames: Record<string, string> = {
                   'h2h': 'Ganador (1X2)',
                   'totals': 'Goles (Más/Menos)',
-                  'alternate_totals': 'Goles (Más/Menos)'
+                  'alternate_totals': 'Goles (Más/Menos)',
+                  'spreads': 'Hándicap Asiático'
                 };
                 const friendlyName = marketNames[group.market_key] || group.market_key.toUpperCase();
 
