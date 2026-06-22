@@ -147,11 +147,20 @@ def _build_all_markets(
     from collections import defaultdict
     groups: dict = defaultdict(lambda: defaultdict(list))
     for row in rows:
+        # Ignore Betfair lay odds, too confusing for regular users
+        if row.market_key == "h2h_lay":
+            continue
+            
+        # Only accept .5 lines for totals and spreads
+        if row.market_key in ("totals", "spreads") and row.point is not None:
+            if abs((row.point % 1) - 0.5) > 0.001:
+                continue
+
         key = (row.market_key, row.point)
         groups[key][row.outcome_name].append(row.price)
 
     # Sort order: h2h first, then totals ascending by line, then spreads, then rest
-    _market_order = {"h2h": 0, "totals": 1, "spreads": 2, "h2h_lay": 3}
+    _market_order = {"h2h": 0, "totals": 1, "spreads": 2}
 
     def _sort_key(k):
         mkey, point = k
@@ -196,8 +205,8 @@ def _build_all_markets(
             # ── EV and value flag ──────────────────────────────────────────
             if ai_prob is not None and ai_prob > 0:
                 ev      = round((avg_price * ai_prob - 1.0) * 100, 2)
-                min_ev  = _dynamic_ev_threshold(avg_price)
-                is_value = ev > min_ev
+                # For the exhaustive allMarkets view, any EV > 0 is technically a value bet
+                is_value = ev > 0.0
             else:
                 ev       = None
                 is_value = False

@@ -103,10 +103,18 @@ export default function AllOptionsModal({
         <div className="p-6 md:p-8 max-h-[60vh] overflow-y-auto">
           {allMarkets && allMarkets.length > 0 ? (
             <div className="grid gap-6">
-              {allMarkets.map((group, idx) => (
+              {allMarkets.map((group, idx) => {
+                const marketNames: Record<string, string> = {
+                  'h2h': 'Ganador (1X2)',
+                  'totals': 'Goles (Más/Menos)',
+                  'spreads': 'Hándicap Asiático'
+                };
+                const friendlyName = marketNames[group.market_key] || group.market_key.toUpperCase();
+
+                return (
                 <div key={idx} className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
                   <h3 className="text-lg font-bold text-[#1A1C1E] mb-4 flex items-center gap-2">
-                    <span className="uppercase text-sm tracking-widest text-[#64748B]">{group.market_key}</span>
+                    <span className="uppercase text-sm tracking-widest text-[#64748B]">{friendlyName}</span>
                     {group.point !== null && <span className="bg-[#1A1C1E] text-white px-2 py-0.5 rounded text-sm">{group.point}</span>}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -155,7 +163,8 @@ export default function AllOptionsModal({
                     ))}
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
           ) : allCandidates.length === 0 ? (
             <div className="text-center py-12 text-[#64748B]">
