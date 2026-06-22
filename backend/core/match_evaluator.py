@@ -147,9 +147,18 @@ def _build_all_markets(
     from collections import defaultdict
     groups: dict = defaultdict(lambda: defaultdict(list))
     for row in rows:
-        # Ignore Betfair lay odds, too confusing for regular users
+        # Ignore Betfair lay odds
         if row.market_key == "h2h_lay":
             continue
+
+        # User's mental model: Totals must be .5, Spreads must be integers
+        if row.market_key == "totals" and row.point is not None:
+            if abs((row.point % 1) - 0.5) > 0.001:
+                continue
+                
+        if row.market_key == "spreads" and row.point is not None:
+            if abs(row.point % 1) > 0.001:
+                continue
 
         key = (row.market_key, row.point)
         groups[key][row.outcome_name].append(row.price)
