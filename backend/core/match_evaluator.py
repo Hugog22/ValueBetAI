@@ -106,6 +106,59 @@ def _prob_covers_handicap(lam_team: float, lam_opp: float, handicap: float) -> f
     return max(0.0, min(1.0, p_covers))
 
 
+
+def _fit_lambdas_from_1x2_probs(
+    p_home_win: float,
+    p_away_win: float,
+    base_total: float = 2.50,
+    max_iter: int = 80,
+) -> tuple[float, float]:
+    """
+    Fit Poisson expected-goal lambdas (lam_home, lam_away) so that the
+    implied P(home win) matches the predictor's output.
+
+    Strategy: fix lam_home + lam_away = base_total (sport average total goals)
+    and binary-search on the ratio r = lam_home / lam_away until the Poisson
+    home-win probability matches p_home_win.
+
+    This ensures handicap probabilities are internally consistent with
+    the model's 1x2 prediction instead of relying on raw DB xG values
+    that often default to nearly equal for both teams.
+
+    Parameters
+    ----------
+    p_home_win : float  AI probability of a home win (0-1)
+    p_away_win : float  AI probability of an away win (0-1)
+    base_total : float  Expected total goals for the sport/competition
+                        (≈2.60 for club football, ≈2.35 for World Cup)
+    """
+    # Sanity-clamp: avoid extreme probabilities crashing the search
+    p_home_win = max(0.05, min(0.90, p_home_win))
+
+    def _p_home(ratio: float) -> float:
+        lh = base_total * ratio / (1.0 + ratio)
+        la = base_total / (1.0 + ratio)
+        p = 0.0
+        for h in range(16):
+            for a in range(16):
+                if h > a:
+                    p += _poisson_pmf(lh, h) * _poisson_pmf(la, a)
+        return p
+
+    lo, hi = 0.05, 30.0
+    for _ in range(max_iter):
+        mid = (lo + hi) / 2.0
+        if _p_home(mid) < p_home_win:
+            lo = mid
+        else:
+            hi = mid
+
+    ratio = (lo + hi) / 2.0
+    lam_home = round(base_total * ratio / (1.0 + ratio), 4)
+    lam_away = round(base_total / (1.0 + ratio), 4)
+    return lam_home, lam_away
+
+
 def _normalize_team_name(name: str) -> str:
     """Lowercase + strip for fuzzy team name matching."""
     return name.lower().strip().replace("-", " ")
@@ -402,12 +455,18 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
     source     = odds.pop("_source", "mock")
     all_bookmakers_h2h = odds.pop("all_bookmakers_h2h", [])
 
-    # Expected goals for Poisson-based allMarkets evaluation
-    lam_home = float(features.get("home_xg_for_avg10", 1.45))
-    lam_away = float(features.get("away_xg_for_avg10", 1.10))
-
     predict_features = {k: v for k, v in features.items() if not k.startswith("_")}
     pred             = predictor.predict_match(predict_features)
+
+    # Expected goals for Poisson-based allMarkets evaluation.
+    # Derive lambdas from the predictor's 1x2 probabilities so that
+    # handicap probabilities are consistent with the model's win-probability.
+    # Club football average: ~2.60 total goals/match.
+    lam_home, lam_away = _fit_lambdas_from_1x2_probs(
+        pred["probabilities"]["home"],
+        pred["probabilities"]["away"],
+        base_total=2.60,
+    )
 
     eps        = 1e-6
     candidates = []
@@ -563,10 +622,15 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     source = odds.pop("_source", "mock")
     all_bookmakers_h2h = odds.pop("all_bookmakers_h2h", [])
 
-    # Expected goals for Poisson-based allMarkets evaluation
-    # Use real xG stats from the WC if available, else use defaults
-    lam_home = float(extra_features.get("home_avg_xg") or 1.30)
-    lam_away = float(extra_features.get("away_avg_xg") or 1.10)
+    # Expected goals for Poisson-based allMarkets evaluation.
+    # Derive lambdas from the predictor's 1x2 probabilities so that
+    # handicap probabilities are consistent with the model's win-probability.
+    # World Cup average: ~2.35 total goals/match.
+    lam_home, lam_away = _fit_lambdas_from_1x2_probs(
+        pred["probabilities"]["home"],
+        pred["probabilities"]["away"],
+        base_total=2.35,
+    )
 
     eps        = 1e-6
     candidates = []
