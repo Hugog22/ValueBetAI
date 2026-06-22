@@ -113,7 +113,7 @@ def sync_world_cup_odds() -> int:
         params = {
             "apiKey":     settings.ODDS_API_KEY,
             "regions":    "eu,uk",
-            "markets":    "h2h,totals",
+            "markets":    "h2h,totals,spreads",
             "oddsFormat": "decimal",
         }
 
@@ -127,6 +127,9 @@ def sync_world_cup_odds() -> int:
         resp.raise_for_status()
         events = resp.json()
         logger.info(f"[world_cup_etl] {len(events)} World Cup events from The Odds API")
+
+        # Track which match IDs have had their MarketOdds cleared this run
+        cleaned_match_ids: set[int] = set()
 
         for event in events:
             home_name = event.get("home_team", "")
@@ -170,16 +173,40 @@ def sync_world_cup_odds() -> int:
                 
             match = existing
 
-            # Store h2h odds for all bookmakers
+            # Store odds for all bookmakers in MarketOdds + h2h in Odds table
             bookmakers = event.get("bookmakers", [])
             for bookmaker in bookmakers:
                 bm_key = bookmaker.get("key")
                 if not bm_key:
                     continue
+
+                # ── Upsert: clear old MarketOdds for this match before inserting
+                if match.id not in cleaned_match_ids:
+                    from db.models import MarketOdds
+                    db.query(MarketOdds).filter(MarketOdds.match_id == match.id).delete()
+                    cleaned_match_ids.add(match.id)
+
                 for mkt in bookmaker.get("markets", []):
-                    if mkt["key"] != "h2h":
+                    mkey = mkt["key"]
+                    all_outcomes = mkt.get("outcomes", [])
+
+                    # ── Save ALL markets to MarketOdds (generic, flexible table) ──
+                    from db.models import MarketOdds
+                    for outcome in all_outcomes:
+                        db.add(MarketOdds(
+                            match_id=match.id,
+                            bookmaker=bm_key,
+                            market_key=mkey,
+                            outcome_name=outcome.get("name", "Unknown"),
+                            price=float(outcome.get("price", 0)),
+                            point=outcome.get("point"),
+                            timestamp=datetime.utcnow(),
+                        ))
+
+                    # ── Also store h2h in the Odds table (used by _get_odds in evaluator) ──
+                    if mkey != "h2h":
                         continue
-                    outcomes = mkt.get("outcomes", [])
+                    outcomes = all_outcomes
                     ho = dr = aw = 0.0
                     for o in outcomes:
                         nm = o["name"].strip().lower()

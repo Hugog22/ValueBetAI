@@ -14,10 +14,26 @@ interface PickData {
   bookmaker_implied_prob?: number;
 }
 
+interface MarketOutcome {
+  name: string;
+  bookmaker_odds: number;
+  implied_prob: number;
+  ai_prob: number | null;
+  ev: number | null;
+  is_value: boolean;
+}
+
+interface MarketGroup {
+  market_key: string;
+  point: number | null;
+  outcomes: MarketOutcome[];
+}
+
 interface AllOptionsModalProps {
   homeTeam: string;
   awayTeam: string;
   allCandidates: PickData[];
+  allMarkets?: MarketGroup[];
   onClose: () => void;
   onSimulateBet: (candidate: PickData) => void;
 }
@@ -26,6 +42,7 @@ export default function AllOptionsModal({
   homeTeam,
   awayTeam,
   allCandidates,
+  allMarkets,
   onClose,
   onSimulateBet,
 }: AllOptionsModalProps) {
@@ -84,7 +101,63 @@ export default function AllOptionsModal({
 
         {/* Content */}
         <div className="p-6 md:p-8 max-h-[60vh] overflow-y-auto">
-          {allCandidates.length === 0 ? (
+          {allMarkets && allMarkets.length > 0 ? (
+            <div className="grid gap-6">
+              {allMarkets.map((group, idx) => (
+                <div key={idx} className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                  <h3 className="text-lg font-bold text-[#1A1C1E] mb-4 flex items-center gap-2">
+                    <span className="uppercase text-sm tracking-widest text-[#64748B]">{group.market_key}</span>
+                    {group.point !== null && <span className="bg-[#1A1C1E] text-white px-2 py-0.5 rounded text-sm">{group.point}</span>}
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {group.outcomes.map((outcome, oIdx) => (
+                      <div 
+                        key={oIdx} 
+                        className={`border rounded-xl p-4 transition-colors ${
+                          outcome.is_value 
+                            ? 'border-[#064E3B] bg-[#064E3B]/5' 
+                            : 'border-gray-200 bg-white'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="font-bold text-[#1A1C1E]">{outcome.name}</span>
+                          {outcome.is_value && (
+                            <span className="bg-[#064E3B] text-white px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider">
+                              Value
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex justify-between items-center text-sm mb-1">
+                          <span className="text-gray-500">Cuota:</span>
+                          <span className="font-bold">{outcome.bookmaker_odds.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm mb-1">
+                          <span className="text-gray-500">Prob Casa:</span>
+                          <span>{(outcome.implied_prob * 100).toFixed(1)}%</span>
+                        </div>
+                        {outcome.ai_prob !== null && (
+                          <div className="flex justify-between items-center text-sm mb-1">
+                            <span className="text-gray-500">Prob IA:</span>
+                            <span className={`font-bold ${outcome.is_value ? 'text-[#064E3B]' : 'text-[#1A1C1E]'}`}>
+                              {(outcome.ai_prob * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                        )}
+                        {outcome.ev !== null && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500">EV:</span>
+                            <span className={`font-bold ${outcome.ev > 0 ? 'text-[#064E3B]' : 'text-red-600'}`}>
+                              {outcome.ev > 0 ? '+' : ''}{outcome.ev.toFixed(2)}%
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : allCandidates.length === 0 ? (
             <div className="text-center py-12 text-[#64748B]">
               No hay opciones disponibles para este partido.
             </div>
@@ -148,6 +221,7 @@ export default function AllOptionsModal({
 
                       <div className="col-span-2 md:col-span-1 text-right mt-2 md:mt-0">
                         <div className="bg-[#1A1C1E] text-white px-5 py-3 rounded-xl font-black text-center min-w-[80px]">
+
                           {odds.toFixed(2)}
                         </div>
                       </div>

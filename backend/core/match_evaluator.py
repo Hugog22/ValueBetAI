@@ -10,6 +10,7 @@ Supports two evaluator paths:
 The correct evaluator is selected by cache_service based on sport key.
 """
 
+import math
 import random
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -44,6 +45,179 @@ _WC_ODDS_POOL = [
     {"home": 3.00, "draw": 3.30, "away": 2.30, "over25": 2.00, "under25": 1.80},
     {"home": 2.20, "draw": 3.10, "away": 3.30, "over25": 1.90, "under25": 1.90},
 ]
+
+
+# ---------------------------------------------------------------------------
+# Poisson-based AI probability helpers for all markets
+# ---------------------------------------------------------------------------
+
+def _poisson_pmf(lam: float, k: int) -> float:
+    """Poisson probability mass function P(X = k). Safe against overflow."""
+    if k < 0 or lam <= 0:
+        return 0.0
+    try:
+        return math.exp(-lam) * (lam ** k) / math.factorial(k)
+    except (OverflowError, ValueError):
+        return 0.0
+
+
+def _prob_over_goals(lam_home: float, lam_away: float, threshold: float) -> float:
+    """
+    P(total goals > threshold) using independent Poisson distributions.
+    Works for any threshold: 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.5, 4.0...
+    """
+    n = int(math.floor(threshold))
+    prob_le = 0.0
+    for total in range(n + 1):
+        for h in range(total + 1):
+            a = total - h
+            prob_le += _poisson_pmf(lam_home, h) * _poisson_pmf(lam_away, a)
+    return max(0.0, min(1.0, 1.0 - prob_le))
+
+
+def _prob_covers_handicap(lam_team: float, lam_opp: float, handicap: float) -> float:
+    """
+    P(team covers Asian handicap) using independent Poisson distributions.
+
+    handicap > 0: team has an advantage (e.g., away +1.0 → gets a 1-goal head start).
+    handicap < 0: team has a disadvantage (e.g., home -1.0 → must win by 2+).
+
+    Quarter handicaps (.25 / .75) are split bets: average of the two adjacent lines.
+    On whole-number handicaps, an exact-margin result (push) is treated as a half win.
+    """
+    # Quarter handicap → split between two adjacent half-lines
+    frac = round(handicap % 0.5, 6)
+    if abs(abs(frac) - 0.25) < 0.001:
+        p1 = _prob_covers_handicap(lam_team, lam_opp, round(handicap - 0.25, 2))
+        p2 = _prob_covers_handicap(lam_team, lam_opp, round(handicap + 0.25, 2))
+        return (p1 + p2) / 2.0
+
+    max_g = 15
+    p_covers = 0.0
+    for t in range(max_g + 1):
+        for o in range(max_g + 1):
+            p = _poisson_pmf(lam_team, t) * _poisson_pmf(lam_opp, o)
+            margin = t + handicap - o
+            if margin > 0.0:
+                p_covers += p
+            elif abs(margin) < 0.001 and abs(handicap % 1.0) < 0.001:
+                # Push on whole-number handicap: half the stake returned
+                p_covers += p * 0.5
+    return max(0.0, min(1.0, p_covers))
+
+
+def _normalize_team_name(name: str) -> str:
+    """Lowercase + strip for fuzzy team name matching."""
+    return name.lower().strip().replace("-", " ")
+
+
+def _build_all_markets(
+    match,
+    db,
+    pred_probs: dict,
+    prob_over25: float,
+    lam_home: float,
+    lam_away: float,
+) -> list[dict]:
+    """
+    Build enriched market data for ALL bookmaker odds stored in MarketOdds.
+
+    For each (market_key, point) group:
+      - Averages prices across all bookmakers for the same outcome
+      - Adds implied_prob  = 1 / bookmaker_odds
+      - Adds ai_prob       = model probability (Poisson for totals/spreads, predictor for 1x2)
+      - Adds ev            = (bookmaker_odds * ai_prob - 1) * 100
+      - Adds is_value      = ev > dynamic threshold
+
+    This function is ADDITIVE — it does not affect bestPick, allCandidates, or any
+    existing logic. It only provides the new 'allMarkets' field.
+    """
+    if db is None:
+        return []
+
+    rows = db.query(MarketOdds).filter(MarketOdds.match_id == match.id).all()
+    if not rows:
+        return []
+
+    home_norm = _normalize_team_name(match.home_team.name)
+    away_norm = _normalize_team_name(match.away_team.name)
+    eps = 1e-6
+
+    # Group: (market_key, point) → outcome_name → [prices from different bookmakers]
+    from collections import defaultdict
+    groups: dict = defaultdict(lambda: defaultdict(list))
+    for row in rows:
+        key = (row.market_key, row.point)
+        groups[key][row.outcome_name].append(row.price)
+
+    # Sort order: h2h first, then totals ascending by line, then spreads, then rest
+    _market_order = {"h2h": 0, "totals": 1, "spreads": 2, "h2h_lay": 3}
+
+    def _sort_key(k):
+        mkey, point = k
+        return (_market_order.get(mkey, 9), point if point is not None else 0.0)
+
+    result = []
+
+    for (mkey, point) in sorted(groups.keys(), key=_sort_key):
+        outcomes_prices = groups[(mkey, point)]
+        outcomes_list = []
+
+        for outcome_name, prices in outcomes_prices.items():
+            avg_price   = sum(prices) / len(prices)
+            implied_prob = round(1.0 / (avg_price + eps), 4)
+
+            # ── AI probability per market ──────────────────────────────────
+            ai_prob: float | None = None
+            name_norm = _normalize_team_name(outcome_name)
+
+            if mkey == "h2h":
+                if "draw" in name_norm:
+                    ai_prob = float(pred_probs.get("draw", 0.0))
+                elif name_norm in home_norm or home_norm in name_norm:
+                    ai_prob = float(pred_probs.get("home", 0.0))
+                elif name_norm in away_norm or away_norm in name_norm:
+                    ai_prob = float(pred_probs.get("away", 0.0))
+
+            elif mkey == "totals" and point is not None:
+                if name_norm == "over":
+                    ai_prob = _prob_over_goals(lam_home, lam_away, float(point))
+                elif name_norm == "under":
+                    ai_prob = 1.0 - _prob_over_goals(lam_home, lam_away, float(point))
+
+            elif mkey == "spreads" and point is not None:
+                # The API stores each side with its own signed point
+                # (e.g. home=-1.25, away=+1.25)
+                if name_norm in home_norm or home_norm in name_norm:
+                    ai_prob = _prob_covers_handicap(lam_home, lam_away, float(point))
+                elif name_norm in away_norm or away_norm in name_norm:
+                    ai_prob = _prob_covers_handicap(lam_away, lam_home, float(point))
+
+            # ── EV and value flag ──────────────────────────────────────────
+            if ai_prob is not None and ai_prob > 0:
+                ev      = round((avg_price * ai_prob - 1.0) * 100, 2)
+                min_ev  = _dynamic_ev_threshold(avg_price)
+                is_value = ev > min_ev
+            else:
+                ev       = None
+                is_value = False
+
+            outcomes_list.append({
+                "name":           outcome_name,
+                "bookmaker_odds": round(avg_price, 3),
+                "implied_prob":   implied_prob,
+                "ai_prob":        round(ai_prob, 4) if ai_prob is not None else None,
+                "ev":             ev,
+                "is_value":       is_value,
+            })
+
+        result.append({
+            "market_key": mkey,
+            "point":      point,
+            "outcomes":   outcomes_list,
+        })
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -219,6 +393,10 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
     source     = odds.pop("_source", "mock")
     all_bookmakers_h2h = odds.pop("all_bookmakers_h2h", [])
 
+    # Expected goals for Poisson-based allMarkets evaluation
+    lam_home = float(features.get("home_xg_for_avg10", 1.45))
+    lam_away = float(features.get("away_xg_for_avg10", 1.10))
+
     predict_features = {k: v for k, v in features.items() if not k.startswith("_")}
     pred             = predictor.predict_match(predict_features)
 
@@ -278,6 +456,10 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
 
     candidates.sort(key=lambda x: x["probability"], reverse=True)
 
+    all_markets = _build_all_markets(
+        match, db, pred["probabilities"], pred["prob_over25"], lam_home, lam_away
+    )
+
     return {
         "id":         match.id,
         "homeTeam":   home,
@@ -303,6 +485,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
         "topPicks":      candidates[:3],
         "justification": f"{home} vs {away} — evaluación de fútbol.",
         "all_bookmakers": all_bookmakers_h2h,
+        "allMarkets":    all_markets,
     }
 
 
@@ -367,9 +550,14 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     odds   = _get_odds(match, db)
     if odds is None:
         return None
-        
+
     source = odds.pop("_source", "mock")
     all_bookmakers_h2h = odds.pop("all_bookmakers_h2h", [])
+
+    # Expected goals for Poisson-based allMarkets evaluation
+    # Use real xG stats from the WC if available, else use defaults
+    lam_home = float(extra_features.get("home_avg_xg") or 1.30)
+    lam_away = float(extra_features.get("away_avg_xg") or 1.10)
 
     eps        = 1e-6
     candidates = []
@@ -427,6 +615,10 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
         best = max(candidates, key=lambda x: x["ev"])
 
     candidates.sort(key=lambda x: x["probability"], reverse=True)
+
+    all_markets = _build_all_markets(
+        match, db, pred["probabilities"], pred["prob_over25"], lam_home, lam_away
+    )
 
     # Build rich justification with FIFA context and Live 2026 DB stats
     home_pts    = pred.get("home_fifa_pts", 0)
@@ -490,4 +682,5 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
         "topPicks":      candidates[:3],
         "justification": justification,
         "all_bookmakers": all_bookmakers_h2h,
+        "allMarkets":    all_markets,
     }

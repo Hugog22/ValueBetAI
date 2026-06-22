@@ -87,6 +87,7 @@ interface Match {
   isSteam?: boolean; justification?: string;
   all_bookmakers?: BookmakerOdds[];
   allCandidates?: PickData[];
+  allMarkets?: any[];
   // World Cup specific
   homeFifaPts?: number; awayFifaPts?: number;
   homeSquadQuality?: number; awaySquadQuality?: number;
@@ -667,6 +668,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
           homeTeam={getEsName(activeOptionsMatch.homeTeam)}
           awayTeam={getEsName(activeOptionsMatch.awayTeam)}
           allCandidates={activeOptionsMatch.allCandidates || []}
+          allMarkets={activeOptionsMatch.allMarkets || []}
           onClose={() => setActiveOptionsMatch(null)}
           onSimulateBet={(candidate) => {
             handleSimulateBet(activeOptionsMatch.id, candidate, activeOptionsMatch.homeTeam, activeOptionsMatch.awayTeam);
