@@ -576,7 +576,9 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     # We normalise by stripping a trailing 's' to match both singular and plural variants
     _raw_stage = getattr(match, 'stage', '') or ''
     _stage_norm = _raw_stage.lower().rstrip('s')  # 'quarter_finals' -> 'quarter_final'
-    is_knockout = _stage_norm in ('round_of_16', 'quarter_final', 'semi_final', 'final')
+    
+    # Matches 'round_of_16', 'last_16', 'last_32', 'quarter_final', 'semi_final', 'final'
+    is_knockout = any(k in _stage_norm for k in ('round_of_', 'last_', 'quarter_final', 'semi_final', 'final')) and 'group' not in _stage_norm
     
     local_db_created = False
     if db is None:
