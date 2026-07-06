@@ -572,7 +572,11 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
     home, away = match.home_team.name, match.away_team.name
 
     # Detect knockout stage
-    is_knockout = getattr(match, 'stage', '') in ('round_of_16', 'quarter_final', 'semi_final', 'final')
+    # football-data.org returns plural forms: 'quarter_finals', 'semi_finals', 'round_of_16'
+    # We normalise by stripping a trailing 's' to match both singular and plural variants
+    _raw_stage = getattr(match, 'stage', '') or ''
+    _stage_norm = _raw_stage.lower().rstrip('s')  # 'quarter_finals' -> 'quarter_final'
+    is_knockout = _stage_norm in ('round_of_16', 'quarter_final', 'semi_final', 'final')
     
     local_db_created = False
     if db is None:

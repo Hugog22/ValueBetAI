@@ -399,7 +399,8 @@ def _analytic_ou25(home_quality: float, away_quality: float,
     return round(1.0 - p_under, 4)
 
 
-def _anchor_to_fifa_differential(probs: dict, home_pts: float, away_pts: float) -> dict:
+def _anchor_to_fifa_differential(probs: dict, home_pts: float, away_pts: float,
+                                  is_knockout: bool = False) -> dict:
     """
     Mezcla las probabilidades del modelo ML con las del modelo analítico
     usando alpha como peso del modelo analítico.
@@ -408,11 +409,25 @@ def _anchor_to_fifa_differential(probs: dict, home_pts: float, away_pts: float) 
     """
     diff = abs(home_pts - away_pts)
     if diff < 150:
+        if is_knockout:
+            # The ML model was trained mostly on group-stage data and strongly
+            # overestimates draw probability in evenly-matched knockout games.
+            # Use a heavy analytic blend (0.55) to correct this: in knockout
+            # rounds a draw at 90' is just one possible path to penalties, so
+            # the true draw probability is far lower than what the ML outputs.
+            analytic = _analytic_predict(home_pts, away_pts, 60.0, 60.0, 0.0, True)
+            alpha = 0.55  # heavy blend toward analytic for knockout
+            blended = {
+                k: (1 - alpha) * probs[k] + alpha * analytic[k]
+                for k in ("home", "draw", "away")
+            }
+            total = sum(blended.values())
+            return {k: round(v / total, 4) for k, v in blended.items()}
         return probs
 
     alpha = min(0.65, 0.25 + diff / 1500.0)
 
-    analytic = _analytic_predict(home_pts, away_pts, 60.0, 60.0, 0.0, False)
+    analytic = _analytic_predict(home_pts, away_pts, 60.0, 60.0, 0.0, is_knockout)
     blended = {
         k: (1 - alpha) * probs[k] + alpha * analytic[k]
         for k in ("home", "draw", "away")
@@ -564,7 +579,8 @@ class WorldCupPredictor:
             
             probs_1x2 = {"home": float(p_home), "draw": float(p_draw), "away": float(p_away)}
             probs_1x2 = _anchor_to_fifa_differential(
-                probs_1x2, fv["home_fifa_pts"], fv["away_fifa_pts"]
+                probs_1x2, fv["home_fifa_pts"], fv["away_fifa_pts"],
+                is_knockout=is_knockout,
             )
         else:
             probs_1x2 = _analytic_predict(
