@@ -61,3 +61,14 @@ export function getEsName(teamName: string): string {
   const found = Object.keys(COUNTRY_NAMES_ES).find(k => k.toUpperCase() === upper);
   return found ? COUNTRY_NAMES_ES[found] : teamName;
 }
+
+export function translateText(text: string): string {
+  if (!text) return text;
+  let translated = text;
+  Object.keys(COUNTRY_NAMES_ES).forEach(enName => {
+    // Replace whole words, ignoring case is optional but exact match is safer
+    const regex = new RegExp(`\\b${enName}\\b`, 'g');
+    translated = translated.replace(regex, COUNTRY_NAMES_ES[enName]);
+  });
+  return translated;
+}

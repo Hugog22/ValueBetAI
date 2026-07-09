@@ -38,38 +38,103 @@ META_PATH       = os.path.join(MODELS_DIR, "wc_training_meta.json")
 # Below this threshold the analytic model (FIFA points + squad quality) is
 # more reliable than a model trained on synthetic data.
 MIN_REAL_MATCHES_FOR_ML = 150
-
-
 # ---------------------------------------------------------------------------
-# FIFA Ranking Points — World Cup 2026 (March 2026 snapshot)
+# FIFA Ranking Points — World Cup 2026 (July 8, 2026 — live durante el torneo)
+# Fuente: inside.fifa.com/rankings/men
 # ---------------------------------------------------------------------------
 
 FIFA_POINTS: dict[str, float] = {
-    "Argentina": 1862.0, "France": 1840.0, "Spain": 1815.0,
-    "England": 1790.0, "Brazil": 1775.0, "Portugal": 1767.0,
-    "Belgium": 1744.0, "Netherlands": 1738.0, "Germany": 1728.0,
-    "Italy": 1719.0, "Colombia": 1692.0, "Uruguay": 1678.0,
-    "Morocco": 1669.0, "Croatia": 1654.0, "Senegal": 1638.0,
-    "United States": 1630.0, "Mexico": 1624.0, "Japan": 1614.0,
-    "Ecuador": 1608.0, "South Korea": 1596.0, "Canada": 1588.0,
-    "Australia": 1580.0, "Switzerland": 1570.0, "Poland": 1556.0,
-    "Denmark": 1548.0, "Serbia": 1536.0, "Turkey": 1524.0,
-    "Austria": 1514.0, "Ukraine": 1506.0, "Hungary": 1498.0,
-    "Slovakia": 1490.0, "Romania": 1478.0, "Slovenia": 1468.0,
-    "Czechia": 1460.0, "Scotland": 1448.0, "Greece": 1438.0,
-    "Albania": 1428.0, "Georgia": 1420.0, "Costa Rica": 1410.0,
-    "Panama": 1398.0, "Venezuela": 1388.0, "Chile": 1378.0,
-    "Paraguay": 1366.0, "Bolivia": 1348.0, "Honduras": 1336.0,
-    "El Salvador": 1320.0, "New Zealand": 1298.0, "Saudi Arabia": 1280.0,
-    "Haiti": 1260.0, "Curaçao": 1250.0, "Ivory Coast": 1530.0,
-    "Sweden": 1530.0, "Tunisia": 1520.0, "Cape Verde": 1300.0,
-    "Egypt": 1500.0, "Iran": 1610.0, "Iraq": 1420.0,
-    "Norway": 1460.0, "Algeria": 1480.0, "Jordan": 1380.0,
-    "DR Congo": 1380.0, "Ghana": 1450.0, "Uzbekistan": 1380.0,
-    "South Africa": 1410.0, "Bosnia & Herzegovina": 1330.0, "Qatar": 1440.0,
-    # Aliases
-    "USA": 1630.0, "Korea Republic": 1596.0, "Türkiye": 1524.0,
-    "Czech Republic": 1460.0,
+    # Top 10
+    "France":           1925.88,
+    "Argentina":        1825.15,
+    "Spain":            1912.34,
+    "England":          1871.39,
+    "Brazil":           1804.32,
+    "Morocco":          1803.99,
+    "Portugal":         1787.85,
+    "Belgium":          1778.38,
+    "Netherlands":      1775.54,
+    "Mexico":           1754.30,
+    # 11–20
+    "Colombia":         1739.89,
+    "Germany":          1729.22,
+    "Croatia":          1723.05,
+    "Italy":            1704.73,
+    "Switzerland":      1699.38,
+    "United States":    1690.33,
+    "Japan":            1673.88,
+    "Senegal":          1653.43,
+    "Norway":           1651.29,
+    "Uruguay":          1634.70,
+    # 21–30
+    "Denmark":          1619.47,
+    "Iran":             1609.85,
+    "Austria":          1599.82,
+    "Egypt":            1597.04,
+    "Ecuador":          1592.59,
+    "Nigeria":          1585.02,
+    "Turkey":           1582.54,
+    "Australia":        1581.51,
+    "Algeria":          1576.80,
+    "Canada":           1571.34,
+    # 31–40
+    "Ivory Coast":      1565.47,
+    "South Korea":      1558.72,
+    "Ukraine":          1549.29,
+    "Paraguay":         1542.48,
+    "Russia":           1529.60,
+    "Poland":           1526.18,
+    "Sweden":           1525.58,
+    "Wales":            1516.85,
+    "Hungary":          1508.39,
+    "Serbia":           1502.13,
+    # 41–51
+    "DR Congo":         1495.48,
+    "Scotland":         1481.22,
+    "Cameroon":         1481.24,
+    "Panama":           1478.41,
+    "Slovakia":         1473.98,
+    "Greece":           1473.19,
+    "Venezuela":        1469.18,
+    "Czechia":          1467.26,
+    "Chile":            1458.20,
+    "Peru":             1457.69,
+    "Costa Rica":       1456.03,
+    # 53–69
+    "Mali":             1455.59,
+    "South Africa":     1451.24,
+    "Republic of Ireland": 1441.10,
+    "Slovenia":         1441.09,
+    "Tunisia":          1428.58,
+    "Saudi Arabia":     1425.52,
+    "Qatar":            1411.06,
+    "Uzbekistan":       1409.73,
+    "Bosnia and Herzegovina": 1408.03,
+    "Burkina Faso":     1407.00,
+    "Iraq":             1404.72,
+    "Cape Verde":       1402.97,
+    "Ghana":            1397.00,
+    "Honduras":         1378.97,
+    "Albania":          1376.03,
+    "UAE":              1370.47,
+    "North Macedonia":  1369.16,
+    # Other nations (not in screenshots — keeping reasonable estimates)
+    "Romania":          1365.00,
+    "Georgia":          1360.00,
+    "Bolivia":          1348.00,
+    "El Salvador":      1320.00,
+    "New Zealand":      1298.00,
+    "Haiti":            1260.00,
+    "Curaçao":          1250.00,
+    "Jordan":           1380.00,
+    # Aliases (same value as canonical name)
+    "USA":              1690.33,
+    "Korea Republic":   1558.72,
+    "Türkiye":          1582.54,
+    "Czech Republic":   1467.26,
+    "Bosnia & Herzegovina": 1408.03,
+    "Côte d'Ivoire":    1565.47,
+    "IR Iran":          1609.85,
 }
 
 DEFAULT_FIFA_POINTS = 1350.0  # for teams not in the ranking
@@ -346,15 +411,25 @@ def _analytic_predict(home_pts: float, away_pts: float,
                       home_quality: float, away_quality: float,
                       form_diff: float, is_knockout: bool) -> dict:
     """
-    Logistic model using FIFA points + squad quality differential.
+    Logistic model using FIFA points + squad quality + recent form.
     Returns P(home win), P(draw), P(away win).
     Calibrated against historical World Cup results.
-    """
-    # Composite strength score (70% FIFA points, 30% squad quality)
-    home_str = 0.70 * home_pts + 0.30 * home_quality * 15
-    away_str = 0.70 * away_pts + 0.30 * away_quality * 15
 
-    delta = home_str - away_str + form_diff * 30
+    Weight breakdown:
+      - 65% FIFA ranking points  (long-term quality signal)
+      - 20% squad quality score  (individual player talent)
+      - 15% recent tournament form (form_diff from last 5 official matches,
+            0–15 pts scale: win=3, draw=1, loss=0)
+    """
+    # Composite strength score: 65% FIFA + 20% squad quality
+    # Form is added separately as a delta term (15% of strength range ≈ ×50 multiplier)
+    home_str = 0.65 * home_pts + 0.20 * home_quality * 15
+    away_str = 0.65 * away_pts + 0.20 * away_quality * 15
+
+    # form_diff is in [-15, +15] points range;
+    # multiplier 35 gives ~±525 pts swing for max form gap (~10% of typical FIFA spread).
+    # This makes a 5-pt gap (e.g. 3W-0D-0L vs 1W-1D-1L) worth about +10pp probability.
+    delta = home_str - away_str + form_diff * 35
 
     # Bradley-Terry logistic for home win (extremely sharp curve to crush mismatches)
     p_home = 1.0 / (1.0 + 10.0 ** (-delta / 200.0))
@@ -400,12 +475,18 @@ def _analytic_ou25(home_quality: float, away_quality: float,
 
 
 def _anchor_to_fifa_differential(probs: dict, home_pts: float, away_pts: float,
-                                  is_knockout: bool = False) -> dict:
+                                  is_knockout: bool = False,
+                                  home_qual: float = 60.0,
+                                  away_qual: float = 60.0,
+                                  form_diff: float = 0.0) -> dict:
     """
     Mezcla las probabilidades del modelo ML con las del modelo analítico
     usando alpha como peso del modelo analítico.
     Evita que el ML se aleje demasiado de lo que dictan los FIFA points
     en partidos muy desiguales (donde el ML tiene menos datos de entrenamiento).
+
+    Now also accepts squad quality and tournament form_diff so the analytic
+    anchor itself reflects real current-tournament data, not just FIFA points.
     """
     diff = abs(home_pts - away_pts)
     if diff < 150:
@@ -415,7 +496,7 @@ def _anchor_to_fifa_differential(probs: dict, home_pts: float, away_pts: float,
             # Use a heavy analytic blend (0.55) to correct this: in knockout
             # rounds a draw at 90' is just one possible path to penalties, so
             # the true draw probability is far lower than what the ML outputs.
-            analytic = _analytic_predict(home_pts, away_pts, 60.0, 60.0, 0.0, True)
+            analytic = _analytic_predict(home_pts, away_pts, home_qual, away_qual, form_diff, True)
             alpha = 0.55  # heavy blend toward analytic for knockout
             blended = {
                 k: (1 - alpha) * probs[k] + alpha * analytic[k]
@@ -427,7 +508,7 @@ def _anchor_to_fifa_differential(probs: dict, home_pts: float, away_pts: float,
 
     alpha = min(0.65, 0.25 + diff / 1500.0)
 
-    analytic = _analytic_predict(home_pts, away_pts, 60.0, 60.0, 0.0, is_knockout)
+    analytic = _analytic_predict(home_pts, away_pts, home_qual, away_qual, form_diff, is_knockout)
     blended = {
         k: (1 - alpha) * probs[k] + alpha * analytic[k]
         for k in ("home", "draw", "away")
@@ -581,6 +662,9 @@ class WorldCupPredictor:
             probs_1x2 = _anchor_to_fifa_differential(
                 probs_1x2, fv["home_fifa_pts"], fv["away_fifa_pts"],
                 is_knockout=is_knockout,
+                home_qual=fv["home_squad_quality"],
+                away_qual=fv["away_squad_quality"],
+                form_diff=fv["form_diff"],
             )
         else:
             probs_1x2 = _analytic_predict(

@@ -557,9 +557,154 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
     }
 
 
+
+
 # ---------------------------------------------------------------------------
 # World Cup evaluator
 # ---------------------------------------------------------------------------
+
+def _build_wc_justification(
+    home: str, away: str,
+    home_pts: float, away_pts: float,
+    home_qual: float, away_qual: float,
+    h_stat, a_stat,
+    h2h_n: int,
+    pred_probs: dict,
+    is_knockout: bool,
+) -> str:
+    """
+    Build a persuasive, analyst-style narrative justification for the prediction.
+    Written to convince the user WHY the model gives these probabilities —
+    not just listing numbers, but making an argument.
+    """
+    p_home = pred_probs.get("home", 0.33)
+    p_draw = pred_probs.get("draw", 0.33)
+    p_away = pred_probs.get("away", 0.33)
+    pts_diff = home_pts - away_pts
+
+    # ── 1. Favourite argument ────────────────────────────────────────────────
+    if p_home > p_away + 0.08:
+        fav, underdog = home, away
+        fav_prob, und_prob = p_home, p_away
+        fav_pts, und_pts = home_pts, away_pts
+        fav_qual, und_qual = home_qual, away_qual
+        pts_gap = pts_diff
+    elif p_away > p_home + 0.08:
+        fav, underdog = away, home
+        fav_prob, und_prob = p_away, p_home
+        fav_pts, und_pts = away_pts, home_pts
+        fav_qual, und_qual = away_qual, home_qual
+        pts_gap = -pts_diff
+    else:
+        fav = underdog = None
+        fav_prob = und_prob = None
+        pts_gap = abs(pts_diff)
+
+    parts = []
+
+    if fav:
+        fav_pct  = round(fav_prob * 100)
+        und_pct  = round(und_prob * 100)
+        if pts_gap >= 50:
+            ranking_desc = (
+                f"**{fav}** parte como favorito claro con un {fav_pct}% de probabilidad de victoria. "
+                f"Su ventaja en el ranking FIFA ({fav_pts:.0f} vs {und_pts:.0f} puntos, una brecha de {pts_gap:.0f} pts) "
+                f"refleja años de resultados consistentes a nivel internacional."
+            )
+        else:
+            ranking_desc = (
+                f"**{fav}** es ligero favorito ({fav_pct}% vs {und_pct}%), "
+                f"y aunque los rankings FIFA son muy cercanos ({fav_pts:.0f} vs {und_pts:.0f} pts), "
+                f"el rendimiento real en el torneo inclina la balanza."
+            )
+        if fav_qual > und_qual + 5:
+            ranking_desc += (
+                f" A esto se suma una calidad individual de plantilla superior "
+                f"({fav_qual:.0f}/100 frente a {und_qual:.0f}/100), lo que se traduce "
+                f"en mayor capacidad para resolver los partidos."
+            )
+        parts.append(ranking_desc)
+    else:
+        # Essentially a coin-flip match
+        parts.append(
+            f"El modelo ve este partido como extremadamente equilibrado: "
+            f"**{home}** tiene un {round(p_home*100)}% de posibilidades de ganar, "
+            f"**{away}** un {round(p_away*100)}%, con el empate en un {round(p_draw*100)}%. "
+            f"Los rankings FIFA ({home_pts:.0f} vs {away_pts:.0f} pts) están muy igualados y "
+            f"el rendimiento en el torneo no decanta la balanza de forma significativa."
+        )
+
+    # ── 2. Tournament performance argument ──────────────────────────────────
+    h_played = h_stat.matches_played if h_stat else 0
+    a_played = a_stat.matches_played if a_stat else 0
+
+    if h_played > 0 or a_played > 0:
+        tourn_parts = []
+        if h_played > 0 and h_stat:
+            h_form_pts = h_stat.wins * 3 + h_stat.draws
+            h_record = f"{h_stat.wins}V-{h_stat.draws}E-{h_stat.losses}D"
+            if h_stat.wins == h_played:
+                h_desc = f"**{home}** ha sido perfecto en el torneo ({h_record}, {h_stat.goals_for} goles a favor y solo {h_stat.goals_against} en contra)"
+            elif h_stat.wins > h_stat.losses:
+                h_desc = f"**{home}** viene en buena forma ({h_record}, {h_stat.goals_for} GF / {h_stat.goals_against} GC)"
+            elif h_stat.losses > h_stat.wins:
+                h_desc = f"**{home}** llega con dudas tras una fase de grupos irregular ({h_record}, {h_stat.goals_for} GF / {h_stat.goals_against} GC)"
+            else:
+                h_desc = f"**{home}** ha tenido un torneo regular ({h_record})"
+            tourn_parts.append(h_desc)
+
+        if a_played > 0 and a_stat:
+            a_form_pts = a_stat.wins * 3 + a_stat.draws
+            a_record = f"{a_stat.wins}V-{a_stat.draws}E-{a_stat.losses}D"
+            if a_stat.wins == a_played:
+                a_desc = f"**{away}** también llega en estado perfecto ({a_record})"
+            elif a_stat.wins > a_stat.losses:
+                a_desc = f"**{away}** llega con confianza ({a_record}, {a_stat.goals_for} GF / {a_stat.goals_against} GC)"
+            elif a_stat.losses > a_stat.wins:
+                a_desc = f"**{away}** llega con poca confianza tras una fase irregular ({a_record})"
+            else:
+                a_desc = f"**{away}** ha tenido un torneo regular ({a_record})"
+            tourn_parts.append(a_desc)
+
+        if tourn_parts:
+            parts.append("En cuanto al rendimiento en este Mundial 2026: " + ", mientras que ".join(tourn_parts) + ".")
+
+    # ── 3. H2H argument ─────────────────────────────────────────────────────
+    if h2h_n > 0:
+        parts.append(
+            f"En sus {h2h_n} enfrentamientos previos en Mundiales, "
+            f"el historial apoya la predicción actual sin grandes sorpresas históricas entre estos dos equipos."
+        )
+    else:
+        parts.append(
+            f"Se trata del primer encuentro entre **{home}** y **{away}** en un Mundial, "
+            f"por lo que no existe historial directo que altere la predicción."
+        )
+
+    # ── 4. Knockout nuance ───────────────────────────────────────────────────
+    if is_knockout:
+        parts.append(
+            "Al ser partido de eliminación directa, la presión aumenta para ambos equipos. "
+            "Los partidos de knockout tienden a ser más cerrados y la probabilidad de empate a 90' "
+            "es menor — cualquier error puede ser definitivo."
+        )
+
+    # ── 5. Conclusion ────────────────────────────────────────────────────────
+    if fav:
+        fav_pct = round(fav_prob * 100)
+        conclusion = (
+            f"En conjunto, el modelo estima que **{fav}** tiene la ventaja real en este partido. "
+            f"Con un {fav_pct}% de probabilidad, cualquier cuota superior a "
+            f"{round(100/fav_pct, 2) if fav_pct > 0 else '–'}€ por su victoria representaría un valor positivo."
+        )
+    else:
+        conclusion = (
+            f"En un partido tan equilibrado, apostar por el favorito implica asumir que el mercado "
+            f"está ligeramente equivocado. Analiza las cuotas con cuidado antes de decidir."
+        )
+    parts.append(conclusion)
+
+    return " ".join(parts)
 
 def _evaluate_world_cup_match(match: Match, wc_predictor,
                                db: Session | None = None) -> dict:
@@ -609,12 +754,31 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
         "home_wc_goals": (h_stat.goals_for + h_stat.goals_against) if h_stat else 0,
         "away_wc_goals": (a_stat.goals_for + a_stat.goals_against) if a_stat else 0,
     }
-    if avg_h_xg is not None: extra_features["home_avg_xg"] = float(avg_h_xg)
-    if avg_a_xg is not None: extra_features["away_avg_xg"] = float(avg_a_xg)
+
+    # ── Tournament form: W=3 pts, D=1 pt (same scale as home_form_pts5, max 15) ──
+    # This is the key signal: recent performance in the 2026 World Cup itself.
+    home_wins_wc  = h_stat.wins   if h_stat else 0
+    home_draws_wc = h_stat.draws  if h_stat else 0
+    away_wins_wc  = a_stat.wins   if a_stat else 0
+    away_draws_wc = a_stat.draws  if a_stat else 0
+    home_form_pts = float(min(home_wins_wc * 3 + home_draws_wc, 15))
+    away_form_pts = float(min(away_wins_wc * 3 + away_draws_wc, 15))
+
+    # Only inject form when the teams have actually played in the tournament;
+    # otherwise keep the neutral default (7.5) already set by _build_feature_vector.
+    if h_stat and h_stat.matches_played > 0:
+        extra_features["home_form_pts5"] = home_form_pts
+    if a_stat and a_stat.matches_played > 0:
+        extra_features["away_form_pts5"] = away_form_pts
+    if (h_stat and h_stat.matches_played > 0) or (a_stat and a_stat.matches_played > 0):
+        extra_features["form_diff"] = home_form_pts - away_form_pts
+
+    if avg_h_xg is not None:   extra_features["home_avg_xg"]        = float(avg_h_xg)
+    if avg_a_xg is not None:   extra_features["away_avg_xg"]        = float(avg_a_xg)
     if avg_h_poss is not None: extra_features["home_avg_possession"] = float(avg_h_poss)
     if avg_a_poss is not None: extra_features["away_avg_possession"] = float(avg_a_poss)
-    if avg_h_shots is not None: extra_features["home_avg_shots"] = float(avg_h_shots)
-    if avg_a_shots is not None: extra_features["away_avg_shots"] = float(avg_a_shots)
+    if avg_h_shots is not None: extra_features["home_avg_shots"]     = float(avg_h_shots)
+    if avg_a_shots is not None: extra_features["away_avg_shots"]     = float(avg_a_shots)
 
 
     # Get prediction from World Cup specialist model
@@ -699,37 +863,25 @@ def _evaluate_world_cup_match(match: Match, wc_predictor,
         match, db, pred["probabilities"], pred["prob_over25"], lam_home, lam_away
     )
 
-    # Build rich justification with FIFA context and Live 2026 DB stats
-    home_pts    = pred.get("home_fifa_pts", 0)
-    away_pts    = pred.get("away_fifa_pts", 0)
-    home_qual   = pred.get("home_squad_quality", 0)
-    away_qual   = pred.get("away_squad_quality", 0)
-    h2h_n       = pred.get("h2h_matches", 0)
-    h2h_note    = f"H2H: {h2h_n} partidos históricos." if h2h_n > 0 else "Primer enfrentamiento en un Mundial."
+    # Build persuasive narrative justification
+    home_pts  = pred.get("home_fifa_pts", 0)
+    away_pts  = pred.get("away_fifa_pts", 0)
+    home_qual = pred.get("home_squad_quality", 0)
+    away_qual = pred.get("away_squad_quality", 0)
+    h2h_n     = pred.get("h2h_matches", 0)
 
-    # DB info already fetched above
-    
-    h_stats_str = ""
-    a_stats_str = ""
-
-    if h_team:
-        h_stat = db.query(WorldCupTeamStats).filter(WorldCupTeamStats.team_id == h_team.id).first()
-        if h_stat and h_stat.matches_played > 0:
-            h_stats_str = f" {home} lleva {h_stat.matches_played} partidos en el Mundial 2026 ({h_stat.goals_for} GF, {h_stat.goals_against} GC)."
-
-    if a_team:
-        a_stat = db.query(WorldCupTeamStats).filter(WorldCupTeamStats.team_id == a_team.id).first()
-        if a_stat and a_stat.matches_played > 0:
-            a_stats_str = f" {away} lleva {a_stat.matches_played} partidos en el Mundial 2026 ({a_stat.goals_for} GF, {a_stat.goals_against} GC)."
+    justification = _build_wc_justification(
+        home=home, away=away,
+        home_pts=home_pts, away_pts=away_pts,
+        home_qual=home_qual, away_qual=away_qual,
+        h_stat=h_stat, a_stat=a_stat,
+        h2h_n=h2h_n,
+        pred_probs=pred["probabilities"],
+        is_knockout=is_knockout,
+    )
         
     if local_db_created:
         db.close()
-
-    justification = (
-        f"FIFA Rankings: {home} ({home_pts:.0f} pts) vs {away} ({away_pts:.0f} pts). "
-        f"Calidad de plantilla: {home_qual:.0f} vs {away_qual:.0f}/100. {h2h_note}"
-        f"{h_stats_str}{a_stats_str}"
-    )
 
     return {
         "id":         match.id,

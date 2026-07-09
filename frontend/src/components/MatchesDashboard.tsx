@@ -683,6 +683,10 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
           homeTeam={getEsName(activeAnalysisMatch.homeTeam)}
           awayTeam={getEsName(activeAnalysisMatch.awayTeam)}
           justification={activeAnalysisMatch.justification || ''}
+          homeFifaPts={activeAnalysisMatch.homeFifaPts}
+          awayFifaPts={activeAnalysisMatch.awayFifaPts}
+          homeSquadQuality={activeAnalysisMatch.homeSquadQuality}
+          awaySquadQuality={activeAnalysisMatch.awaySquadQuality}
           onClose={() => setActiveAnalysisMatch(null)}
         />
       )}

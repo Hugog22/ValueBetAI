@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import RichText from '@/components/RichText';
 
 interface FeaturedBetProps {
   homeTeam: string;
@@ -76,7 +77,7 @@ export default function FeaturedBet({
         </h1>
 
         <p className="text-[#64748B] text-lg leading-relaxed mb-10 font-medium">
-          {justification || "Nuestro modelo detecta una discrepancia significativa en la probabilidad real del mercado. Los datos sugieren una ventaja competitiva en esta selección específica."}
+          <RichText text={justification || "Nuestro modelo detecta una discrepancia significativa en la probabilidad real del mercado. Los datos sugieren una ventaja competitiva en esta selección específica."} />
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-6 pt-6 border-t border-[#E5E7EB]">
