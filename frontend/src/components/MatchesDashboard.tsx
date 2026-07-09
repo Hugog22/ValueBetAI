@@ -571,18 +571,12 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                     </div>
                   )}
 
-                  {/* FIFA ranking bar for World Cup matches */}
+                  {/* FIFA ranking stats (bar removed, just text if wanted, or completely removed) */}
                   {isWorldCupActive && match.homeFifaPts && match.awayFifaPts && (
-                    <div className="mb-4 space-y-2">
+                    <div className="mb-4">
                       <div className="flex items-center justify-between text-[10px] text-white/50 font-bold uppercase tracking-widest">
                         <span>Ranking FIFA</span>
                         <span>{match.homeFifaPts.toFixed(0)} vs {match.awayFifaPts.toFixed(0)} pts</span>
-                      </div>
-                      <div className="relative h-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <div
-                          className="fifa-rank-bar absolute left-0 top-0 h-full"
-                          style={{ width: `${(match.homeFifaPts / (match.homeFifaPts + match.awayFifaPts)) * 100}%` }}
-                        />
                       </div>
                     </div>
                   )}
@@ -590,7 +584,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                   <div className="mt-auto space-y-4">
                     {(match.bestPick ? [match.bestPick] : []).map((pick, pi) => (
                       <div key={pi} className="group">
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between mb-2">
                           <span className={`text-[10px] font-bold uppercase tracking-widest ${
                             isWorldCupActive ? 'text-amber-400/80' : 'text-[#64748B]'
                           }`}>{pick.market}</span>
@@ -598,6 +592,14 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                             AI {((pick.probability ?? 0) * 100).toFixed(0)}% vs Media {((pick.bookmaker_implied_prob ?? 0) * 100).toFixed(0)}%
                           </span>
                         </div>
+                        {isWorldCupActive && (
+                          <div className="relative h-1.5 bg-white/10 rounded-full overflow-hidden mb-3">
+                            <div
+                              className="fifa-rank-bar absolute left-0 top-0 h-full transition-all duration-1000"
+                              style={{ width: `${(pick.probability ?? 0) * 100}%` }}
+                            />
+                          </div>
+                        )}
                         <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4">
                           <div className={`text-base md:text-lg font-editorial font-bold pr-2 ${isWorldCupActive ? 'text-white' : 'text-[#1A1C1E]'}`}>
                             {pick.label}
