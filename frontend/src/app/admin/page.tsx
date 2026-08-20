@@ -26,7 +26,7 @@ export default function AdminDashboard() {
   const fetchCharacteristics = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:8001/api/admin/team-characteristics", {
+      const res = await fetch("/api/proxy/admin/team-characteristics", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
     setSuccess("");
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:8001/api/admin/team-characteristics", {
+      const res = await fetch("/api/proxy/admin/team-characteristics", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
