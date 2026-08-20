@@ -163,10 +163,21 @@ export default function BankrollPage() {
                 
             });
             const data = await res.json();
-            if (data.url) {
+            if (res.ok && data.url) {
                 window.location.href = data.url;
+            } else if (res.status === 400 || !data.url) {
+                // If user doesn't have a Stripe ID yet, redirect to checkout
+                const checkoutRes = await fetch(`${API}/stripe/create-checkout-session`, {
+                    method: 'POST',
+                });
+                const checkoutData = await checkoutRes.json();
+                if (checkoutRes.ok && checkoutData.url) {
+                    window.location.href = checkoutData.url;
+                } else {
+                    alert("Error al abrir la pasarela de pago. " + (checkoutData.detail || ""));
+                }
             } else {
-                alert("Error al abrir el portal de suscripción. Asegúrate de tenerlo activado en Stripe.");
+                alert(data.detail || "Error al abrir el portal de suscripción.");
             }
         } catch (err) {
             console.error(err);
