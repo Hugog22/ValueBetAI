@@ -59,6 +59,7 @@ interface Match {
   all_bookmakers?: BookmakerOdds[];
   allCandidates?: PickData[];
   allMarkets?: any[];
+  isMockOdds?: boolean;
 }
 
 interface ParlayLeg extends PickData {
@@ -376,29 +377,53 @@ export default function MatchesDashboard({ initialMatches, initialParlay }: Prop
                 }`}>
                   {/* LaLiga match header */}
                   {isLaLigaActive ? (
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest block mb-1" style={{ color: 'rgba(255,69,0,0.8)' }}>
-                          {new Date(match.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <h3 className="text-xl font-editorial font-bold text-white">{getEsName(match.homeTeam)} vs {getEsName(match.awayTeam)}</h3>
+                    <div className="mb-4">
+                      <span className="text-[10px] font-bold uppercase tracking-widest block mb-1" style={{ color: 'rgba(255,69,0,0.8)' }}>
+                        {new Date(match.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-xl font-editorial font-bold text-white">{getEsName(match.homeTeam)} vs {getEsName(match.awayTeam)}</h3>
+                          {match.isMockOdds && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 uppercase tracking-wider">
+                              Cuotas Simuladas
+                            </span>
+                          )}
+                        </div>
+                        {match.sport && (
+                          <span className="text-xs uppercase tracking-wider text-white/50 bg-white/5 px-2 py-1 rounded mt-2 sm:mt-0 self-start sm:self-auto">
+                            {match.sport}
+                          </span>
+                        )}
                       </div>
                       {match.bestPick?.risk && (
-                        <div className={`${match.bestPick.risk.bgClass} px-3 py-1 rounded-lg text-[8px] font-bold uppercase tracking-widest`}>
+                        <div className={`${match.bestPick.risk.bgClass} inline-block px-3 py-1 rounded-lg text-[8px] font-bold uppercase tracking-widest`}>
                           {match.bestPick.risk.level}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="flex justify-between items-start mb-6">
-                      <div>
-                        <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">
-                          {new Date(match.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <h3 className="text-xl font-editorial font-bold text-[#1A1C1E]">{getEsName(match.homeTeam)} vs {getEsName(match.awayTeam)}</h3>
+                    <div className="mb-6">
+                      <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">
+                        {new Date(match.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-xl font-editorial font-bold text-[#1A1C1E]">{getEsName(match.homeTeam)} vs {getEsName(match.awayTeam)}</h3>
+                          {match.isMockOdds && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 border border-red-200 uppercase tracking-wider">
+                              Cuotas Simuladas
+                            </span>
+                          )}
+                        </div>
+                        {match.sport && (
+                          <span className="text-xs uppercase tracking-wider text-[#63686D] bg-[#F1F4F8] px-2 py-1 rounded mt-2 sm:mt-0 self-start sm:self-auto">
+                            {match.sport}
+                          </span>
+                        )}
                       </div>
                       {match.bestPick?.risk && (
-                        <div className={`${match.bestPick.risk.bgClass} px-3 py-1 rounded-lg text-[8px] font-bold uppercase tracking-widest`}>
+                        <div className={`${match.bestPick.risk.bgClass} inline-block px-3 py-1 rounded-lg text-[8px] font-bold uppercase tracking-widest`}>
                           {match.bestPick.risk.level}
                         </div>
                       )}

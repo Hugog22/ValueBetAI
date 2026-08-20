@@ -9,6 +9,7 @@ Supports one evaluator path:
 
 import math
 import random
+import numpy as np
 from datetime import datetime
 from sqlalchemy.orm import Session
 from db.models import Match, Odds, MarketOdds, OddsHistory, Team
@@ -391,23 +392,48 @@ def _build_match_features(match: Match, db: Session | None = None) -> dict:
         "home_elo":          home_elo,
         "away_elo":          away_elo,
         "elo_diff":          home_elo - away_elo,
-        "home_xg_for_avg10": round(1.2 * h_pow, 2),
-        "away_xg_for_avg10": round(1.1 * a_pow, 2),
-        "xg_diff":           round((1.2 * h_pow) - (1.1 * a_pow), 2),
-        "home_possession_avg10":   round(50 * h_pow, 1),
-        "away_possession_avg10":   round(50 * a_pow, 1),
-        "possession_diff":         round((50 * h_pow) - (50 * a_pow), 1),
-        "home_shots_target_avg10": round(4.5 * h_pow, 1),
-        "away_shots_target_avg10": round(4.0 * a_pow, 1),
-        "shots_diff":              round((4.5 * h_pow) - (4.0 * a_pow), 1),
-        "home_absences":     rng.randint(0, 3),
-        "away_absences":     rng.randint(0, 3),
-        "absence_severity":  rng.randint(0, 1),
-        "rest_days_home":    rng.randint(4, 7),
-        "rest_days_away":    rng.randint(4, 7),
+        "home_xg_for_avg10": np.nan,
+        "away_xg_for_avg10": np.nan,
+        "xg_diff":           np.nan,
+        "home_possession_avg10":   np.nan,
+        "away_possession_avg10":   np.nan,
+        "possession_diff":         np.nan,
+        "home_shots_target_avg10": np.nan,
+        "away_shots_target_avg10": np.nan,
+        "shots_diff":              np.nan,
+        "home_absences":     0,
+        "away_absences":     0,
+        "absence_severity":  0,
+        "rest_days_home":    7.0,
+        "rest_days_away":    7.0,
     }
+
+    if db is not None:
+        from db.models import MatchTeamStatistics
+        # Fetch the most recent MatchTeamStatistics for home team
+        home_stats = db.query(MatchTeamStatistics).filter(MatchTeamStatistics.team_id == match.home_team_id).order_by(MatchTeamStatistics.id.desc()).first()
+        away_stats = db.query(MatchTeamStatistics).filter(MatchTeamStatistics.team_id == match.away_team_id).order_by(MatchTeamStatistics.id.desc()).first()
+
+        if home_stats:
+            base_feats["home_xg_for_avg10"] = home_stats.xg if home_stats.xg is not None else np.nan
+            base_feats["home_possession_avg10"] = home_stats.possession_pct if home_stats.possession_pct is not None else np.nan
+            base_feats["home_shots_target_avg10"] = home_stats.shots_on_target if home_stats.shots_on_target is not None else np.nan
+
+        if away_stats:
+            base_feats["away_xg_for_avg10"] = away_stats.xg if away_stats.xg is not None else np.nan
+            base_feats["away_possession_avg10"] = away_stats.possession_pct if away_stats.possession_pct is not None else np.nan
+            base_feats["away_shots_target_avg10"] = away_stats.shots_on_target if away_stats.shots_on_target is not None else np.nan
+
+        if not np.isnan(base_feats["home_xg_for_avg10"]) and not np.isnan(base_feats["away_xg_for_avg10"]):
+            base_feats["xg_diff"] = base_feats["home_xg_for_avg10"] - base_feats["away_xg_for_avg10"]
+        
+        if not np.isnan(base_feats["home_possession_avg10"]) and not np.isnan(base_feats["away_possession_avg10"]):
+            base_feats["possession_diff"] = base_feats["home_possession_avg10"] - base_feats["away_possession_avg10"]
+
+        if not np.isnan(base_feats["home_shots_target_avg10"]) and not np.isnan(base_feats["away_shots_target_avg10"]):
+            base_feats["shots_diff"] = base_feats["home_shots_target_avg10"] - base_feats["away_shots_target_avg10"]
     
-    return {**base_feats, **admin_feats}
+    return base_feats, admin_feats
 
 
 # ---------------------------------------------------------------------------
@@ -452,8 +478,8 @@ def _fractional_kelly(prob: float, odds: float, fraction: float = 0.20) -> int:
 # Dynamic AI Justification Generator
 # ---------------------------------------------------------------------------
 
-def _generate_justification(best: dict, home: str, away: str, base_feats: dict, admin_feats: dict) -> str:
-    """Generate a natural-language explanation formatted for the frontend modal."""
+def _generate_justification(best: dict, home: str, away: str, base_feats: dict, admin_feats: dict, importances: dict) -> str:
+    """Generate a natural-language explanation using actual feature importances."""
     prob_pct = int(best["probability"] * 100)
     market_prob = int(best["bookmaker_implied_prob"] * 100)
     ev = best["ev"]
@@ -462,31 +488,51 @@ def _generate_justification(best: dict, home: str, away: str, base_feats: dict, 
     text = f"Nuestro modelo predictivo XGBoost otorga una probabilidad real del {prob_pct}% a '{best['label']}', mientras que la cuota de la casa de apuestas asume solo un {market_prob}%. "
     
     # 2. Add transition word expected by frontend: "A esto"
-    text += f"A esto se le suma una clara ineficiencia del mercado, generando un Expected Value (EV) positivo del {ev}%. "
+    text += f"A esto se le suma una ineficiencia del mercado, generando un Expected Value (EV) positivo del {ev}%. "
     
-    # 3. Add transition word: "En "
-    if "admin_offensive_diff" in admin_feats:
-        # User defined features
-        if admin_feats["admin_offensive_diff"] > 1 and best["outcome"] == "home":
-            text += f"En el análisis de las métricas manuales, {home} presenta una fuerza ofensiva ({admin_feats['home_offensive_strength']}) muy superior a la defensa de {away}. "
-        elif admin_feats["admin_offensive_diff"] < -1 and best["outcome"] == "away":
-            text += f"En el desglose de fuerza de equipos, {away} destaca con un potencial ofensivo ({admin_feats['away_offensive_strength']}) que {home} tendrá problemas para contener. "
-        elif admin_feats["admin_motivation_diff"] != 0:
-            fav_team = home if admin_feats["admin_motivation_diff"] > 0 else away
-            text += f"En el plano psicológico, {fav_team} llega con un plus de motivación y momentum que el mercado no está reflejando correctamente en la cuota. "
+    # 3. Dynamic explanation based on top feature importances
+    if importances:
+        # Sort features by importance
+        top_features = sorted(importances.items(), key=lambda x: x[1], reverse=True)
+        # Find the most important feature that actually has a strong signal in this match
+        primary_reason = ""
+        for feat, imp in top_features:
+            val = base_feats.get(feat, admin_feats.get(feat, 0))
+            if np.isnan(val): continue
+                
+            if feat == "xg_diff" and val > 0.5 and best["outcome"] == "home":
+                primary_reason = f"En los datos estadísticos puros, el xG (Goles Esperados) es claramente superior para el local ({home}), lo que le otorga una ventaja competitiva evidente. "
+                break
+            elif feat == "xg_diff" and val < -0.5 and best["outcome"] == "away":
+                primary_reason = f"En los datos estadísticos puros, el xG (Goles Esperados) favorece al visitante ({away}), respaldando fuertemente esta predicción. "
+                break
+            elif feat == "elo_diff" and val > 100 and best["outcome"] == "home":
+                primary_reason = f"En el análisis histórico, el Elo dinámico confirma una superioridad estructural del equipo local. "
+                break
+            elif feat == "elo_diff" and val < -100 and best["outcome"] == "away":
+                primary_reason = f"En el análisis histórico, el Elo dinámico demuestra que el visitante tiene un nivel competitivo considerablemente mayor. "
+                break
+            elif feat == "possession_diff" and val > 10 and best["outcome"] == "home":
+                primary_reason = f"En el control del juego, el dominio de la posesión del equipo local minimiza las opciones del rival. "
+                break
+            elif feat == "admin_offensive_diff" and val > 1 and best["outcome"] == "home":
+                primary_reason = f"En el análisis de las métricas manuales, {home} presenta una fuerza ofensiva muy superior a la defensa de {away}. "
+                break
+            elif feat == "admin_motivation_diff" and abs(val) > 1:
+                fav_team = home if val > 0 else away
+                if (val > 0 and best["outcome"] == "home") or (val < 0 and best["outcome"] == "away"):
+                    primary_reason = f"En el plano psicológico, {fav_team} llega con un plus de motivación y momentum que el mercado no está reflejando. "
+                    break
+                    
+        if primary_reason:
+            text += primary_reason
         else:
-            text += f"En la simulación táctica, el equilibrio de fuerzas se rompe a favor de esta selección debido a la solidez estructural evaluada. "
+            text += "En los datos analizados, la combinación de múltiples factores tácticos y de forma reciente justifican el valor encontrado. "
     else:
-        text += f"En los datos estadísticos puros, el modelo ha detectado patrones históricos que respaldan fuertemente esta predicción. "
+        text += "En la simulación táctica, el equilibrio de fuerzas se rompe a favor de esta selección debido a la solidez estructural evaluada. "
         
     # 4. Add transition word: "Con un "
-    xg_diff = base_feats.get("xg_diff", 0)
-    if xg_diff > 0.5 and best["outcome"] == "home":
-        text += f"Con un xG (Goles Esperados) claramente superior para el local en los últimos partidos, la ventaja competitiva es evidente."
-    elif xg_diff < -0.5 and best["outcome"] == "away":
-        text += f"Con un xG (Goles Esperados) favorable al visitante, la probabilidad de éxito supera ampliamente el riesgo asumido."
-    else:
-        text += f"Con un cálculo de riesgo catalogado como '{best['risk']['level']}', esta selección es matemáticamente rentable a largo plazo."
+    text += f"Con un cálculo de riesgo catalogado como '{best['risk']['level']}', esta selección es matemáticamente rentable a largo plazo."
         
     return text
 
@@ -518,7 +564,9 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
     oddsSource, sport, bestPick, allCandidates, topPicks, justification.
     """
     home, away = match.home_team.name, match.away_team.name
-    features   = _build_match_features(match, db)
+    base_feats, admin_feats = _build_match_features(match, db)
+    # The predictor expects a single dict
+    features = {**base_feats, **admin_feats}
     odds       = _get_odds(match, db)
     if odds is None:
         return None
@@ -599,8 +647,10 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
     )
     
     # ── GENERATE AI ANALYSIS TEXT ──
+    # base_feats and admin_feats were extracted from _build_match_features!
     feats = {**base_feats, **admin_feats}
-    justification_text = _generate_justification(best, home, away, feats, admin_feats)
+    importances = predictor.get_feature_importances() if hasattr(predictor, "get_feature_importances") else {}
+    justification_text = _generate_justification(best, home, away, feats, admin_feats, importances)
 
     return {
         "id":         match.id,
@@ -609,6 +659,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
         "date":       match.date.isoformat() + "Z" if match.date else None,
         "status":     match.status,
         "oddsSource": source,
+        "isMockOdds": source == "mock",
         "sport":      "football",
         "bestPick": {
             "label":                  best["label"],

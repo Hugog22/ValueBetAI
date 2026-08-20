@@ -72,35 +72,24 @@ API_KEY = settings.API_SPORTS_KEY
 # ---------------------------------------------------------------------------
 def enrich_with_api_football(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Downloads contextual features from API-Football for the last 10 matches of each team.
-    Includes: xG, Possession, Shots on Target, Absences (Bajas), Fatigue (Rest days).
-    For historical bulk backtesting without blowing API rate limits, we simulate the fetch 
-    realistically if data isn't locally cached, but the architecture is fully implemented.
+    Integrates contextual features (xG, Possession, Shots on Target, Absences, Fatigue).
+    Replaces previously simulated data with NaN to prevent noise.
     """
     logger.info("Initializing API-Football Data Enrichment...")
     
-    # We expect these columns. If they don't exist, we fetch/simulate them.
+    # We expect these columns. If they don't exist, we initialize them with NaN.
     api_features = ["home_possession", "away_possession", "home_shots_target", "away_shots_target", "home_absences", "away_absences"]
     
     for col in api_features:
         if col not in df.columns:
-            logger.info(f"Fetching / Simulating `{col}` via API-Football endpoint...")
-            # Real implementation would call: GET https://v3.football.api-sports.io/fixtures/statistics
-            # Here we fill with realistic logical distributions for the backtest
-            if "possession" in col:
-                df[col] = [random.uniform(40, 60) for _ in range(len(df))]
-            elif "shots_target" in col:
-                df[col] = [max(0, int(random.gauss(4, 2))) for _ in range(len(df))]
-            elif "absences" in col:
-                # 0-3 key players missing
-                df[col] = [max(0, int(random.gauss(0, 1.5))) for _ in range(len(df))]
+            df[col] = np.nan
     
     # Rest days (Fatigue)
     if "rest_days_home" not in df.columns or df["rest_days_home"].isnull().all():
         df["rest_days_home"] = 7.0
         df["rest_days_away"] = 7.0
 
-    logger.info("✅ API-Football enrichment complete: xG, Possession, Shots, Absences, Fatigue integrated.")
+    logger.info("✅ API-Football enrichment complete: No more mock random data.")
     return df
 
 # ---------------------------------------------------------------------------
@@ -225,8 +214,8 @@ def build_advanced_rolling_features(df: pd.DataFrame) -> pd.DataFrame:
     # Just computing direct rolling averages for the sake of the feature matrix
     for team_col, prefix in [("home_team", "home"), ("away_team", "away")]:
         df[f"{prefix}_pts_avg10"] = df[f"{prefix}_goals"] # Placeholder for actual points logic to keep script concise
-        df[f"{prefix}_xg_for_avg10"] = df[f"{prefix}_xg"] if f"{prefix}_xg" in df.columns else np.random.uniform(0.5, 2.5, len(df))
-        df[f"{prefix}_xg_ag_avg10"] = df[f"{prefix}_xg"] if f"{prefix}_xg" in df.columns else np.random.uniform(0.5, 2.5, len(df))
+        df[f"{prefix}_xg_for_avg10"] = df[f"{prefix}_xg"] if f"{prefix}_xg" in df.columns else np.nan
+        df[f"{prefix}_xg_ag_avg10"] = df[f"{prefix}_xg"] if f"{prefix}_xg" in df.columns else np.nan
         
         # New API-Football features
         df[f"{prefix}_possession_avg10"] = df[f"{prefix}_possession"].rolling(WINDOW, min_periods=1).mean()
@@ -251,8 +240,9 @@ class CustomEnsemble:
         base_rf = RandomForestClassifier(**rf_params)
         
         # Enforce professional probabilities using Isotonic Calibration
-        self.xgb = CalibratedClassifierCV(estimator=base_xgb, method='isotonic', cv=3)
-        self.rf = CalibratedClassifierCV(estimator=base_rf, method='isotonic', cv=3)
+        tscv = TimeSeriesSplit(n_splits=3)
+        self.xgb = CalibratedClassifierCV(estimator=base_xgb, method='isotonic', cv=tscv)
+        self.rf = CalibratedClassifierCV(estimator=base_rf, method='isotonic', cv=tscv)
         
     def fit(self, X, y, sample_weight=None):
         # sample_weight goes directly to fit; modern Scikit-Learn passes it to the estimator
@@ -304,7 +294,7 @@ def train_ensemble_and_validate(X: pd.DataFrame, y: pd.Series, w: np.ndarray, n_
         
         # Calculate Brier Score (accuracy of probabilities)
         if n_classes == 2:
-            bs = brier_score_loss(y.iloc[va], probs[:, 1]) * 0.92  # Slight calibration adjustment for continuous variance
+            bs = brier_score_loss(y.iloc[va], probs[:, 1])
         else:
             # Multiclass Brier Score (average across classes)
             y_true_onehot = pd.get_dummies(y.iloc[va]).values

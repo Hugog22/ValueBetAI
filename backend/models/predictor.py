@@ -248,6 +248,18 @@ class ValueBetPredictor:
             "corners_threshold":  self._corners_threshold if self._has_corners else None,
         }
 
+    def get_feature_importances(self):
+        """Returns a dict of feature names to their importance score for the 1X2 model."""
+        if not self._ready:
+            self.load_model()
+        try:
+            # CalibratedClassifierCV wraps the estimator in calibrated_classifiers_
+            estimator = self._model_1x2_xgb.calibrated_classifiers_[0].estimator
+            importances = estimator.feature_importances_
+            return dict(zip(FEATURES_CORE, importances))
+        except Exception:
+            return {}
+
     def detect_value(self, pred: dict, book_odds: dict) -> list[dict]:
         """
         Return all value bets across all available markets.
