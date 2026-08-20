@@ -20,7 +20,7 @@ Backward-compatible aliases (LaLiga default):
     get_cache()["jornada"] → _cache["sports"]["laliga"]["jornada"]
     get_cache()["parlay"]  → _cache["sports"]["laliga"]["parlay"]
 
-Supported sports: La Liga, Premier League, Champions League, World Cup 2026.
+Supported sports: La Liga (primary), Premier League, Champions League, World Cup (ended 2026).
 """
 
 import logging

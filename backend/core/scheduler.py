@@ -48,39 +48,40 @@ def _settle_and_refresh():
     Composite job: sync match results → sync per-match player stats →
     settle pending bets → retrain if needed → conditional cache refresh.
     """
-    # ── Step 1: Sync match results from external sources ──────────────
+    from core.config import settings
+
+    # ── Step 1: Sync La Liga match results (Understat) ───────────────
+    laliga_updated = 0
+    if getattr(settings, 'enable_club_leagues', False):
+        try:
+            from etl.run_etl import run_pipeline
+            run_pipeline()
+            laliga_updated = 1  # run_pipeline doesn't return a count; assume changes possible
+            logger.info("🔄 [scheduler] La Liga ETL results synced.")
+        except Exception as e:
+            logger.warning(f"⚠️  [scheduler] La Liga ETL sync failed: {e}")
+
+    # ── Step 1b: Sync World Cup results (only if WC is not fully off-season) ──
     wc_updated = 0
     try:
         from etl.world_cup_etl import sync_world_cup_schedule
         wc_updated = sync_world_cup_schedule()
-        logger.info(f"🔄 [scheduler] World Cup results synced. Changes detected: {wc_updated}")
+        if wc_updated:
+            logger.info(f"🔄 [scheduler] World Cup results synced. Changes detected: {wc_updated}")
     except Exception as e:
         logger.warning(f"⚠️  [scheduler] WC results sync failed: {e}")
 
-    try:
-        from core.config import settings
-        if getattr(settings, 'enable_club_leagues', False):
-            from etl.run_etl import run_pipeline
-            run_pipeline()
-            logger.info("🔄 [scheduler] La Liga ETL results synced.")
-    except Exception as e:
-        logger.warning(f"⚠️  [scheduler] La Liga ETL sync failed: {e}")
-
-    # ── Step 1.5: Sync per-match team stats for finished WC matches ──
-    # Run this every hour regardless of `wc_updated`. A match can sit as
-    # "Finished" for a while before statistics are available, so this step
-    # needs its own retry loop instead of only running on the exact tick
-    # the schedule sync detects a change.
+    # ── Step 1.5: Sync per-match team stats for finished matches ──────────
     match_stats_updated = 0
     try:
         from etl.match_stats_etl import sync_finished_match_statistics
         match_stats_updated = sync_finished_match_statistics()
         if match_stats_updated > 0:
-            logger.info(f"🔄 [scheduler] Synced stats for {match_stats_updated} matches from finished WC matches.")
+            logger.info(f"🔄 [scheduler] Synced stats for {match_stats_updated} finished matches.")
     except Exception as e:
-        logger.warning(f"⚠️  [scheduler] WC match stats sync failed: {e}", exc_info=True)
+        logger.warning(f"⚠️  [scheduler] Match stats sync failed: {e}", exc_info=True)
 
-    # ── Step 2: Settle bets on newly-finished matches ─────────────────
+    # ── Step 2: Settle bets on newly-finished matches ──────────────────
     from core.bet_settler import settle_pending_bets
     from core.cache_service import refresh_cache
     
@@ -93,7 +94,7 @@ def _settle_and_refresh():
     except Exception as e:
         logger.error(f"❌ [scheduler] settle_pending_bets failed: {e}", exc_info=True)
 
-    # ── Step 3: Retrain model if new results or new match stats came in ──
+    # ── Step 3: Retrain model if new results came in ────────────────────
     if wc_updated > 0 or match_stats_updated > 0:
         try:
             logger.info("🔄 [scheduler] New match results/stats. Retraining World Cup AI...")
@@ -130,9 +131,7 @@ def _settle_and_refresh():
             )
 
     # ── Step 4: Conditional Cache Refresh ─────────────────────────────
-    # Refresh cache if bets were settled, results changed, or new match
-    # stats came in (any of these can change predictions/recommendations)
-    if bets_settled > 0 or wc_updated > 0 or match_stats_updated > 0:
+    if bets_settled > 0 or wc_updated > 0 or match_stats_updated > 0 or laliga_updated > 0:
         try:
             logger.info("🔄 [scheduler] Triggering cache refresh due to settled bets, new results, or new player stats.")
             refresh_cache()
@@ -245,22 +244,19 @@ def start_scheduler():
     logger.info("  ✓ Task 1.5 → Daily Auto-Retrain at 04:30 Madrid time (report → logs/training_report.log).")
 
 
-    # ── Task 2+3: Unified cache refresh every 2 hours, 7 days a week ─────────
-    # HuggingFace is always-on (no sleep), so we refresh uniformly.
-    # ── Task 2: Cache refresh 144 veces al día (Mundial) ──────────────────────
-    # Al estar desactivadas las ligas de clubes (ENABLE_CLUB_LEAGUES=false),
-    # el coste es de solo 1 petición por refresco (Mundial).
-    # Refrescando cada 10 min, 24 horas al día = 144 refrescos/día.
-    # 144 peticiones × 30 días = 4320 peticiones/mes (presupuesto 4500 con 9 keys).
+    # ── Task 2: Cache refresh — La Liga + multi-sport ────────────────────────
+    # With ENABLE_CLUB_LEAGUES=true the refresh fetches La Liga, Premier and
+    # Champions League odds (3 API requests per cycle).
+    # 12 refreshes/day × 3 requests × 30 days = 1080 credits/month (well within free tier).
     scheduler.add_job(
         refresh_cache,
-        trigger=CronTrigger(minute="0,10,20,30,40,50", timezone="Europe/Madrid"),
+        trigger=CronTrigger(hour="0,2,4,6,8,10,12,14,16,18,20,22", timezone="Europe/Madrid"),
         id="daily_cache_refresh",
-        name="144x/day cache refresh (WC only)",
+        name="12x/day cache refresh (La Liga primary)",
         replace_existing=True,
         misfire_grace_time=60,
     )
-    logger.info("  ✓ Task 2 → Cache refresh cada 10 minutos 24/7 (~4320 créd/mes)")
+    logger.info("  ✓ Task 2 → Cache refresh every 2h 24/7 (~1080 créd/mes)")
 
     # ── Task 3: Hourly bet settlement + conditional cache refresh ────────────
     scheduler.add_job(

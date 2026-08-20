@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     WIN_PROBABILITY_THRESHOLD: float = 0.60
     
     # Feature Flags
-    enable_club_leagues: bool = False
+    enable_club_leagues: bool = True  # La Liga is now the primary active competition
 
     # Stripe
     STRIPE_SECRET_KEY: str = ""
