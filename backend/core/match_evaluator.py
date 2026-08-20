@@ -330,7 +330,7 @@ def _get_odds(match: Match, db: Session | None = None) -> dict | None:
 # Feature engineering — club football
 # ---------------------------------------------------------------------------
 
-def _build_match_features(match: Match) -> dict:
+def _build_match_features(match: Match, db: Session | None = None) -> dict:
     """Build ELO-based proxy features for club football matches."""
     home, away = match.home_team.name, match.away_team.name
 
@@ -349,8 +349,45 @@ def _build_match_features(match: Match) -> dict:
     h_pow    = home_elo / 1500.0
     a_pow    = away_elo / 1500.0
     rng      = random.Random(match.id)
+    
+    admin_feats = {
+        "home_offensive_strength": 5.0,
+        "away_offensive_strength": 5.0,
+        "admin_offensive_diff": 0.0,
+        "home_defensive_solidity": 5.0,
+        "away_defensive_solidity": 5.0,
+        "admin_defensive_diff": 0.0,
+        "home_motivation": 5.0,
+        "away_motivation": 5.0,
+        "admin_motivation_diff": 0.0,
+        "home_momentum": 5.0,
+        "away_momentum": 5.0,
+        "admin_momentum_diff": 0.0,
+    }
 
-    return {
+    if db is not None:
+        from db.models import TeamCharacteristic
+        h_char = db.query(TeamCharacteristic).filter(TeamCharacteristic.team_id == match.home_team_id).first()
+        a_char = db.query(TeamCharacteristic).filter(TeamCharacteristic.team_id == match.away_team_id).first()
+
+        if h_char:
+            admin_feats["home_offensive_strength"] = h_char.offensive_strength
+            admin_feats["home_defensive_solidity"] = h_char.defensive_solidity
+            admin_feats["home_motivation"] = h_char.motivation
+            admin_feats["home_momentum"] = h_char.momentum
+        
+        if a_char:
+            admin_feats["away_offensive_strength"] = a_char.offensive_strength
+            admin_feats["away_defensive_solidity"] = a_char.defensive_solidity
+            admin_feats["away_motivation"] = a_char.motivation
+            admin_feats["away_momentum"] = a_char.momentum
+
+        admin_feats["admin_offensive_diff"] = admin_feats["home_offensive_strength"] - admin_feats["away_offensive_strength"]
+        admin_feats["admin_defensive_diff"] = admin_feats["home_defensive_solidity"] - admin_feats["away_defensive_solidity"]
+        admin_feats["admin_motivation_diff"] = admin_feats["home_motivation"] - admin_feats["away_motivation"]
+        admin_feats["admin_momentum_diff"] = admin_feats["home_momentum"] - admin_feats["away_momentum"]
+
+    base_feats = {
         "home_elo":          home_elo,
         "away_elo":          away_elo,
         "elo_diff":          home_elo - away_elo,
@@ -369,6 +406,8 @@ def _build_match_features(match: Match) -> dict:
         "rest_days_home":    rng.randint(4, 7),
         "rest_days_away":    rng.randint(4, 7),
     }
+    
+    return {**base_feats, **admin_feats}
 
 
 # ---------------------------------------------------------------------------
@@ -437,7 +476,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
     oddsSource, sport, bestPick, allCandidates, topPicks, justification.
     """
     home, away = match.home_team.name, match.away_team.name
-    features   = _build_match_features(match)
+    features   = _build_match_features(match, db)
     odds       = _get_odds(match, db)
     if odds is None:
         return None

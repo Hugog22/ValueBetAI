@@ -53,6 +53,10 @@ FEATURES_CORE = [
     "home_shots_target_avg10", "away_shots_target_avg10", "shots_diff",
     "home_absences", "away_absences", "absence_severity",
     "rest_days_home", "rest_days_away",
+    "home_offensive_strength", "away_offensive_strength", "admin_offensive_diff",
+    "home_defensive_solidity", "away_defensive_solidity", "admin_defensive_diff",
+    "home_motivation", "away_motivation", "admin_motivation_diff",
+    "home_momentum", "away_momentum", "admin_momentum_diff"
 ]
 
 FEATURES_CORNERS = FEATURES_CORE + [
@@ -79,6 +83,18 @@ DEFAULTS: dict[str, float] = {
     "absence_severity":  0.0,
     "rest_days_home":    7.0,
     "rest_days_away":    7.0,
+    "home_offensive_strength": 5.0,
+    "away_offensive_strength": 5.0,
+    "admin_offensive_diff": 0.0,
+    "home_defensive_solidity": 5.0,
+    "away_defensive_solidity": 5.0,
+    "admin_defensive_diff": 0.0,
+    "home_motivation": 5.0,
+    "away_motivation": 5.0,
+    "admin_motivation_diff": 0.0,
+    "home_momentum": 5.0,
+    "away_momentum": 5.0,
+    "admin_momentum_diff": 0.0,
     # Corners (model C)
     "home_corners_avg5": 5.2,
     "away_corners_avg5": 4.3,

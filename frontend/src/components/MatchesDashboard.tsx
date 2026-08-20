@@ -59,9 +59,6 @@ interface Match {
   all_bookmakers?: BookmakerOdds[];
   allCandidates?: PickData[];
   allMarkets?: any[];
-  // World Cup specific
-  homeFifaPts?: number; awayFifaPts?: number;
-  homeSquadQuality?: number; awaySquadQuality?: number;
 }
 
 interface ParlayLeg extends PickData {
@@ -515,10 +512,6 @@ export default function MatchesDashboard({ initialMatches, initialParlay }: Prop
           homeTeam={getEsName(activeAnalysisMatch.homeTeam)}
           awayTeam={getEsName(activeAnalysisMatch.awayTeam)}
           justification={activeAnalysisMatch.justification || ''}
-          homeFifaPts={activeAnalysisMatch.homeFifaPts}
-          awayFifaPts={activeAnalysisMatch.awayFifaPts}
-          homeSquadQuality={activeAnalysisMatch.homeSquadQuality}
-          awaySquadQuality={activeAnalysisMatch.awaySquadQuality}
           onClose={() => setActiveAnalysisMatch(null)}
         />
       )}

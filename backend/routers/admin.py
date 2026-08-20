@@ -26,7 +26,7 @@ def format_trained_at(ts: str) -> str:
         return ts
 
 from db.session import get_db
-from db.models import Bet, Match, User, Team, MatchTeamStatistics
+from db.models import Bet, Match, User, Team, MatchTeamStatistics, TeamCharacteristic
 from routers.auth import get_current_user
 
 ADMIN_EMAIL = "hugodesax123@gmail.com"
@@ -262,25 +262,6 @@ def get_training_report(
 
     report_lines: list[str] = []
 
-    # World Cup AI Ensemble metadata
-    if os.path.exists(wc_meta_path):
-        try:
-            with open(wc_meta_path, "r", encoding="utf-8") as f:
-                meta = json.load(f)
-            trained_str = format_trained_at(meta.get('trained_at', 'N/A'))
-            report_lines += [
-                "=== WORLD CUP AI ENSEMBLE ===",
-                f"Último entrenamiento : {trained_str}",
-                f"Partidos históricos  : {meta.get('training_rows', 'N/A')}",
-                f"Partidos Mundial '26 : {meta.get('wc_matches_used', 0)}",
-                f"Puntos de datos xG   : {meta.get('xg_data_points', 0)}",
-                f"Precisión 1X2        : {meta.get('cv_1x2_acc', 0) * 100:.2f}%",
-                f"LogLoss O/U 2.5      : {meta.get('cv_ou25_logloss', 0):.4f}",
-                "",
-            ]
-        except Exception as e:
-            report_lines.append(f"Error leyendo meta del Mundial: {e}\n")
-
     # AI training log (last 500 lines)
     if os.path.exists(log_path):
         try:
@@ -340,4 +321,87 @@ class TeamStatResponse(BaseModel):
     avg_possession: Optional[float] = None
     avg_shots_on_target: Optional[float] = None
 
+class TeamCharacteristicDTO(BaseModel):
+    team_id: int
+    team_name: str
+    offensive_strength: float
+    defensive_solidity: float
+    motivation: float
+    momentum: float
 
+class UpdateTeamCharacteristicsRequest(BaseModel):
+    characteristics: List[TeamCharacteristicDTO]
+
+@router.get("/team-characteristics", response_model=List[TeamCharacteristicDTO])
+def get_team_characteristics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Returns the list of teams and their manual characteristics.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para ver esta página."
+        )
+
+    teams = db.query(Team).order_by(Team.name).all()
+    results = []
+    for team in teams:
+        char = team.characteristic
+        if not char:
+            char = TeamCharacteristic(
+                team_id=team.id,
+                offensive_strength=5.0,
+                defensive_solidity=5.0,
+                motivation=5.0,
+                momentum=5.0
+            )
+            db.add(char)
+            db.commit()
+            db.refresh(char)
+        
+        results.append(TeamCharacteristicDTO(
+            team_id=team.id,
+            team_name=team.name,
+            offensive_strength=char.offensive_strength,
+            defensive_solidity=char.defensive_solidity,
+            motivation=char.motivation,
+            momentum=char.momentum
+        ))
+    return results
+
+@router.put("/team-characteristics")
+def update_team_characteristics(
+    request: UpdateTeamCharacteristicsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Updates the manual characteristics for multiple teams.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para ver esta página."
+        )
+
+    for item in request.characteristics:
+        char = db.query(TeamCharacteristic).filter(TeamCharacteristic.team_id == item.team_id).first()
+        if char:
+            char.offensive_strength = item.offensive_strength
+            char.defensive_solidity = item.defensive_solidity
+            char.motivation = item.motivation
+            char.momentum = item.momentum
+        else:
+            char = TeamCharacteristic(
+                team_id=item.team_id,
+                offensive_strength=item.offensive_strength,
+                defensive_solidity=item.defensive_solidity,
+                motivation=item.motivation,
+                momentum=item.momentum
+            )
+            db.add(char)
+    db.commit()
+    return {"status": "ok", "message": "Team characteristics updated."}

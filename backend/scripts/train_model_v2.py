@@ -51,6 +51,8 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.config import settings
+from db.session import SessionLocal
+from db.models import Team, TeamCharacteristic
 
 # Paths
 DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "laliga_historical.csv")
@@ -99,6 +101,56 @@ def enrich_with_api_football(df: pd.DataFrame) -> pd.DataFrame:
         df["rest_days_away"] = 7.0
 
     logger.info("✅ API-Football enrichment complete: xG, Possession, Shots, Absences, Fatigue integrated.")
+    return df
+
+# ---------------------------------------------------------------------------
+# 1B. Admin Manual Characteristics
+# ---------------------------------------------------------------------------
+def fetch_admin_team_characteristics() -> dict:
+    """Fetches manual team characteristics from DB. Returns a dict mapping team_name -> characteristics dict."""
+    db = SessionLocal()
+    teams = db.query(Team).all()
+    char_map = {}
+    for team in teams:
+        if team.characteristic:
+            char_map[team.name] = {
+                "offensive_strength": team.characteristic.offensive_strength,
+                "defensive_solidity": team.characteristic.defensive_solidity,
+                "motivation": team.characteristic.motivation,
+                "momentum": team.characteristic.momentum
+            }
+        else:
+            char_map[team.name] = {
+                "offensive_strength": 5.0,
+                "defensive_solidity": 5.0,
+                "motivation": 5.0,
+                "momentum": 5.0
+            }
+    db.close()
+    return char_map
+
+def enrich_with_admin_characteristics(df: pd.DataFrame) -> pd.DataFrame:
+    logger.info("Injecting Admin Manual Characteristics...")
+    char_map = fetch_admin_team_characteristics()
+    
+    df["home_offensive_strength"] = df["home_team"].map(lambda x: char_map.get(x, {}).get("offensive_strength", 5.0))
+    df["away_offensive_strength"] = df["away_team"].map(lambda x: char_map.get(x, {}).get("offensive_strength", 5.0))
+    
+    df["home_defensive_solidity"] = df["home_team"].map(lambda x: char_map.get(x, {}).get("defensive_solidity", 5.0))
+    df["away_defensive_solidity"] = df["away_team"].map(lambda x: char_map.get(x, {}).get("defensive_solidity", 5.0))
+    
+    df["home_motivation"] = df["home_team"].map(lambda x: char_map.get(x, {}).get("motivation", 5.0))
+    df["away_motivation"] = df["away_team"].map(lambda x: char_map.get(x, {}).get("motivation", 5.0))
+    
+    df["home_momentum"] = df["home_team"].map(lambda x: char_map.get(x, {}).get("momentum", 5.0))
+    df["away_momentum"] = df["away_team"].map(lambda x: char_map.get(x, {}).get("momentum", 5.0))
+    
+    # Create differentials
+    df["admin_offensive_diff"] = df["home_offensive_strength"] - df["away_offensive_strength"]
+    df["admin_defensive_diff"] = df["home_defensive_solidity"] - df["away_defensive_solidity"]
+    df["admin_motivation_diff"] = df["home_motivation"] - df["away_motivation"]
+    df["admin_momentum_diff"] = df["home_momentum"] - df["away_momentum"]
+    
     return df
 
 # ---------------------------------------------------------------------------
@@ -296,6 +348,7 @@ def main():
     logger.info(f"Loaded {len(df)} historical matches.")
     
     df = enrich_with_api_football(df)
+    df = enrich_with_admin_characteristics(df)
     df = compute_dynamic_elo(df)
     df = build_advanced_rolling_features(df)
     
@@ -309,7 +362,11 @@ def main():
         "home_possession_avg10", "away_possession_avg10", "possession_diff",
         "home_shots_target_avg10", "away_shots_target_avg10", "shots_diff",
         "home_absences", "away_absences", "absence_severity",
-        "rest_days_home", "rest_days_away"
+        "rest_days_home", "rest_days_away",
+        "home_offensive_strength", "away_offensive_strength", "admin_offensive_diff",
+        "home_defensive_solidity", "away_defensive_solidity", "admin_defensive_diff",
+        "home_motivation", "away_motivation", "admin_motivation_diff",
+        "home_momentum", "away_momentum", "admin_momentum_diff"
     ]
 
     # Target: 1X2

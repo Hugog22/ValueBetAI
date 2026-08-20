@@ -7,11 +7,6 @@ interface AnalysisModalProps {
   awayTeam: string;
   justification: string;
   onClose: () => void;
-  // Optional World Cup context fields
-  homeFifaPts?: number;
-  awayFifaPts?: number;
-  homeSquadQuality?: number;
-  awaySquadQuality?: number;
 }
 
 import RichText from '@/components/RichText';
@@ -30,10 +25,6 @@ export default function AnalysisModal({
   awayTeam,
   justification,
   onClose,
-  homeFifaPts,
-  awayFifaPts,
-  homeSquadQuality,
-  awaySquadQuality,
 }: AnalysisModalProps) {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -41,7 +32,6 @@ export default function AnalysisModal({
   }, []);
 
   const paragraphs = buildParagraphs(justification);
-  const hasWcContext = homeFifaPts !== undefined && awayFifaPts !== undefined;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
@@ -78,36 +68,6 @@ export default function AnalysisModal({
 
         {/* Scrollable body */}
         <div className="overflow-y-auto flex-1">
-
-          {/* World Cup context pills — only for WC matches */}
-          {hasWcContext && (
-            <div className="px-6 pt-5 pb-2 grid grid-cols-2 gap-3">
-              <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-3 text-center">
-                <span className="text-[10px] font-bold text-[#16A34A] uppercase tracking-widest block mb-1">
-                  Ranking FIFA
-                </span>
-                <div className="flex items-center justify-center gap-2 text-sm font-bold text-[#15803D]">
-                  <span className="text-[#1A1C1E] text-xs">{homeTeam.split(' ')[0]}</span>
-                  <span className="text-[#64748B] font-normal text-xs">{homeFifaPts?.toFixed(0)}</span>
-                  <span className="text-[#94A3B8] text-xs">vs</span>
-                  <span className="text-[#64748B] font-normal text-xs">{awayFifaPts?.toFixed(0)}</span>
-                  <span className="text-[#1A1C1E] text-xs">{awayTeam.split(' ')[0]}</span>
-                </div>
-              </div>
-              <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl p-3 text-center">
-                <span className="text-[10px] font-bold text-[#2563EB] uppercase tracking-widest block mb-1">
-                  Calidad Plantilla
-                </span>
-                <div className="flex items-center justify-center gap-2 text-sm font-bold text-[#1D4ED8]">
-                  <span className="text-[#1A1C1E] text-xs">{homeTeam.split(' ')[0]}</span>
-                  <span className="text-[#64748B] font-normal text-xs">{homeSquadQuality?.toFixed(0)}/100</span>
-                  <span className="text-[#94A3B8] text-xs">vs</span>
-                  <span className="text-[#64748B] font-normal text-xs">{awaySquadQuality?.toFixed(0)}/100</span>
-                  <span className="text-[#1A1C1E] text-xs">{awayTeam.split(' ')[0]}</span>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Main analysis content */}
           <div className="p-6 pt-4">

@@ -28,7 +28,20 @@ class Team(Base):
     name = Column(String, unique=True, index=True)
     api_football_id = Column(Integer, unique=True, index=True)
     
+    characteristic = relationship("TeamCharacteristic", back_populates="team", uselist=False)
 
+class TeamCharacteristic(Base):
+    __tablename__ = "team_characteristics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    team_id = Column(Integer, ForeignKey("teams.id"), unique=True)
+    offensive_strength = Column(Float, default=5.0) # 1-10
+    defensive_solidity = Column(Float, default=5.0) # 1-10
+    motivation = Column(Float, default=5.0) # 1-10
+    momentum = Column(Float, default=5.0) # 1-10
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    team = relationship("Team", back_populates="characteristic")
 
 class Match(Base):
     __tablename__ = "matches"
