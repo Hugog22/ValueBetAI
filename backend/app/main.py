@@ -57,11 +57,12 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 logger.error(f"⚠️ Failed to clean duplicates: {e}")
 
-            # Step 2: Warm the prediction cache
+            # Step 2: Warm the prediction cache asynchronously to avoid blocking startup
             try:
-                logger.info("🔄 Running prediction cache warm-up synchronously...")
-                refresh_cache()
-                logger.info("✅ Cache warm-up completada.")
+                import threading
+                logger.info("🔄 Running prediction cache warm-up asynchronously...")
+                threading.Thread(target=refresh_cache, daemon=True).start()
+                logger.info("✅ Cache warm-up started in background.")
             except Exception as e:
                 logger.warning(f"⚠️  Startup cache warm-up failed: {e}")
 
