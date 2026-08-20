@@ -32,7 +32,7 @@ def create_checkout_session(current_user: User = Depends(get_current_user)):
             }],
             mode='subscription',
             subscription_data={
-                # No trial period
+                'trial_period_days': TRIAL_PERIOD_DAYS,
             },
             success_url=f"{frontend_url}/success?session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{frontend_url}/register",
