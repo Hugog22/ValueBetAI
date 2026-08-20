@@ -405,3 +405,28 @@ def update_team_characteristics(
             db.add(char)
     db.commit()
     return {"status": "ok", "message": "Team characteristics updated."}
+
+from fastapi import BackgroundTasks
+import subprocess
+import sys
+
+@router.post("/retrain-model")
+def trigger_model_retrain(
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Manually triggers the AI model retraining pipeline.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para ver esta página."
+        )
+
+    def run_retrain():
+        train_script = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts", "train_model_v2.py")
+        subprocess.run([sys.executable, train_script])
+
+    background_tasks.add_task(run_retrain)
+    return {"status": "ok", "message": "El reentrenamiento de La Liga ha comenzado en segundo plano."}

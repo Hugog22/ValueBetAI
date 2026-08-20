@@ -136,7 +136,7 @@ export default function BankrollPage() {
         setIsRetraining(true);
         try {
             const API = '/api/proxy';
-            const res = await fetch(`${API}/admin/retrain-world-cup`, {
+            const res = await fetch(`${API}/admin/retrain-model`, {
                 method: 'POST',
                 
             });
@@ -293,6 +293,14 @@ export default function BankrollPage() {
                                                 <span className="text-lg">⚙️</span>
                                                 Informe de Entrenamiento
                                             </button>
+                                            <Link href="/admin">
+                                                <button
+                                                    className="px-6 py-3 bg-[#0A0F1E] text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-[#1A2240] transition-colors flex items-center gap-2"
+                                                >
+                                                    <span className="text-lg">📊</span>
+                                                    Fuerza Equipos
+                                                </button>
+                                            </Link>
                                             <button
                                                 onClick={handleRetrainAI}
                                                 disabled={isRetraining}
