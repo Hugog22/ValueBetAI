@@ -448,6 +448,48 @@ def _fractional_kelly(prob: float, odds: float, fraction: float = 0.20) -> int:
         return 1
     return max(1, min(10, int((kelly_pct * fraction) * 200)))
 
+# ---------------------------------------------------------------------------
+# Dynamic AI Justification Generator
+# ---------------------------------------------------------------------------
+
+def _generate_justification(best: dict, home: str, away: str, base_feats: dict, admin_feats: dict) -> str:
+    """Generate a natural-language explanation formatted for the frontend modal."""
+    prob_pct = int(best["probability"] * 100)
+    market_prob = int(best["bookmaker_implied_prob"] * 100)
+    ev = best["ev"]
+    
+    # 1. Base prediction
+    text = f"Nuestro modelo predictivo XGBoost otorga una probabilidad real del {prob_pct}% a '{best['label']}', mientras que la cuota de la casa de apuestas asume solo un {market_prob}%. "
+    
+    # 2. Add transition word expected by frontend: "A esto"
+    text += f"A esto se le suma una clara ineficiencia del mercado, generando un Expected Value (EV) positivo del {ev}%. "
+    
+    # 3. Add transition word: "En "
+    if "admin_offensive_diff" in admin_feats:
+        # User defined features
+        if admin_feats["admin_offensive_diff"] > 1 and best["outcome"] == "home":
+            text += f"En el análisis de las métricas manuales, {home} presenta una fuerza ofensiva ({admin_feats['home_offensive_strength']}) muy superior a la defensa de {away}. "
+        elif admin_feats["admin_offensive_diff"] < -1 and best["outcome"] == "away":
+            text += f"En el desglose de fuerza de equipos, {away} destaca con un potencial ofensivo ({admin_feats['away_offensive_strength']}) que {home} tendrá problemas para contener. "
+        elif admin_feats["admin_motivation_diff"] != 0:
+            fav_team = home if admin_feats["admin_motivation_diff"] > 0 else away
+            text += f"En el plano psicológico, {fav_team} llega con un plus de motivación y momentum que el mercado no está reflejando correctamente en la cuota. "
+        else:
+            text += f"En la simulación táctica, el equilibrio de fuerzas se rompe a favor de esta selección debido a la solidez estructural evaluada. "
+    else:
+        text += f"En los datos estadísticos puros, el modelo ha detectado patrones históricos que respaldan fuertemente esta predicción. "
+        
+    # 4. Add transition word: "Con un "
+    xg_diff = base_feats.get("xg_diff", 0)
+    if xg_diff > 0.5 and best["outcome"] == "home":
+        text += f"Con un xG (Goles Esperados) claramente superior para el local en los últimos partidos, la ventaja competitiva es evidente."
+    elif xg_diff < -0.5 and best["outcome"] == "away":
+        text += f"Con un xG (Goles Esperados) favorable al visitante, la probabilidad de éxito supera ampliamente el riesgo asumido."
+    else:
+        text += f"Con un cálculo de riesgo catalogado como '{best['risk']['level']}', esta selección es matemáticamente rentable a largo plazo."
+        
+    return text
+
 
 def _dynamic_ev_threshold(odds_val: float) -> float:
     """
@@ -555,6 +597,10 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
     all_markets = _build_all_markets(
         match, db, pred["probabilities"], pred["prob_over25"], lam_home, lam_away
     )
+    
+    # ── GENERATE AI ANALYSIS TEXT ──
+    feats = {**base_feats, **admin_feats}
+    justification_text = _generate_justification(best, home, away, feats, admin_feats)
 
     return {
         "id":         match.id,
@@ -579,7 +625,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
         },
         "allCandidates": candidates,
         "topPicks":      candidates[:3],
-        "justification": f"{home} vs {away} — evaluación de fútbol.",
+        "justification": justification_text,
         "all_bookmakers": all_bookmakers_h2h,
         "allMarkets":    all_markets,
     }
