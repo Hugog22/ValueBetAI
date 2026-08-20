@@ -1,14 +1,10 @@
 """
 fetch_historical_data.py
 ------------------------
-Downloads historical match data from Understat for multiple leagues:
-  - La Liga (Spain)   — 2014–2025
-  - EPL (England)     — 2014–2025
-  - Champions League  — 2014–2025
+Downloads La Liga historical match data from Understat (2014–present).
 
 Outputs:
-  data/football_historical.csv  — combined multi-league dataset (for training)
-  data/laliga_historical.csv    — LaLiga-only backward-compat file
+  data/laliga_historical.csv  — La Liga historical dataset (for training)
 
 Features per match:
   season, match_id, date, league,
@@ -16,7 +12,7 @@ Features per match:
   home_xg, away_xg, rest_days_home, rest_days_away, corners_home, corners_away
 
 Usage:
-  ./venv/bin/python -m scripts.fetch_historical_data [--league La_Liga EPL Champions_League]
+  ./venv/bin/python -m scripts.fetch_historical_data
 """
 
 import csv
@@ -40,11 +36,9 @@ OUTPUT_LALIGA = os.path.join(DATA_DIR, "laliga_historical.csv")
 
 SEASONS = [str(y) for y in range(2014, 2026)]  # 2014/15 → 2025/26
 
-# Understat league keys and their friendly names
+# Understat league key for La Liga
 UNDERSTAT_LEAGUES = {
-    "La_Liga":          "laliga",
-    "EPL":              "premier",
-    "Champions_League": "champions",
+    "La_Liga": "laliga",
 }
 
 FIELDNAMES = [

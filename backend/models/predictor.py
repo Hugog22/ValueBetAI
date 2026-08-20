@@ -13,12 +13,27 @@ Missing feature values fall back to historical La Liga averages (DEFAULTS).
 
 import json
 import logging
+import xgboost as xgb
+import joblib
+
+# -- MONKEYPATCH for XGBoost & Scikit-Learn 1.6+ compatibility --
+if not hasattr(xgb.XGBClassifier, '__sklearn_tags__') or True:
+    def _sklearn_tags(self):
+        # We must use super() with the actual class in the MRO that defines it, or just fallback
+        try:
+            tags = super(xgb.XGBClassifier, self).__sklearn_tags__()
+        except AttributeError:
+            from sklearn.utils import get_tags
+            from sklearn.base import ClassifierMixin
+            tags = get_tags(ClassifierMixin())
+        tags.estimator_type = 'classifier'
+        return tags
+    xgb.XGBClassifier.__sklearn_tags__ = _sklearn_tags
+# ----------------------------------------------------------------
 import os
 
-import joblib
 import numpy as np
 import pandas as pd
-import xgboost as xgb
 
 logger = logging.getLogger(__name__)
 

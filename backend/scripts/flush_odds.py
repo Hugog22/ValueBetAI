@@ -132,10 +132,19 @@ def flush_and_reload():
             home_team = _find_team(home_name, all_teams)
             away_team = _find_team(away_name, all_teams)
 
-            if not home_team or not away_team:
-                logger.warning(f"  ⚠ No DB teams for: {home_name} vs {away_name} — skipping")
-                skipped += 1
-                continue
+            if not home_team:
+                logger.info(f"  + Creating missing team: {home_name}")
+                home_team = Team(name=home_name)
+                db.add(home_team)
+                db.flush()
+                all_teams.append(home_team)
+                
+            if not away_team:
+                logger.info(f"  + Creating missing team: {away_name}")
+                away_team = Team(name=away_name)
+                db.add(away_team)
+                db.flush()
+                all_teams.append(away_team)
 
             # Find DB match (try both home/away orders)
             match = (
@@ -152,12 +161,21 @@ def flush_and_reload():
                     .first()
                 )
             if not match:
-                logger.warning(
-                    f"  ⚠ No upcoming match for: {home_team.name} vs {away_team.name} "
-                    f"(API: {home_name} vs {away_name})"
+                try:
+                    c_time = event.get("commence_time")
+                    match_date = datetime.fromisoformat(c_time.replace("Z", "+00:00")).replace(tzinfo=None)
+                except Exception:
+                    match_date = datetime.utcnow()
+                    
+                logger.info(f"  + Creating missing match: {home_name} vs {away_name} at {match_date}")
+                match = Match(
+                    home_team_id=home_team.id,
+                    away_team_id=away_team.id,
+                    date=match_date,
+                    status="Not Started",
                 )
-                skipped += 1
-                continue
+                db.add(match)
+                db.flush()
 
             # ── Upsert: clear old MarketOdds for this match before inserting fresh data
             # This prevents unbounded table growth across multiple refresh cycles.
@@ -238,7 +256,26 @@ def flush_and_reload():
                             f"    h2h [{bm_key}] → home={ho:.2f}, draw={dr:.2f}, away={aw:.2f}"
                         )
                         
-                        # Instead of overwriting Odds, we add to OddsHistory for Line Shopping
+                        # We must update Odds for cache_service to find the matches!
+                        # Clear old Odds for this match/bookmaker/market if it exists
+                        from db.models import Odds
+                        db.query(Odds).filter(
+                            Odds.match_id == match.id,
+                            Odds.bookmaker == bm_key,
+                            Odds.market == "h2h"
+                        ).delete()
+                        
+                        db.add(Odds(
+                            match_id=match.id,
+                            bookmaker=bm_key,
+                            market="h2h",
+                            home_odds=ho,
+                            draw_odds=dr,
+                            away_odds=aw,
+                            timestamp=datetime.utcnow(),
+                        ))
+
+                        # Also add to OddsHistory for Line Shopping
                         db.add(OddsHistory(
                             match_id=match.id,
                             bookmaker=bm_key,

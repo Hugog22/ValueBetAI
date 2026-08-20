@@ -145,7 +145,7 @@ def get_jornada():
     return jornada
 
 
-VALID_SPORTS = {"laliga", "premier", "champions", "worldcup"}
+VALID_SPORTS = {"laliga"}
 
 @app.get("/api/matches/{sport}/jornada")
 def get_sport_jornada(sport: str):

@@ -99,7 +99,11 @@ def fetch_and_store_laliga_matches(season: str | None = None):
 
 def run_pipeline():
     init_db()
-    fetch_and_store_laliga_matches()
+    
+    try:
+        fetch_and_store_laliga_matches()
+    except Exception as e:
+        logger.error(f"Failed to fetch historical data from Understat: {e}")
 
     logger.info("Fetching current La Liga odds from Bet365...")
     try:

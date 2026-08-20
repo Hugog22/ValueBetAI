@@ -18,6 +18,21 @@ import json
 import logging
 import math
 import random
+import xgboost as xgb
+
+# -- MONKEYPATCH for XGBoost & Scikit-Learn 1.6+ compatibility --
+if not hasattr(xgb.XGBClassifier, '__sklearn_tags__') or True:
+    def _sklearn_tags(self):
+        try:
+            tags = super(xgb.XGBClassifier, self).__sklearn_tags__()
+        except AttributeError:
+            from sklearn.utils import get_tags
+            from sklearn.base import ClassifierMixin
+            tags = get_tags(ClassifierMixin())
+        tags.estimator_type = 'classifier'
+        return tags
+    xgb.XGBClassifier.__sklearn_tags__ = _sklearn_tags
+# ----------------------------------------------------------------
 from datetime import datetime, timedelta
 
 import numpy as np

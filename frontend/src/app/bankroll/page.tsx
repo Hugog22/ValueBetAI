@@ -64,9 +64,6 @@ interface PredictionsDetailData {
 export default function BankrollPage() {
     const [stats, setStats] = useState<BankrollStats | null>(null);
     const [adminStats, setAdminStats] = useState<any>(null);
-    const [wcTeamStats, setWcTeamStats] = useState<any[]>([]);
-    const [wcPlayers, setWcPlayers] = useState<any[]>([]);
-    const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
     const [predictionModal, setPredictionModal] = useState<{
         open: boolean;
         data: PredictionsDetailData | null;
@@ -98,16 +95,6 @@ export default function BankrollPage() {
                 .then(res => res.json())
                 .then(data => setAdminStats(data))
                 .catch(err => console.error("Error fetching admin stats", err));
-                
-            fetch(`${API}/admin/wc-team-stats`)
-                .then(res => res.json())
-                .then(data => setWcTeamStats(data))
-                .catch(err => console.error("Error fetching team stats", err));
-                
-            fetch(`${API}/admin/wc-players`)
-                .then(res => res.json())
-                .then(data => setWcPlayers(data))
-                .catch(err => console.error("Error fetching players", err));
         }
     }, [token, user]);
 
@@ -360,83 +347,7 @@ export default function BankrollPage() {
                                         </div>
                                     )}
 
-                                    {/* SELECCIONES Y JUGADORES MUNDIAL */}
-                                    <div className="mt-16">
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <span className="h-px w-8 bg-[#064E3B]"></span>
-                                            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#064E3B]">Base de Datos Mundial 2026</span>
-                                        </div>
-                                                     <div className="grid grid-cols-1 gap-8">
-                                            {/* SELECCIONES */}
-                                            <div className="bg-white rounded-[2rem] border border-[#E5E7EB] overflow-hidden shadow-sm">
-                                                <div className="p-6 border-b border-[#E5E7EB] bg-[#F8F9FA]">
-                                                    <h3 className="text-xl font-editorial font-bold text-[#1A1C1E]">Rendimiento de Selecciones (Avanzado)</h3>
-                                                    <p className="text-xs text-[#64748B] mt-1">Datos y Estadísticas xG ({wcTeamStats.length} selecciones)</p>
-                                                </div>
-                                                <div className="max-h-[500px] overflow-y-auto p-0">
-                                                    <table className="min-w-full text-sm text-left">
-                                                        <thead className="bg-[#FCF9F1] sticky top-0 border-b border-[#E5E7EB] z-10">
-                                                            <tr>
-                                                                <th className="px-6 py-3 font-bold text-[10px] uppercase text-[#64748B]">Selección</th>
-                                                                <th className="px-6 py-3 font-bold text-[10px] uppercase text-[#64748B]">PJ / Goles</th>
-                                                                <th className="px-6 py-3 font-bold text-[10px] uppercase text-[#64748B]">xG / Posesión</th>
-                                                                <th className="px-6 py-3 font-bold text-[10px] uppercase text-[#64748B]">Última Act.</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y divide-[#E5E7EB]">
-                                                            {wcTeamStats.length === 0 && <tr><td colSpan={4} className="p-6 text-center text-[#64748B]">No hay datos de equipos</td></tr>}
-                                                            {wcTeamStats.map((t, idx) => (
-                                                                <React.Fragment key={idx}>
-                                                                    <tr 
-                                                                        className="hover:bg-slate-50 cursor-pointer transition-colors"
-                                                                        onClick={() => setExpandedTeam(expandedTeam === t.team_name ? null : t.team_name)}
-                                                                    >
-                                                                        <td className="px-6 py-4 font-bold text-[#1A1C1E] flex justify-between items-center">
-                                                                            <span>{getEsName(t.team_name)}</span>
-                                                                            <span className={`text-[10px] text-gray-400 transition-transform ${expandedTeam === t.team_name ? 'rotate-180' : ''}`}>▼</span>
-                                                                        </td>
-                                                                        <td className="px-6 py-4 text-[#64748B]">{t.matches_played} PJ <span className="text-emerald-600 font-medium">({t.goals_for} GF)</span></td>
-                                                                        <td className="px-6 py-4 text-[#64748B]">
-                                                                            {t.avg_xg !== null ? (
-                                                                                <span className="font-bold text-[#1A1C1E]">{t.avg_xg.toFixed(2)} xG <span className="font-normal text-[#64748B]">/ {t.avg_possession?.toFixed(1)}%</span></span>
-                                                                            ) : (
-                                                                                <span className="text-gray-400 italic">No Data</span>
-                                                                            )}
-                                                                        </td>
-                                                                        <td className="px-6 py-4 text-[10px] font-mono text-[#94A3B8]">{t.last_updated.substring(0,16).replace('T', ' ')}</td>
-                                                                    </tr>
-                                                                    {expandedTeam === t.team_name && (
-                                                                        <tr className="bg-slate-50/50">
-                                                                            <td colSpan={4} className="px-6 py-4 border-b border-[#E5E7EB]">
-                                                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                                                                                    <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-sm">
-                                                                                        <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest mb-1">Victorias</div>
-                                                                                        <div className="font-editorial text-xl font-bold text-emerald-900">{t.wins}</div>
-                                                                                    </div>
-                                                                                    <div className="bg-white p-3 rounded-xl border border-[#E5E7EB] shadow-sm">
-                                                                                        <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-1">Empates</div>
-                                                                                        <div className="font-editorial text-xl font-bold text-[#1A1C1E]">{t.draws}</div>
-                                                                                    </div>
-                                                                                    <div className="bg-white p-3 rounded-xl border border-rose-100 shadow-sm">
-                                                                                        <div className="text-[10px] font-bold text-rose-800 uppercase tracking-widest mb-1">Derrotas</div>
-                                                                                        <div className="font-editorial text-xl font-bold text-rose-900">{t.losses}</div>
-                                                                                    </div>
-                                                                                    <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
-                                                                                        <div className="text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-1">Tiros a Puerta (Prom.)</div>
-                                                                                        <div className="font-editorial text-xl font-bold text-blue-900">{t.avg_shots_on_target !== null ? t.avg_shots_on_target.toFixed(1) : '-'}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </td>
-                                                                        </tr>
-                                                                    )}
-                                                                </React.Fragment>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+
                                 </div>
                             )}
 

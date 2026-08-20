@@ -28,23 +28,6 @@ class Team(Base):
     name = Column(String, unique=True, index=True)
     api_football_id = Column(Integer, unique=True, index=True)
     
-    world_cup_stats = relationship("WorldCupTeamStats", back_populates="team", uselist=False)
-
-class WorldCupTeamStats(Base):
-    __tablename__ = "world_cup_team_stats"
-
-    id = Column(Integer, primary_key=True, index=True)
-    team_id = Column(Integer, ForeignKey("teams.id"), unique=True)
-    matches_played = Column(Integer, default=0)
-    goals_for = Column(Integer, default=0)
-    goals_against = Column(Integer, default=0)
-    wins = Column(Integer, default=0)
-    draws = Column(Integer, default=0)
-    losses = Column(Integer, default=0)
-    last_updated = Column(DateTime, default=datetime.utcnow)
-
-    team = relationship("Team", back_populates="world_cup_stats")
-
 
 
 class Match(Base):

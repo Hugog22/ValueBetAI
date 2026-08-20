@@ -1,20 +1,16 @@
 """
-train_model.py — Advanced Multi-Model Training Pipeline
-========================================================
-Trains THREE independent XGBoost models on real football data (2014–2025):
-  Leagues: La Liga + EPL (Premier League) + Champions League  ← multi-league
+train_model.py — La Liga XGBoost Training Pipeline
+====================================================
+Trains XGBoost models on La Liga historical data (2014–present):
 
-  Model A: 1X2 Result       → models/ensemble_1x2_xgb.pkl      (3 classes)
-  Model B: Over/Under 2.5   → models/ensemble_ou2.5_xgb.pkl    (binary)
-  Model C: Over/Under Corners → models/xgb_corners.json (when data available)
+  Model A: 1X2 Result       → models/ensemble_1x2_xgb.pkl   (3 classes)
+  Model B: Over/Under 2.5   → models/ensemble_ou2.5_xgb.pkl (binary)
 
 Key advances:
-  ✅ Multi-league training (more data, better generalisation)
-  ✅ league_encoded feature (model learns league-specific patterns)
   ✅ Exponential time-decay sample weights
   ✅ TimeSeriesSplit cross-validation (no future leakage)
   ✅ Optuna hyperparameter search (200 trials per model)
-  ✅ 17+ engineered features (rolling + ELO + rest days + league)
+  ✅ 17+ engineered features (rolling + ELO + rest days)
   ✅ Probability calibration (isotonic regression hold-out)
 
 Run from backend/:
@@ -469,13 +465,13 @@ def train():
     logger.info(f"Raw rows: {len(df)}")
 
     # ---- League encoding (new feature for multi-league datasets) ----
-    league_map = {"laliga": 0, "premier": 1, "champions": 2}
+    league_map = {"laliga": 0}
     if "league" in df.columns:
         df["league_encoded"] = df["league"].map(league_map).fillna(0).astype(int)
         breakdown = df["league"].value_counts().to_dict()
         logger.info(f"League distribution: {breakdown}")
     else:
-        df["league_encoded"] = 0  # single-league backward compat
+        df["league_encoded"] = 0  # backward compat
 
     logger.info("Building rolling features (rest days, xG, goals, form)…")
     df = add_rolling_features(df)

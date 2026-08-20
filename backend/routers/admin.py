@@ -26,7 +26,7 @@ def format_trained_at(ts: str) -> str:
         return ts
 
 from db.session import get_db
-from db.models import Bet, Match, User, Team, WorldCupTeamStats, MatchTeamStatistics
+from db.models import Bet, Match, User, Team, MatchTeamStatistics
 from routers.auth import get_current_user
 
 ADMIN_EMAIL = "hugodesax123@gmail.com"
@@ -340,88 +340,4 @@ class TeamStatResponse(BaseModel):
     avg_possession: Optional[float] = None
     avg_shots_on_target: Optional[float] = None
 
-@router.get("/wc-team-stats", response_model=List[TeamStatResponse])
-def get_wc_team_stats(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    if not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Forbidden")
-        
-    # Query WC teams and their basic stats
-    stats = db.query(WorldCupTeamStats, Team).join(Team, WorldCupTeamStats.team_id == Team.id).all()
-    
-    # Pre-calculate averages for MatchTeamStatistics
-    avg_stats = db.query(
-        MatchTeamStatistics.team_id,
-        func.avg(MatchTeamStatistics.xg).label('avg_xg'),
-        func.avg(MatchTeamStatistics.possession_pct).label('avg_possession'),
-        func.avg(MatchTeamStatistics.shots_on_target).label('avg_shots_on_target')
-    ).group_by(MatchTeamStatistics.team_id).all()
-    
-    avg_map = {row.team_id: row for row in avg_stats}
-    
-    result = []
-    for s, t in stats:
-        t_avgs = avg_map.get(t.id)
-        result.append(
-            TeamStatResponse(
-                team_name=t.name,
-                matches_played=s.matches_played,
-                goals_for=s.goals_for,
-                goals_against=s.goals_against,
-                wins=s.wins,
-                draws=s.draws,
-                losses=s.losses,
-                last_updated=str(s.last_updated) if s.last_updated else "",
-                avg_xg=round(t_avgs.avg_xg, 2) if t_avgs and t_avgs.avg_xg is not None else None,
-                avg_possession=round(t_avgs.avg_possession, 1) if t_avgs and t_avgs.avg_possession is not None else None,
-                avg_shots_on_target=round(t_avgs.avg_shots_on_target, 1) if t_avgs and t_avgs.avg_shots_on_target is not None else None
-            )
-        )
-    return result
 
-@router.post("/retrain-world-cup")
-def retrain_world_cup(current_user: User = Depends(get_current_user)):
-    """Manually trigger World Cup AI retraining."""
-    if not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Forbidden")
-    
-    import sys, os, importlib
-    scripts_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "scripts"
-    )
-    if scripts_dir not in sys.path:
-        sys.path.insert(0, scripts_dir)
-        
-    try:
-        fetch_mod = importlib.import_module("fetch_world_cup_data")
-        importlib.reload(fetch_mod)
-        fetch_mod.main(force=True)
-
-        wc_mod = importlib.import_module("train_model_worldcup")
-        importlib.reload(wc_mod)
-        wc_mod.train(is_auto=False)
-        
-        # Reload the ML model dynamically in RAM
-        from core.shared_predictor import world_cup_predictor
-        world_cup_predictor.load_model()
-        
-        # Refresh the cache so the frontend sees the new predictions immediately
-        from core.cache_service import refresh_cache
-        refresh_cache()
-        
-        return {"success": True, "message": "Reentrenamiento completado con éxito"}
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Retrain failed: {e}", exc_info=True)
-        
-        from core.training_reporter import write_training_report
-        write_training_report(
-            model_name="World Cup — XGBoost Ensemble",
-            success=False,
-            error=str(e),
-            is_auto=False,
-        )
-        raise HTTPException(status_code=500, detail=f"Fallo en el reentrenamiento: {str(e)}")

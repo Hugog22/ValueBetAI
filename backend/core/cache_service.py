@@ -20,7 +20,7 @@ Backward-compatible aliases (LaLiga default):
     get_cache()["jornada"] → _cache["sports"]["laliga"]["jornada"]
     get_cache()["parlay"]  → _cache["sports"]["laliga"]["parlay"]
 
-Supported sports: La Liga (primary), Premier League, Champions League, World Cup (ended 2026).
+Supported sports: La Liga.
 """
 
 import logging
@@ -31,18 +31,14 @@ from functools import reduce
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_SPORTS = ["laliga", "premier", "champions", "worldcup"]
+SUPPORTED_SPORTS = ["laliga"]
 
 # Sport display metadata
 _SPORT_META = {
-    "laliga":    {"label": "La Liga",          "flag": "🇪🇸"},
-    "premier":   {"label": "Premier League",   "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿"},
-    "champions": {"label": "Champions League", "flag": "🏆"},
-    "worldcup":  {"label": "Mundial 2026",     "flag": "⚽"},
+    "laliga":   {"label": "La Liga",     "flag": "🇪🇸"},
 }
 
-# Months when European leagues are off-season (June–July).
-# World Cup runs in summer so it's never marked as off-season.
+# Months when La Liga is off-season (June–July).
 _OFF_SEASON_MONTHS = {6, 7}
 
 
@@ -67,7 +63,6 @@ def _empty_cache() -> dict:
 _cache: dict = _empty_cache()
 
 # Prevent two refresh_cache() calls from running concurrently
-# (e.g. a scheduled peak refresh + the hourly settle_and_refresh overlap).
 _refresh_lock = threading.Lock()
 
 
@@ -86,8 +81,8 @@ def get_sport_info(sport_key: str) -> dict:
     meta  = _SPORT_META.get(sport_key, {"label": sport_key, "flag": ""})
     return {
         **meta,
-        "match_count":    len(sport["jornada"]),
-        "is_off_season":  sport["is_off_season"],
+        "match_count":   len(sport["jornada"]),
+        "is_off_season": sport["is_off_season"],
     }
 
 
@@ -167,42 +162,8 @@ def _get_laliga_team_names(db) -> set[str]:
     return {t.name for t in teams}
 
 
-def _get_premier_team_names() -> set[str]:
-    """Known Premier League team names for sport detection."""
-    return {
-        "Arsenal", "Aston Villa", "Bournemouth", "Brentford", "Brighton",
-        "Burnley", "Chelsea", "Crystal Palace", "Everton", "Fulham",
-        "Liverpool", "Leeds United", "Leicester City", "Manchester City",
-        "Manchester United", "Newcastle United", "Nottingham Forest",
-        "Sheffield United", "Tottenham Hotspur", "West Ham United",
-        "Wolverhampton Wanderers", "Luton Town", "Ipswich Town", "Southampton",
-    }
-
-
-def _get_champions_team_names() -> set[str]:
-    """Known Champions League participant names for sport detection."""
-    return {
-        "Real Madrid", "Barcelona", "Bayern Munich", "Manchester City",
-        "Paris Saint-Germain", "Liverpool", "Chelsea", "Juventus",
-        "Inter Milan", "AC Milan", "Borussia Dortmund", "Atletico Madrid",
-        "Porto", "Benfica", "Ajax", "Napoli", "RB Leipzig", "Villarreal",
-        "Sporting CP", "Red Bull Salzburg", "Celtic", "Rangers",
-        "Shakhtar Donetsk", "Club Brugge", "Sevilla", "Feyenoord",
-        "Bayer Leverkusen", "Lazio", "Real Sociedad", "Brest", "Atalanta",
-    }
-
-
-def _get_worldcup_team_names() -> set[str]:
-    """Return all 48 FIFA World Cup 2026 national team names."""
-    try:
-        from etl.world_cup_etl import get_world_cup_team_names
-        return get_world_cup_team_names()
-    except Exception:
-        return set()
-
-
 def _is_off_season() -> bool:
-    """True during June–July when European leagues are off."""
+    """True during June–July when La Liga is off."""
     return datetime.utcnow().month in _OFF_SEASON_MONTHS
 
 
@@ -212,28 +173,23 @@ def _is_off_season() -> bool:
 
 def refresh_cache() -> None:
     """
-    Run the full multi-sport football prediction pipeline and update the
-    in-RAM cache.
+    Run the La Liga prediction pipeline and update the in-RAM cache.
 
     Uses the double-buffer / atomic-swap pattern:
       1. All new data is built into a LOCAL `new_cache` dict.
       2. Only after ALL computation succeeds, the global `_cache` reference
          is swapped to the new dict in a single assignment (atomic under
          CPython's GIL).
-      3. If anything fails, the old cache is kept intact — users never
-         see 0 matches.
+      3. If anything fails, the old cache is kept intact.
 
     Steps:
-      1. Sync World Cup matches (The Odds API + football-data.org).
-      2. Refresh La Liga odds via flush_odds (The Odds API).
-      3. Sync Premier League and Champions League via multi_sport_etl.
-      4. Evaluate all upcoming matches with the correct predictor.
-      5. Tag matches per sport by team name heuristic.
-      6. Mark European leagues as off-season when no upcoming matches found.
-      7. Build CombinAIas (parlays) per sport and the all_parlays list.
-      8. Atomic swap: _cache = new_cache.
+      1. Refresh La Liga odds via flush_odds (The Odds API — 1 request/cycle).
+      2. Evaluate all upcoming La Liga matches with the XGBoost predictor.
+      3. Tag matches per sport by team name heuristic.
+      4. Mark La Liga as off-season when no upcoming matches found in June–July.
+      5. Build CombinAIA (parlay) for La Liga and the all_parlays list.
+      6. Atomic swap: _cache = new_cache.
     """
-    # Prevent overlapping refreshes (scheduler can fire multiple jobs)
     if not _refresh_lock.acquire(blocking=False):
         logger.warning("⏳ [cache] Refresh already in progress — skipping this invocation.")
         return
@@ -248,86 +204,50 @@ def _do_refresh() -> None:
     """Inner refresh logic — called only while holding _refresh_lock."""
     global _cache
 
-    logger.info("🔄 [cache_service] Starting multi-sport cache refresh…")
+    logger.info("🔄 [cache_service] Starting La Liga cache refresh…")
     t0 = time.time()
 
     try:
         from db.session import SessionLocal
         from db.models import Match, Bet, Odds
-        from core.shared_predictor import predictor, world_cup_predictor
-        from core.match_evaluator import _evaluate_match, _evaluate_world_cup_match
-        from core.config import settings
+        from core.shared_predictor import predictor
+        from core.match_evaluator import _evaluate_match
 
-        # ── Step 1: Sync World Cup matches ────────────────────────────────
+        # ── Step 1: Refresh La Liga odds (The Odds API — 1 request) ──────────
         try:
-            from etl.world_cup_etl import sync_world_cup_odds, sync_world_cup_schedule
-            wc_new1 = sync_world_cup_odds()
-            wc_new2 = sync_world_cup_schedule()
-            logger.info(f"✅ [cache] World Cup sync: odds={wc_new1} new, schedule={wc_new2} new")
+            from scripts.flush_odds import flush_and_reload
+            flush_and_reload()
+            logger.info("✅ [cache] La Liga odds refreshed.")
         except Exception as e:
-            logger.warning(f"⚠️  [cache] World Cup sync failed: {e}")
+            logger.warning(f"⚠️  [cache] La Liga odds refresh failed: {e}")
 
-        # ── Step 2: Refresh La Liga odds ──────────────────────────────────
-        if settings.enable_club_leagues:
-            try:
-                from scripts.flush_odds import flush_and_reload
-                flush_and_reload()
-                logger.info("✅ [cache] LaLiga odds refreshed.")
-            except Exception as e:
-                logger.warning(f"⚠️  [cache] LaLiga odds refresh failed: {e}")
-        else:
-            logger.info("⏸  [cache] Skipping LaLiga odds (ENABLE_CLUB_LEAGUES=False)")
-
-        # ── Step 3: Sync Premier League and Champions League ──────────────
-        if settings.enable_club_leagues:
-            try:
-                from etl.multi_sport_etl import sync_all_sports
-                sync_results = sync_all_sports()
-                logger.info(f"✅ [cache] Multi-sport sync: {sync_results}")
-            except Exception as e:
-                logger.warning(f"⚠️  [cache] Multi-sport sync failed: {e}")
-        else:
-            logger.info("⏸  [cache] Skipping Multi-sport sync (ENABLE_CLUB_LEAGUES=False)")
-
-        # ── Step 4: Evaluate all upcoming matches ─────────────────────────
-        # Build everything into a NEW local cache dict.
+        # ── Step 2: Evaluate upcoming La Liga matches ─────────────────────────
         new_cache = _empty_cache()
 
         db = SessionLocal()
         try:
             now        = datetime.utcnow()
-            seven_days = now + timedelta(days=7)  # 7-day horizon for stable odds
+            fourteen_days = now + timedelta(days=14)
             upcoming   = (
                 db.query(Match)
                 .join(Odds, (Odds.match_id == Match.id) & (Odds.market == "h2h"))
-                .filter(Match.date >= now, Match.date <= seven_days)
+                .filter(Match.date >= now, Match.date <= fourteen_days)
                 .order_by(Match.date.asc())
                 .distinct()
                 .all()
             )
 
-            wc_teams       = _get_worldcup_team_names()
-            jornada_all:    list[dict] = []
-            jornada_wc:     list[dict] = []
+            jornada_ll: list[dict] = []
 
             for m in upcoming:
                 try:
-                    home_name = m.home_team.name
-                    away_name = m.away_team.name
+                    result = _evaluate_match(m, predictor, db)
+                    if result:
+                        jornada_ll.append(result)
 
-                    # Route to World Cup evaluator if both teams are national teams
-                    if home_name in wc_teams or away_name in wc_teams:
-                        result = _evaluate_world_cup_match(m, world_cup_predictor, db)
-                        if result:
-                            jornada_wc.append(result)
-                    else:
-                        result = _evaluate_match(m, predictor, db)
-                        if result:
-                            jornada_all.append(result)
-                            
                     if not result:
                         continue
-                        
+
                     # Auto-track the system's value bet recommendation
                     best_pick = result.get("bestPick")
                     if best_pick and best_pick.get("isValueBet"):
@@ -337,7 +257,7 @@ def _do_refresh() -> None:
                             Bet.market == best_pick["market"],
                             Bet.selection == best_pick["outcome"]
                         ).first()
-                        
+
                         if not existing_sys_bet:
                             sys_bet = Bet(
                                 user_id=None,
@@ -357,37 +277,24 @@ def _do_refresh() -> None:
                     db.rollback()
                     logger.warning(f"⚠️  [cache] Skipping match {m.id}: {e}")
 
-            # ── Step 5: Tag club matches per sport ────────────────────────
-            laliga_teams    = _get_laliga_team_names(db) if settings.enable_club_leagues else set()
-            premier_teams   = _get_premier_team_names() if settings.enable_club_leagues else set()
-            champions_teams = _get_champions_team_names() if settings.enable_club_leagues else set()
+            # ── Step 3: Tag matches per sport ─────────────────────────────────
+            laliga_teams   = _get_laliga_team_names(db)
+            off_season_now = _is_off_season()
 
-            off_season_now  = _is_off_season() or not settings.enable_club_leagues
+            laliga_jornada = (
+                [m for m in jornada_ll if m["homeTeam"] in laliga_teams or m["awayTeam"] in laliga_teams]
+                if laliga_teams else jornada_ll  # fallback: all club matches are La Liga
+            )
+            is_laliga_off = len(laliga_jornada) == 0 and off_season_now
 
-            for sport_key, team_set in [
-                ("laliga",    laliga_teams),
-                ("premier",   premier_teams),
-                ("champions", champions_teams),
-            ]:
-                sport_jornada = (
-                    [m for m in jornada_all if m["homeTeam"] in team_set or m["awayTeam"] in team_set]
-                    if team_set
-                    else []
-                )
-                is_off = len(sport_jornada) == 0 and off_season_now
-                new_cache["sports"][sport_key]["jornada"]      = sport_jornada
-                new_cache["sports"][sport_key]["parlay"]       = _build_parlay(sport_jornada)
-                new_cache["sports"][sport_key]["is_off_season"] = is_off
-
-            # World Cup 2026 has ended — mark as off-season
-            new_cache["sports"]["worldcup"]["jornada"]       = jornada_wc
-            new_cache["sports"]["worldcup"]["parlay"]        = _build_parlay(jornada_wc)
-            new_cache["sports"]["worldcup"]["is_off_season"] = True  # WC 2026 ended
+            new_cache["sports"]["laliga"]["jornada"]      = laliga_jornada
+            new_cache["sports"]["laliga"]["parlay"]       = _build_parlay(laliga_jornada)
+            new_cache["sports"]["laliga"]["is_off_season"] = is_laliga_off
 
         finally:
             db.close()
 
-        # ── Step 6: Build the all_parlays list ────────────────────────────
+        # ── Step 4: Build the all_parlays list ────────────────────────────────
         all_parlays = []
         for sk in SUPPORTED_SPORTS:
             parlay = new_cache["sports"][sk]["parlay"]
@@ -402,21 +309,18 @@ def _do_refresh() -> None:
         new_cache["boosts"]       = []
         new_cache["last_updated"] = time.time()
 
-        # Backward-compat aliases baked into the dict (no mutation on read)
+        # Backward-compat aliases
         new_cache["jornada"] = new_cache["sports"]["laliga"]["jornada"]
         new_cache["parlay"]  = new_cache["sports"]["laliga"]["parlay"]
 
-        # ── Step 7: ATOMIC SWAP ───────────────────────────────────────────
-        # Single reference assignment is atomic under CPython's GIL.
-        # Readers that already grabbed the old _cache keep a valid snapshot;
-        # new readers immediately see the fresh data.
+        # ── Step 5: ATOMIC SWAP ───────────────────────────────────────────────
         _cache = new_cache
 
         elapsed       = round(time.time() - t0, 2)
-        total_matches = sum(len(new_cache["sports"][s]["jornada"]) for s in SUPPORTED_SPORTS)
+        total_matches = len(new_cache["sports"]["laliga"]["jornada"])
         logger.info(
-            f"✅ [cache] Refresh complete in {elapsed}s — "
-            f"{total_matches} total matches, {len(all_parlays)} CombinAIas."
+            f"✅ [cache] La Liga refresh complete in {elapsed}s — "
+            f"{total_matches} matches, {len(all_parlays)} CombinAIas."
         )
 
     except Exception as e:
