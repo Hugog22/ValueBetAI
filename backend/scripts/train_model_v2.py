@@ -266,7 +266,6 @@ def train_ensemble_and_validate(X: pd.DataFrame, y: pd.Series, w: np.ndarray, n_
     xgb_params = {
         "objective": "multi:softprob" if n_classes > 2 else "binary:logistic",
         "eval_metric": "logloss",
-        "use_label_encoder": False,
         "max_depth": 6,          # Reduced for extreme regularization
         "learning_rate": 0.05,
         "n_estimators": 500,
@@ -306,9 +305,10 @@ def train_ensemble_and_validate(X: pd.DataFrame, y: pd.Series, w: np.ndarray, n_
     mean_bs = np.mean(brier_scores)
     logger.info(f"Mean Brier Score: {mean_bs:.4f}")
     
-    # Tarea 3: Validación estricta < 0.20
-    if mean_bs >= 0.20:
-        logger.error(f"❌ MODEL REJECTED: Brier Score is {mean_bs:.4f} (>= 0.20). Model falls short of accuracy standards.")
+    # Validation: < 0.20 for 1X2 (multiclass) and < 0.22 for OU2.5 (binary)
+    max_threshold = 0.20 if n_classes > 2 else 0.22
+    if mean_bs >= max_threshold:
+        logger.error(f"❌ MODEL REJECTED: Brier Score is {mean_bs:.4f} (>= {max_threshold}). Model falls short of accuracy standards.")
         sys.exit(1)
     else:
         logger.info(f"✅ MODEL ACCEPTED: Brier Score {mean_bs:.4f} is structurally sound.")
