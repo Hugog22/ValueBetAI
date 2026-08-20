@@ -9,6 +9,7 @@ import BetModal from '@/components/BetModal';
 import AllOptionsModal from '@/components/AllOptionsModal';
 import AnalysisModal from '@/components/AnalysisModal';
 import WorldCupBanner from '@/components/WorldCupBanner';
+import LaLigaBanner from '@/components/LaLigaBanner';
 import { getFlag, getEsName } from '@/utils/translations';
 
 // Safelist for Tailwind JIT (backend-generated classes)
@@ -20,22 +21,24 @@ const API = '/api/proxy';
 
 const SPORTS = [
   {
-    key:      'worldcup',
-    label:    'Mundial 2026',
-    subtitle: 'FIFA World Cup',
-    flag:     '⚽',
-    image:    '/maradona.jpg',
-    isWorldCup: true,
-    isOffSeason: false, // World Cup is never off-season
-  },
-  {
     key:      'laliga',
     label:    'La Liga',
     subtitle: 'España',
     flag:     '🇪🇸',
     image:    'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=400&h=400&auto=format&fit=crop',
     isWorldCup: false,
-    isOffSeason: true, // Off until September 2026
+    isLaLiga:   true,
+    isOffSeason: false, // La Liga 2026/27 is active
+  },
+  {
+    key:      'worldcup',
+    label:    'Mundial 2026',
+    subtitle: 'FIFA World Cup',
+    flag:     '⚽',
+    image:    '/maradona.jpg',
+    isWorldCup: true,
+    isLaLiga:   false,
+    isOffSeason: true, // World Cup has ended
   },
   {
     key:      'premier',
@@ -44,7 +47,8 @@ const SPORTS = [
     flag:     '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
     image:    'https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=400&h=400&auto=format&fit=crop',
     isWorldCup: false,
-    isOffSeason: true, // Off until August 2026
+    isLaLiga:   false,
+    isOffSeason: true,
   },
   {
     key:      'champions',
@@ -53,7 +57,8 @@ const SPORTS = [
     flag:     '🏆',
     image:    'https://images.unsplash.com/photo-1614632537190-23e4146777db?q=80&w=400&h=400&auto=format&fit=crop',
     isWorldCup: false,
-    isOffSeason: true, // Off until September 2026
+    isLaLiga:   false,
+    isOffSeason: true,
   },
 ] as const;
 
@@ -114,14 +119,14 @@ interface Props {
 export default function MatchesDashboard({ initialMatches, initialParlay, initialWorldCupMatches }: Props) {
   const { token } = useAuth();
 
-  // Sport selector — default to worldcup (MODO MUNDIAL)
-  const [activeSport, setActiveSport] = useState<SportKey>('worldcup');
+  // Sport selector — default to laliga (MODO LALIGA)
+  const [activeSport, setActiveSport] = useState<SportKey>('laliga');
   const [sportLoading, setSportLoading] = useState(false);
 
-  // Match data — World Cup seeded from ISR, others lazy-loaded
+  // Match data — LaLiga seeded from ISR, others lazy-loaded
   const [matchesBySport, setMatchesBySport] = useState<Record<SportKey, Match[]>>({
-    worldcup:  initialWorldCupMatches ?? [],
     laliga:    initialMatches,
+    worldcup:  initialWorldCupMatches ?? [],
     premier:   [],
     champions: [],
   });
@@ -233,12 +238,20 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
     return matchesRisk && matchesEV;
   });
 
-  const featuredMatch = activeMatches.find(m => m.bestPick?.isValueBet) || activeMatches[0];
+  const featuredMatch   = activeMatches.find(m => m.bestPick?.isValueBet) || activeMatches[0];
   const isWorldCupActive = activeSport === 'worldcup';
+  const isLaLigaActive  = activeSport === 'laliga';
 
   return (
     <>
-      {/* ── WORLD CUP BANNER ────────────────────────────────────────────── */}
+      {/* ── LALIGA BANNER ───────────────────────────────────────────────── */}
+      {isLaLigaActive && (
+        <section className="mb-16">
+          <LaLigaBanner matchCount={activeMatches.length} />
+        </section>
+      )}
+
+      {/* ── WORLD CUP BANNER (historial) ────────────────────────────────── */}
       {isWorldCupActive && (
         <section className="mb-16">
           <WorldCupBanner matchCount={activeMatches.length} />
@@ -290,8 +303,14 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                   className={`relative overflow-hidden rounded-[2rem] shadow-xl p-8 ${
                     isWcParlay
                       ? 'wc-card text-white'
-                      : 'bg-gradient-to-br from-[#064E3B] to-[#043327] text-white'
+                      : parlay.sport === 'laliga'
+                        ? 'll-card text-white'
+                        : 'bg-gradient-to-br from-[#064E3B] to-[#043327] text-white'
                   }`}
+                  style={parlay.sport === 'laliga' && !isWcParlay ? {
+                    background: 'linear-gradient(135deg, #0D0603 0%, #1A0A05 60%, #0F0804 100%)',
+                    border: '1px solid rgba(255,69,0,0.25)'
+                  } : {}}
                 >
                   {/* Sport header */}
                   <div className="flex items-center gap-3 mb-6">
@@ -302,7 +321,9 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                     </div>
                     <div className="ml-auto text-right">
                       <div className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1">Cuota Total</div>
-                      <div className={`text-3xl font-editorial font-bold ${isWcParlay ? 'text-amber-300' : 'text-[#FFD700]'}`}>
+                      <div className={`text-3xl font-editorial font-bold ${
+                        isWcParlay ? 'text-amber-300' : parlay.sport === 'laliga' ? 'text-orange-400' : 'text-[#FFD700]'
+                      }`}>
                         {parlay.totalOdds?.toFixed(2)}
                       </div>
                     </div>
@@ -320,7 +341,9 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                         </div>
                         <div className="flex justify-between items-end">
                           <div>
-                            <div className={`text-[10px] font-bold mb-0.5 ${isWcParlay ? 'text-amber-300' : 'text-[#FFD700]'}`}>{leg.market}</div>
+                            <div className={`text-[10px] font-bold mb-0.5 ${
+                            isWcParlay ? 'text-amber-300' : parlay.sport === 'laliga' ? 'text-orange-400' : 'text-[#FFD700]'
+                          }`}>{leg.market}</div>
                             <div className="text-sm font-editorial font-bold">{leg.label}</div>
                           </div>
                           <div className="text-lg font-black text-white/90">{leg.bookmakerOdds?.toFixed(2)}</div>
@@ -332,14 +355,16 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                   {/* Footer */}
                   <div className="flex items-center justify-between">
                     <div className="bg-white/20 text-xs font-bold px-4 py-1.5 rounded-full">
-                      Prob. IA: <span className={isWcParlay ? 'text-amber-300' : 'text-[#FFD700]'}>{parlay.jointProbability?.toFixed(1)}%</span>
+                      Prob. IA: <span className={isWcParlay ? 'text-amber-300' : parlay.sport === 'laliga' ? 'text-orange-400' : 'text-[#FFD700]'}>{parlay.jointProbability?.toFixed(1)}%</span>
                     </div>
                     <button
                       onClick={() => setActiveSport(parlay.sport as SportKey)}
                       className={`font-black text-xs px-5 py-2 rounded-full hover:scale-105 transition-transform active:scale-95 ${
                         isWcParlay
                           ? 'bg-amber-400 text-[#0A0F1E]'
-                          : 'bg-[#FFD700] text-[#1A1C1E]'
+                          : parlay.sport === 'laliga'
+                            ? 'bg-orange-500 text-white'
+                            : 'bg-[#FFD700] text-[#1A1C1E]'
                       }`}
                     >
                       Ver partidos →
@@ -377,7 +402,9 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                   isActive
                     ? sport.isWorldCup
                       ? 'border-amber-400 shadow-lg shadow-amber-400/20'
-                      : 'border-[#064E3B] shadow-lg shadow-[#064E3B]/20'
+                      : (sport as any).isLaLiga
+                        ? 'border-orange-500 shadow-lg shadow-orange-500/20'
+                        : 'border-[#064E3B] shadow-lg shadow-[#064E3B]/20'
                     : 'border-transparent group-hover:border-[#E5E7EB]'
                 }`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -392,10 +419,10 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                   {/* Active badge */}
                   {isActive && !isOffSeason && (
                     <div className={`absolute inset-0 flex items-end p-3 ${
-                      sport.isWorldCup ? 'bg-amber-400/20' : 'bg-[#064E3B]/20'
+                      sport.isWorldCup ? 'bg-amber-400/20' : (sport as any).isLaLiga ? 'bg-orange-500/20' : 'bg-[#064E3B]/20'
                     }`}>
                       <span className={`text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${
-                        sport.isWorldCup ? 'bg-amber-500' : 'bg-[#064E3B]'
+                        sport.isWorldCup ? 'bg-amber-500' : (sport as any).isLaLiga ? 'bg-orange-500' : 'bg-[#064E3B]'
                       }`}>
                         {matchCount > 0 ? `${matchCount} partidos` : 'Activo'}
                       </span>
@@ -405,9 +432,9 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                   {/* Off-season overlay */}
                   {isOffSeason && (
                     <div className="absolute inset-0 bg-[#1A1C1E]/70 flex flex-col items-center justify-center gap-2 p-3">
-                      <span className="text-2xl">💤</span>
+                      <span className="text-2xl">{sport.isWorldCup ? '⏳' : '💤'}</span>
                       <span className="text-white text-[9px] font-black uppercase tracking-widest text-center leading-tight px-2">
-                        Off Season<br/>Sep 2026
+                        {sport.isWorldCup ? 'Próximamente' : 'Off Season'}<br/>{sport.isWorldCup ? '2030' : 'Sep 2026'}
                       </span>
                     </div>
                   )}
@@ -423,10 +450,10 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                   <div className="flex items-center gap-2">
                     <span className="text-base">{sport.flag}</span>
                     <h3 className={`font-editorial text-base font-bold transition-colors ${
-                      isActive
-                        ? sport.isWorldCup ? 'text-amber-600' : 'text-[#064E3B]'
-                        : 'text-[#1A1C1E] group-hover:text-[#064E3B]'
-                    }`}>{sport.label}</h3>
+                    isActive
+                      ? sport.isWorldCup ? 'text-amber-600' : (sport as any).isLaLiga ? 'text-orange-600' : 'text-[#064E3B]'
+                      : 'text-[#1A1C1E] group-hover:text-[#064E3B]'
+                  }`}>{sport.label}</h3>
                   </div>
                   <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">{sport.subtitle}</p>
                 </div>
@@ -443,7 +470,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
             <span className="text-2xl">{activeSportConfig.flag}</span>
             <h2 className="text-3xl font-editorial font-bold text-[#1A1C1E]">
               Radar de Valor —{' '}
-              <span className={isWorldCupActive ? 'text-amber-600' : 'text-[#064E3B]'}>
+              <span className={isWorldCupActive ? 'text-amber-600' : isLaLigaActive ? 'text-orange-600' : 'text-[#064E3B]'}>
                 {activeSportConfig.label}
               </span>
             </h2>
@@ -497,23 +524,24 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
               y preparándose para la siguiente.
             </p>
             <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest mb-8">
-              Próxima temporada: Septiembre 2026
+              {isWorldCupActive ? 'Próxima edición: 2030' : 'Próxima temporada: Septiembre 2026'}
             </p>
             <button
-              onClick={() => setActiveSport('worldcup')}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-[#0A0F1E] to-[#1B2A4A] text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition-transform active:scale-95"
+              onClick={() => setActiveSport('laliga')}
+              className="inline-flex items-center gap-2 text-white font-bold px-6 py-3 rounded-full hover:scale-105 transition-transform active:scale-95"
+              style={{ background: 'linear-gradient(135deg, #0D0603, #1A0A05)', border: '1px solid rgba(255,69,0,0.3)' }}
             >
               <span>⚽</span>
-              <span>Ver el Mundial 2026</span>
+              <span>Ver La Liga 2026/27</span>
             </button>
           </div>
         ) : sportLoading ? (
           <div className="flex flex-col items-center justify-center py-24">
             <div className={`w-10 h-10 border-2 border-[#E5E7EB] rounded-full animate-spin mb-4 ${
-              isWorldCupActive ? 'border-t-amber-400' : 'border-t-[#064E3B]'
+              isWorldCupActive ? 'border-t-amber-400' : isLaLigaActive ? 'border-t-orange-500' : 'border-t-[#064E3B]'
             }`} />
             <div className={`text-[10px] font-bold uppercase tracking-widest animate-pulse ${
-              isWorldCupActive ? 'text-amber-600' : 'text-[#064E3B]'
+              isWorldCupActive ? 'text-amber-600' : isLaLigaActive ? 'text-orange-600' : 'text-[#064E3B]'
             }`}>
               Cargando {activeSportConfig.label}…
             </div>
@@ -531,11 +559,27 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
             {filteredMatches.map(match => (
               <div
                 key={match.id}
-                className={isWorldCupActive ? 'wc-card rounded-[2rem] overflow-hidden' : ''}
+                className={isWorldCupActive ? 'wc-card rounded-[2rem] overflow-hidden' : isLaLigaActive ? 'll-card rounded-[2rem] overflow-hidden' : ''}
               >
-                <BentoCard key={match.id} className={`flex flex-col h-full ${isWorldCupActive ? '!bg-transparent !border-none' : ''}`}>
-                  {/* World Cup match header with flags */}
-                  {isWorldCupActive ? (
+                <BentoCard key={match.id} className={`flex flex-col h-full ${
+                  isWorldCupActive ? '!bg-transparent !border-none' : isLaLigaActive ? '!bg-transparent !border-none' : ''
+                }`}>
+                  {/* LaLiga match header */}
+                  {isLaLigaActive ? (
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest block mb-1" style={{ color: 'rgba(255,69,0,0.8)' }}>
+                          {new Date(match.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <h3 className="text-xl font-editorial font-bold text-white">{getEsName(match.homeTeam)} vs {getEsName(match.awayTeam)}</h3>
+                      </div>
+                      {match.bestPick?.risk && (
+                        <div className={`${match.bestPick.risk.bgClass} px-3 py-1 rounded-lg text-[8px] font-bold uppercase tracking-widest`}>
+                          {match.bestPick.risk.level}
+                        </div>
+                      )}
+                    </div>
+                  ) : isWorldCupActive ? (
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <span className="text-[10px] font-bold text-amber-400/80 uppercase tracking-widest block mb-1">
@@ -571,7 +615,17 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                     </div>
                   )}
 
-                  {/* FIFA ranking stats (bar removed, just text if wanted, or completely removed) */}
+                  {/* LaLiga probability bar */}
+                  {isLaLigaActive && (
+                    <div className="relative h-1.5 bg-white/10 rounded-full overflow-hidden mb-3">
+                      <div
+                        className="ll-rank-bar absolute left-0 top-0 h-full transition-all duration-1000"
+                        style={{ width: `${(match.bestPick?.probability ?? 0) * 100}%` }}
+                      />
+                    </div>
+                  )}
+
+                  {/* FIFA ranking stats for World Cup */}
                   {isWorldCupActive && match.homeFifaPts && match.awayFifaPts && (
                     <div className="mb-4">
                       <div className="flex items-center justify-between text-[10px] text-white/50 font-bold uppercase tracking-widest">
@@ -586,9 +640,11 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                       <div key={pi} className="group">
                         <div className="flex items-center justify-between mb-2">
                           <span className={`text-[10px] font-bold uppercase tracking-widest ${
-                            isWorldCupActive ? 'text-amber-400/80' : 'text-[#64748B]'
+                            isWorldCupActive ? 'text-amber-400/80' : isLaLigaActive ? 'text-orange-400/80' : 'text-[#64748B]'
                           }`}>{pick.market}</span>
-                          <span className={`text-xs font-bold ${isWorldCupActive ? 'text-amber-300' : 'text-[#064E3B]'}`}>
+                          <span className={`text-xs font-bold ${
+                            isWorldCupActive ? 'text-amber-300' : isLaLigaActive ? 'text-orange-400' : 'text-[#064E3B]'
+                          }`}>
                             AI {((pick.probability ?? 0) * 100).toFixed(0)}% vs Media {((pick.bookmaker_implied_prob ?? 0) * 100).toFixed(0)}%
                           </span>
                         </div>
@@ -601,7 +657,9 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                           </div>
                         )}
                         <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4">
-                          <div className={`text-base md:text-lg font-editorial font-bold pr-2 ${isWorldCupActive ? 'text-white' : 'text-[#1A1C1E]'}`}>
+                          <div className={`text-base md:text-lg font-editorial font-bold pr-2 ${
+                            isWorldCupActive ? 'text-white' : isLaLigaActive ? 'text-white' : 'text-[#1A1C1E]'
+                          }`}>
                             {pick.label}
                           </div>
                           <div className="flex items-center gap-1.5 md:gap-2 ml-auto">
@@ -611,7 +669,9 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                                 className={`text-[9px] md:text-[10px] font-bold uppercase tracking-widest px-2 md:px-3 py-1 md:py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
                                   isWorldCupActive 
                                     ? 'border-white/20 text-white/70 hover:bg-white/10 hover:text-white' 
-                                    : 'border-[#E5E7EB] text-[#64748B] hover:bg-[#F1F3F5] hover:text-[#1A1C1E]'
+                                    : isLaLigaActive
+                                      ? 'border-white/20 text-white/70 hover:bg-white/10 hover:text-white'
+                                      : 'border-[#E5E7EB] text-[#64748B] hover:bg-[#F1F3F5] hover:text-[#1A1C1E]'
                                 }`}
                               >
                                 Análisis IA
@@ -623,7 +683,9 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                                 className={`text-[9px] md:text-[10px] font-bold uppercase tracking-widest px-2 md:px-3 py-1 md:py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
                                   isWorldCupActive 
                                     ? 'border-white/20 text-white/70 hover:bg-white/10 hover:text-white' 
-                                    : 'border-[#E5E7EB] text-[#64748B] hover:bg-[#F1F3F5] hover:text-[#1A1C1E]'
+                                    : isLaLigaActive
+                                      ? 'border-white/20 text-white/70 hover:bg-white/10 hover:text-white'
+                                      : 'border-[#E5E7EB] text-[#64748B] hover:bg-[#F1F3F5] hover:text-[#1A1C1E]'
                                 }`}
                               >
                                 Ver opciones
@@ -634,7 +696,9 @@ export default function MatchesDashboard({ initialMatches, initialParlay, initia
                               className={`font-black px-2 md:px-4 py-1.5 md:py-2 rounded-xl transition-all active:scale-95 min-w-[50px] md:min-w-[60px] text-xs md:text-sm ${
                               isWorldCupActive
                                 ? 'bg-white/10 hover:bg-amber-400 hover:text-[#0A0F1E] text-white border border-white/20'
-                                : 'bg-[#F1F3F5] hover:bg-[#064E3B] hover:text-white text-[#1A1C1E]'
+                                : isLaLigaActive
+                                  ? 'bg-white/10 hover:bg-orange-500 hover:text-white text-white border border-white/20'
+                                  : 'bg-[#F1F3F5] hover:bg-[#064E3B] hover:text-white text-[#1A1C1E]'
                             }`}
                           >
                             {(pick.bookmaker_odds || pick.bookmakerOdds || 1.0).toFixed(2)}

@@ -379,10 +379,10 @@ def _do_refresh() -> None:
                 new_cache["sports"][sport_key]["parlay"]       = _build_parlay(sport_jornada)
                 new_cache["sports"][sport_key]["is_off_season"] = is_off
 
-            # World Cup always gets its own bucket
+            # World Cup 2026 has ended — mark as off-season
             new_cache["sports"]["worldcup"]["jornada"]       = jornada_wc
             new_cache["sports"]["worldcup"]["parlay"]        = _build_parlay(jornada_wc)
-            new_cache["sports"]["worldcup"]["is_off_season"] = False  # WC is never "off-season"
+            new_cache["sports"]["worldcup"]["is_off_season"] = True  # WC 2026 ended
 
         finally:
             db.close()

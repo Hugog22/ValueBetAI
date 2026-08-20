@@ -17,6 +17,14 @@
   --wc-red:        #C0392B;
   --wc-shimmer-1:  rgba(255, 215, 0, 0.15);
   --wc-shimmer-2:  rgba(255, 215, 0, 0.05);
+
+  /* LaLiga theme tokens */
+  --ll-orange:     #FF4500;
+  --ll-orange-dark:#CC3700;
+  --ll-deep:       #0D0603;
+  --ll-dark:       #1A0A05;
+  --ll-shimmer-1:  rgba(255, 69, 0, 0.15);
+  --ll-shimmer-2:  rgba(255, 69, 0, 0.05);
 }
 
 @layer utilities {
@@ -117,6 +125,66 @@
     height: 3px;
     border-radius: 99px;
     background: linear-gradient(90deg, #FFD700, #B8860B);
+  }
+
+  /* ════════════════════════════════════════════════
+     LaLiga Theme Classes
+  ════════════════════════════════════════════════ */
+
+  /* ── LaLiga match card ── */
+  .ll-card {
+    background: linear-gradient(135deg, #0D0603 0%, #1A0A05 60%, #0F0804 100%);
+    border: 1px solid rgba(255, 69, 0, 0.2);
+    transition: all 0.3s ease;
+  }
+
+  .ll-card:hover {
+    border-color: rgba(255, 69, 0, 0.45);
+    box-shadow: 0 8px 32px rgba(255, 69, 0, 0.10);
+  }
+
+  /* ── LaLiga banner ── */
+  .ll-banner {
+    background: linear-gradient(135deg, #0D0603 0%, #1f0e06 45%, #120704 100%);
+    border: 1px solid rgba(255, 69, 0, 0.30);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 69, 0, 0.12);
+  }
+
+  /* ── Shimmer animation for LaLiga banner ── */
+  .ll-shimmer-bar {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgba(255, 69, 0, 0.07) 50%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: ll-shimmer 4s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes ll-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ── Ball pulse badge ── */
+  .ll-ball-badge {
+    animation: ll-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes ll-pulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(255, 69, 0, 0.4)); }
+    50%       { transform: scale(1.06); filter: drop-shadow(0 0 18px rgba(255, 69, 0, 0.7)); }
+  }
+
+  /* ── LaLiga probability bar ── */
+  .ll-rank-bar {
+    height: 3px;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #FF4500, #CC3700);
   }
 }
 
