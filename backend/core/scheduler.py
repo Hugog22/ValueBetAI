@@ -154,18 +154,19 @@ def start_scheduler():
     )
     logger.info("  ✓ Task 2 → Daily La Liga AI retrain at 04:30 Madrid time.")
 
-    # ── Task 3: Cache refresh every 2 hours ───────────────────────────────────
+    # ── Task 3: Cache refresh every 15 minutos ────────────────────────────────
     # 1 API request per refresh (La Liga odds only).
-    # 12 refreshes/day × 1 request × 30 days = 360 créditos/mes.
+    # 4 refreshes/hour × 24h × 30 days = ~2880 créditos/mes.
+    # Gracias a la rotación de claves en odds_api.py, podemos soportar este volumen.
     scheduler.add_job(
         refresh_cache,
-        trigger=CronTrigger(hour="0,2,4,6,8,10,12,14,16,18,20,22", timezone="Europe/Madrid"),
+        trigger=CronTrigger(minute="*/15", timezone="Europe/Madrid"),
         id="cache_refresh",
-        name="12x/day: La Liga cache refresh",
+        name="Every 15m: La Liga cache refresh",
         replace_existing=True,
         misfire_grace_time=60,
     )
-    logger.info("  ✓ Task 3 → Cache refresh every 2h (~360 créd/mes).")
+    logger.info("  ✓ Task 3 → Cache refresh every 15m (~2880 créd/mes).")
 
     # ── Task 4: Hourly bet settlement + conditional cache refresh ────────────
     scheduler.add_job(
