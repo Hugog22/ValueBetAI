@@ -116,22 +116,11 @@ def start_scheduler():
             if scripts_dir not in sys.path:
                 sys.path.insert(0, scripts_dir)
 
-            train_mod = importlib.import_module("train_model")
+            train_mod = importlib.import_module("train_model_v2")
             importlib.reload(train_mod)
-            train_mod.train()
+            train_mod.main()
             elapsed = time.time() - t0
 
-            meta = {}
-            if os.path.exists(train_mod.META_PATH):
-                with open(train_mod.META_PATH) as f:
-                    meta = json.load(f)
-
-            write_training_report(
-                model_name="La Liga — XGBoost",
-                success=True,
-                meta=meta,
-                duration_seconds=elapsed,
-            )
             logger.info(f"✅ [scheduler] La Liga model retrained in {elapsed:.0f}s")
 
         except Exception as e:

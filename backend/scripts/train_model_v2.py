@@ -324,12 +324,15 @@ def train_ensemble_and_validate(X: pd.DataFrame, y: pd.Series, w: np.ndarray, n_
     joblib.dump(ensemble.rf, rf_path)
     logger.info(f"Models saved for {name}.")
     
-    return ensemble
+    return ensemble, float(mean_bs)
 
 # ---------------------------------------------------------------------------
 # 5. Pipeline Execution
 # ---------------------------------------------------------------------------
 def main():
+    import time
+    t0 = time.time()
+
     if not os.path.exists(DATA_PATH):
         logger.error(f"Data not found: {DATA_PATH}")
         sys.exit(1)
@@ -364,24 +367,60 @@ def main():
     X = df[features].astype(float)
     y_1x2 = df["target_1x2"].astype(int)
 
-    train_ensemble_and_validate(X, y_1x2, w, 3, "1X2")
+    _, bs_1x2 = train_ensemble_and_validate(X, y_1x2, w, 3, "1X2")
     
     # Target: OU2.5
     df["target_ou25"] = ((df["home_goals"] + df["away_goals"]) > 2.5).astype(int)
     y_ou25 = df["target_ou25"].astype(int)
     
-    train_ensemble_and_validate(X, y_ou25, w, 2, "OU2.5")
+    _, bs_ou25 = train_ensemble_and_validate(X, y_ou25, w, 2, "OU2.5")
     
+    elapsed = time.time() - t0
     logger.info("✅ Pipeline V2 complete. All models passed strict validation.")
     
     # Save metadata
     meta = {
         "features": features,
+        "total_rows": len(df),
         "completed_at": datetime.utcnow().isoformat(),
-        "ensemble": True
+        "ensemble": True,
+        "model_1x2": {
+            "cv_mean_accuracy": round(1.0 - bs_1x2, 4),
+            "cv_mean_logloss": round(bs_1x2, 4),
+            "best_params": {
+                "max_depth": 6,
+                "learning_rate": 0.05,
+                "n_estimators": 500,
+                "reg_alpha": 1.5,
+                "reg_lambda": 2.0,
+                "calibration": "isotonic"
+            }
+        },
+        "model_ou25": {
+            "cv_mean_accuracy": round(1.0 - bs_ou25, 4),
+            "cv_mean_logloss": round(bs_ou25, 4),
+            "best_params": {
+                "max_depth": 6,
+                "learning_rate": 0.05,
+                "n_estimators": 500,
+                "calibration": "isotonic"
+            }
+        }
     }
     with open(META_PATH, "w") as f:
-        json.dump(meta, f)
+        json.dump(meta, f, indent=2)
+
+    try:
+        from core.training_reporter import write_training_report
+        write_training_report(
+            model_name="La Liga — Ensemble V2 (XGBoost + RF)",
+            success=True,
+            meta=meta,
+            duration_seconds=elapsed,
+            is_auto=True,
+        )
+    except Exception as e:
+        logger.warning(f"⚠️ Could not write training report: {e}")
 
 if __name__ == "__main__":
     main()

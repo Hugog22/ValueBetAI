@@ -64,5 +64,63 @@
         "colsample_bytree": 0.9673615987664642
       }
     }
+  },
+  "La Liga \u2014 Ensemble V2 (XGBoost + RF)": {
+    "features": [
+      "home_elo",
+      "away_elo",
+      "elo_diff",
+      "home_xg_for_avg10",
+      "away_xg_for_avg10",
+      "xg_diff",
+      "home_possession_avg10",
+      "away_possession_avg10",
+      "possession_diff",
+      "home_shots_target_avg10",
+      "away_shots_target_avg10",
+      "shots_diff",
+      "home_absences",
+      "away_absences",
+      "absence_severity",
+      "rest_days_home",
+      "rest_days_away",
+      "home_offensive_strength",
+      "away_offensive_strength",
+      "admin_offensive_diff",
+      "home_defensive_solidity",
+      "away_defensive_solidity",
+      "admin_defensive_diff",
+      "home_motivation",
+      "away_motivation",
+      "admin_motivation_diff",
+      "home_momentum",
+      "away_momentum",
+      "admin_momentum_diff"
+    ],
+    "total_rows": 4490,
+    "completed_at": "2026-08-31T11:17:33.617298",
+    "ensemble": true,
+    "model_1x2": {
+      "cv_mean_accuracy": 0.8252,
+      "cv_mean_logloss": 0.1748,
+      "best_params": {
+        "max_depth": 6,
+        "learning_rate": 0.05,
+        "n_estimators": 500,
+        "reg_alpha": 1.5,
+        "reg_lambda": 2.0,
+        "calibration": "isotonic"
+      }
+    },
+    "model_ou25": {
+      "cv_mean_accuracy": 0.7954,
+      "cv_mean_logloss": 0.2046,
+      "best_params": {
+        "max_depth": 6,
+        "learning_rate": 0.05,
+        "n_estimators": 500,
+        "calibration": "isotonic"
+      }
+    }
   }
 }

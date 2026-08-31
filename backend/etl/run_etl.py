@@ -61,11 +61,28 @@ def fetch_and_store_laliga_matches(season: str | None = None):
             # Understat match IDs are stored in api_football_id column for cross-referencing
             understat_id = int(m.get("id", 0))
 
-            # Skip if already stored (avoid duplicates on re-run)
-            existing = db.query(Match).filter(Match.api_football_id == understat_id).first()
+            # Match existing by api_football_id or (home_team, away_team, same day)
+            existing = None
+            if understat_id > 0:
+                existing = db.query(Match).filter(Match.api_football_id == understat_id).first()
+
+            if not existing and home_team and away_team:
+                from datetime import timedelta
+                day_start = match_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                day_end = day_start + timedelta(days=1)
+                existing = db.query(Match).filter(
+                    Match.home_team_id == home_team.id,
+                    Match.away_team_id == away_team.id,
+                    Match.date >= day_start,
+                    Match.date < day_end
+                ).first()
+
             if existing:
-                # Update status if match finished since last ETL run
-                if existing.status != status:
+                # Assign understat_id if missing
+                if understat_id > 0 and not existing.api_football_id:
+                    existing.api_football_id = understat_id
+                # Update status and scores if match finished or goals were missing
+                if existing.status != status or (is_played and existing.home_goals is None):
                     existing.status = status
                     existing.home_goals = home_goals
                     existing.away_goals = away_goals
@@ -97,6 +114,99 @@ def fetch_and_store_laliga_matches(season: str | None = None):
         db.close()
 
 
+def sync_football_data_results() -> int:
+    """
+    Syncs finished match scores and statuses from Football-Data.org API
+    for La Liga matches, updates match records in DB, and settles pending bets.
+    """
+    key = settings.FOOTBALL_DATA_API_KEY
+    if not key:
+        logger.warning("⚠️ FOOTBALL_DATA_API_KEY not configured — skipping football-data sync.")
+        return 0
+
+    url = "https://api.football-data.org/v4/competitions/PD/matches"
+    headers = {"X-Auth-Token": key}
+    
+    try:
+        import httpx
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.get(url, headers=headers)
+            if resp.status_code != 200:
+                logger.warning(f"⚠️ Football-Data API returned status {resp.status_code}")
+                return 0
+            data = resp.json()
+            fd_matches = data.get("matches", [])
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to fetch Football-Data.org matches: {e}")
+        return 0
+
+    db = SessionLocal()
+    updated_count = 0
+    try:
+        def normalize_name(name: str) -> str:
+            name = name.lower()
+            replacements = {
+                'deportivo alavés': 'alavés',
+                'rcd espanyol de barcelona': 'espanyol',
+                'rc deportivo la coruña': 'deportivo la coruña',
+                'rayo vallecano de madrid': 'rayo vallecano',
+                'getafe cf': 'getafe',
+                'sevilla fc': 'sevilla',
+                'villarreal cf': 'villarreal',
+                'levante ud': 'levante',
+                'elche cf': 'elche cf',
+                'fc barcelona': 'barcelona',
+                'real madrid cf': 'real madrid',
+                'atletico madrid': 'atlético madrid',
+                'atlético de madrid': 'atlético madrid',
+                'athletic club': 'athletic bilbao',
+                'real betis balompié': 'real betis',
+                'real sociedad de fútbol': 'real sociedad',
+                'celta de vigo': 'celta vigo',
+                'rc celta de vigo': 'celta vigo',
+                'valencia cf': 'valencia',
+                'ca osasuna': 'ca osasuna',
+                'málaga cf': 'málaga'
+            }
+            for k, v in replacements.items():
+                if k in name:
+                    return v
+            return name
+
+        teams = {t.id: normalize_name(t.name) for t in db.query(Team).all()}
+        db_matches = db.query(Match).all()
+
+        for f in fd_matches:
+            if f.get("status") != "FINISHED":
+                continue
+            
+            h_name = normalize_name(f["homeTeam"]["name"])
+            a_name = normalize_name(f["awayTeam"]["name"])
+            h_goals = f["score"]["fullTime"]["home"]
+            a_goals = f["score"]["fullTime"]["away"]
+            
+            for m in db_matches:
+                db_h = teams.get(m.home_team_id, "")
+                db_a = teams.get(m.away_team_id, "")
+                
+                if db_h and db_a and (db_h in h_name or h_name in db_h) and (db_a in a_name or a_name in db_a):
+                    if m.status != "Finished" or m.home_goals != h_goals or m.away_goals != a_goals:
+                        m.status = "Finished"
+                        m.home_goals = h_goals
+                        m.away_goals = a_goals
+                        updated_count += 1
+                        logger.info(f"✅ Synced finished match #{m.id}: {db_h} vs {db_a} ({h_goals}-{a_goals})")
+
+        db.commit()
+    except Exception as e:
+        logger.error(f"❌ Error syncing Football-Data results: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+    return updated_count
+
+
 def run_pipeline():
     init_db()
     
@@ -104,6 +214,12 @@ def run_pipeline():
         fetch_and_store_laliga_matches()
     except Exception as e:
         logger.error(f"Failed to fetch historical data from Understat: {e}")
+
+    try:
+        sync_count = sync_football_data_results()
+        logger.info(f"Synced {sync_count} match results from Football-Data.org")
+    except Exception as e:
+        logger.error(f"Failed to sync Football-Data results: {e}")
 
     logger.info("Fetching current La Liga odds from Bet365...")
     try:

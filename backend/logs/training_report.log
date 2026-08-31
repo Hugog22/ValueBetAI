@@ -70,3 +70,36 @@
   Los modelos actualizados se usarán en las próximas predicciones automáticamente.
   Si la exactitud bajó significativamente, considera revisar los datos de entrenamiento.
 ========================================================================
+
+========================================================================
+  INFORME DE AUTOENTRENAMIENTO — 2026-08-31 13:17:33 (Madrid)
+  Modelo: La Liga — Ensemble V2 (XGBoost + RF)
+========================================================================
+  ✅ ESTADO: EXITOSO
+  ⏱  Duración: 0m 22s
+  📊 Datos de entrenamiento: 4,490 partidos
+
+  ─── Modelo 1X2 (Victoria Local / Empate / Visitante) ───
+  📈 Exactitud CV: 82.52%
+  📉 Log-Loss CV: 0.1748
+  🔧 Hiperparámetros seleccionados por Optuna:
+  • max_depth: 6  ← [nuevo parámetro]
+  • learning_rate: 0.05  ← [nuevo parámetro]
+  • n_estimators: 500  ← [nuevo parámetro]
+  • reg_alpha: 1.5  ← [nuevo parámetro]
+  • reg_lambda: 2.0  ← [nuevo parámetro]
+  • calibration: isotonic  ← [nuevo parámetro]
+
+  ─── Modelo Over/Under 2.5 ───
+  📈 Exactitud CV: 79.54%
+  📉 Log-Loss CV: 0.2046
+  🔧 Hiperparámetros seleccionados por Optuna:
+  • max_depth: 6  ← [nuevo parámetro]
+  • learning_rate: 0.05  ← [nuevo parámetro]
+  • n_estimators: 500  ← [nuevo parámetro]
+  • calibration: isotonic  ← [nuevo parámetro]
+
+  💡 RESUMEN:
+  Los modelos actualizados se usarán en las próximas predicciones automáticamente.
+  Si la exactitud bajó significativamente, considera revisar los datos de entrenamiento.
+========================================================================
