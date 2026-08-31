@@ -289,17 +289,27 @@ def get_ai_info(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Forbidden")
     
     import json
-    meta_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models", "training_meta.json")
+    meta_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models", "training_meta_v2.json")
     if not os.path.exists(meta_path):
         return {"model_name": "Ensemble V2 (XGBoost + RF)", "trained_at": "No disponible", "in_use_since": "No disponible"}
         
     try:
         with open(meta_path, "r") as f:
             data = json.load(f)
+            
+            raw_date = data.get("completed_at", "")
+            formatted_date = "No disponible"
+            if raw_date:
+                try:
+                    dt = datetime.fromisoformat(raw_date)
+                    formatted_date = dt.strftime("%d/%m/%Y %H:%M")
+                except:
+                    formatted_date = raw_date
+
             return {
                 "model_name": data.get("pipeline", "Ensemble V2 (XGBoost + RF)"),
-                "trained_at": data.get("completed_at", "No disponible"),
-                "in_use_since": data.get("completed_at", "No disponible")
+                "trained_at": formatted_date,
+                "in_use_since": formatted_date
             }
     except Exception as e:
         return {"model_name": "Ensemble V2 (XGBoost + RF)", "trained_at": "Error", "in_use_since": "Error"}
@@ -371,7 +381,15 @@ def get_team_characteristics(
             detail="No tienes permisos para ver esta página."
         )
 
-    teams = db.query(Team).order_by(Team.name).all()
+    # Only return the 20 active La Liga teams
+    CURRENT_LALIGA_TEAMS = [
+        "Alavés", "Athletic Bilbao", "Atlético Madrid", "Barcelona", "Celta Vigo",
+        "Deportivo La Coruña", "Elche", "Espanyol", "Getafe", "Levante", "Málaga",
+        "CA Osasuna", "Rayo Vallecano", "Real Betis", "Real Madrid", "Real Sociedad",
+        "Racing de Santander", "Sevilla", "Valencia", "Villarreal"
+    ]
+    
+    teams = db.query(Team).filter(Team.name.in_(CURRENT_LALIGA_TEAMS)).order_by(Team.name).all()
     results = []
     for team in teams:
         char = team.characteristic

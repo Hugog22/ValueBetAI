@@ -23,51 +23,54 @@ def update_team_characteristics():
             ).order_by(Match.date.desc()).limit(10).all()
             
             if not matches:
-                continue
+                offensive_strength = 5.0
+                defensive_solidity = 5.0
+                motivation = 5.0
+                momentum = 5.0
+            else:
+                n = len(matches)
+                pts = 0
+                xg_for_sum = 0.0
+                xg_ag_sum = 0.0
                 
-            n = len(matches)
-            pts = 0
-            xg_for_sum = 0.0
-            xg_ag_sum = 0.0
-            
-            last_match_won = False
-            
-            for i, m in enumerate(matches):
-                is_home = (m.home_team_id == team.id)
-                gf = m.home_goals if is_home else m.away_goals
-                ga = m.away_goals if is_home else m.home_goals
+                last_match_won = False
                 
-                xg_f = m.home_xg if is_home else m.away_xg
-                xg_a = m.away_xg if is_home else m.home_xg
-                
-                # Fallback to actual goals if xG is missing
-                xg_f = xg_f if xg_f is not None else (gf or 0)
-                xg_a = xg_a if xg_a is not None else (ga or 0)
-                
-                xg_for_sum += xg_f
-                xg_ag_sum += xg_a
-                
-                if gf > ga:
-                    pts += 3
-                    if i == 0:
-                        last_match_won = True
-                elif gf == ga:
-                    pts += 1
+                for i, m in enumerate(matches):
+                    is_home = (m.home_team_id == team.id)
+                    gf = m.home_goals if is_home else m.away_goals
+                    ga = m.away_goals if is_home else m.home_goals
                     
-            xg_for_avg = xg_for_sum / n
-            xg_ag_avg = xg_ag_sum / n
-            
-            # Momentum: Points won vs Total possible points in recent matches, scaled to 10
-            momentum = (pts / (n * 3)) * 10.0
-            
-            # Offensive Strength: scaled so an avg xG of 2.5 = 10.0
-            offensive_strength = min(10.0, max(0.0, xg_for_avg * 4.0))
-            
-            # Defensive Solidity: scaled so an avg xGa of 0 = 10.0, xGa of 2.5 = 0.0
-            defensive_solidity = min(10.0, max(0.0, 10.0 - (xg_ag_avg * 4.0)))
-            
-            # Motivation: Base on momentum but boost if they won their last match
-            motivation = min(10.0, momentum + (1.5 if last_match_won else 0.0))
+                    xg_f = m.home_xg if is_home else m.away_xg
+                    xg_a = m.away_xg if is_home else m.home_xg
+                    
+                    # Fallback to actual goals if xG is missing
+                    xg_f = xg_f if xg_f is not None else (gf or 0)
+                    xg_a = xg_a if xg_a is not None else (ga or 0)
+                    
+                    xg_for_sum += xg_f
+                    xg_ag_sum += xg_a
+                    
+                    if gf > ga:
+                        pts += 3
+                        if i == 0:
+                            last_match_won = True
+                    elif gf == ga:
+                        pts += 1
+                        
+                xg_for_avg = xg_for_sum / n
+                xg_ag_avg = xg_ag_sum / n
+                
+                # Momentum: Points won vs Total possible points in recent matches, scaled to 10
+                momentum = (pts / (n * 3)) * 10.0
+                
+                # Offensive Strength: scaled so an avg xG of 2.5 = 10.0
+                offensive_strength = min(10.0, max(0.0, xg_for_avg * 4.0))
+                
+                # Defensive Solidity: scaled so an avg xGa of 0 = 10.0, xGa of 2.5 = 0.0
+                defensive_solidity = min(10.0, max(0.0, 10.0 - (xg_ag_avg * 4.0)))
+                
+                # Motivation: Base on momentum but boost if they won their last match
+                motivation = min(10.0, momentum + (1.5 if last_match_won else 0.0))
             
             char = db.query(TeamCharacteristic).filter(TeamCharacteristic.team_id == team.id).first()
             if not char:
