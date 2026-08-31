@@ -78,6 +78,12 @@ export default function BankrollPage() {
         loading: boolean;
     }>({ open: false, report: "", loading: false });
 
+    const [aiInfoModal, setAiInfoModal] = useState<{
+        open: boolean;
+        info: { model_name: string; trained_at: string; in_use_since: string } | null;
+        loading: boolean;
+    }>({ open: false, info: null, loading: false });
+
     const [isRetraining, setIsRetraining] = useState(false);
 
     const { token, user, logout } = useAuth();
@@ -130,6 +136,22 @@ export default function BankrollPage() {
     };
 
     const closeTrainingReport = () => setTrainingModal({ open: false, report: "", loading: false });
+
+    const openAiInfoModal = async () => {
+        if (!token) return;
+        setAiInfoModal({ open: true, info: null, loading: true });
+        try {
+            const API = '/api/proxy';
+            const res = await fetch(`${API}/admin/ai-info`);
+            const data = await res.json();
+            setAiInfoModal({ open: true, info: data, loading: false });
+        } catch (err) {
+            console.error('Error fetching AI info', err);
+            setAiInfoModal({ open: true, info: null, loading: false });
+        }
+    };
+
+    const closeAiInfoModal = () => setAiInfoModal({ open: false, info: null, loading: false });
 
     const handleRetrainAI = async () => {
         if (!token) return;
@@ -312,18 +334,26 @@ export default function BankrollPage() {
                                                     Fuerza Equipos
                                                 </button>
                                             </Link>
-                                            <button
-                                                onClick={handleRetrainAI}
-                                                disabled={isRetraining}
-                                                className={`px-6 py-3 text-xs font-bold uppercase tracking-widest rounded-xl transition-colors flex items-center gap-2 ${
-                                                    isRetraining 
-                                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                                    : "bg-[#00D084] text-[#0A0F1E] hover:bg-[#00e691]"
-                                                }`}
-                                            >
-                                                <span className={`text-lg ${isRetraining ? 'animate-spin' : ''}`}>🤖</span>
-                                                {isRetraining ? "Entrenando..." : "Reentrenar IA"}
-                                            </button>
+                                            <div className="flex flex-col sm:flex-row gap-4 items-center">
+                                                <button
+                                                    onClick={openAiInfoModal}
+                                                    className="w-full sm:w-auto px-8 py-4 rounded-full font-bold text-sm tracking-widest uppercase transition-all shadow-lg flex items-center justify-center gap-2 bg-[#3B82F6] text-white hover:bg-[#2563EB]"
+                                                >
+                                                    <span className="text-lg">ℹ️</span>
+                                                    Información IA
+                                                </button>
+                                                <button
+                                                    onClick={handleRetrainAI}
+                                                    disabled={isRetraining}
+                                                    className={`w-full sm:w-auto px-8 py-4 rounded-full font-bold text-sm tracking-widest uppercase transition-all shadow-lg flex items-center justify-center gap-2 ${isRetraining
+                                                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                                        : "bg-[#00D084] text-[#0A0F1E] hover:bg-[#00e691]"
+                                                    }`}
+                                                >
+                                                    <span className={`text-lg ${isRetraining ? 'animate-spin' : ''}`}>🤖</span>
+                                                    {isRetraining ? "Entrenando..." : "Reentrenar IA"}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                     
@@ -335,7 +365,7 @@ export default function BankrollPage() {
                                         <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
                                                 <div
                                                     className="bg-[#0A0F1E] p-6 rounded-[2rem] shadow-xl cursor-pointer hover:bg-[#1A2240] active:scale-95 transition-all group"
-                                                    onClick={() => openPredictionsModal(7)}
+                                                    onClick={() => openPredictionsModal(0)}
                                                     title="Ver detalle de predicciones"
                                                 >
                                                     <div className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-2 flex items-center gap-2">
@@ -687,6 +717,53 @@ export default function BankrollPage() {
                                     {trainingModal.report}
                                 </pre>
                             </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
+        {/* AI INFO MODAL */}
+        {aiInfoModal.open && (
+            <div
+                className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                onClick={(e) => { if (e.target === e.currentTarget) closeAiInfoModal(); }}
+            >
+                <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md flex flex-col overflow-hidden">
+                    <div className="flex items-center justify-between px-8 py-6 border-b border-gray-100 flex-shrink-0">
+                        <div className="flex items-center gap-4">
+                            <span className="text-3xl">ℹ️</span>
+                            <div>
+                                <h2 className="text-xl font-editorial font-bold text-gray-900">Información IA</h2>
+                                <div className="text-[10px] text-gray-500 uppercase tracking-[0.2em] mt-1">Estado del Motor Predictivo</div>
+                            </div>
+                        </div>
+                        <button
+                            onClick={closeAiInfoModal}
+                            className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-900 transition-all text-xl"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <div className="p-8">
+                        {aiInfoModal.loading ? (
+                            <div className="text-center text-sm font-bold text-gray-500">Cargando información...</div>
+                        ) : aiInfoModal.info ? (
+                            <div className="space-y-6">
+                                <div>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Modelo Actual</div>
+                                    <div className="text-lg font-bold text-gray-900">{aiInfoModal.info.model_name}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Último Entrenamiento</div>
+                                    <div className="text-sm font-medium text-gray-700">{aiInfoModal.info.trained_at}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">En Uso Desde</div>
+                                    <div className="text-sm font-medium text-gray-700">{aiInfoModal.info.in_use_since}</div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center text-sm font-bold text-red-500">Error cargando información.</div>
                         )}
                     </div>
                 </div>

@@ -134,13 +134,13 @@ def get_system_stats(
 
 @router.get("/predictions-detail", response_model=PredictionsDetailResponse)
 def get_predictions_detail(
-    days: int = Query(default=7, ge=1, le=90, description="Últimos N días"),
+    days: int = Query(default=0, ge=0, description="Últimos N días (0 = Todos)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Returns a detailed breakdown of all AI-backed bets placed in the last N days
-    (default: 7). Shows won/lost/pending per prediction with PnL.
+    Returns a detailed breakdown of all AI-backed bets placed in the last N days.
+    (If days=0, returns all time).
     Only accessible to the admin.
     """
     if not current_user.is_admin:
@@ -149,18 +149,19 @@ def get_predictions_detail(
             detail="No tienes permisos para ver esta página."
         )
 
-    since = datetime.utcnow() - timedelta(days=days)
-
-    rows = (
+    q = (
         db.query(Bet, Match, User)
         .join(Match, Bet.match_id == Match.id)
         .outerjoin(User, Bet.user_id == User.id)
         .filter(Bet.user_id == None)
-        .filter(Bet.placed_at >= since)
         .filter(Bet.status.in_(["Won", "Lost", "Void"]))
-        .order_by(Bet.placed_at.desc())
-        .all()
     )
+    
+    if days > 0:
+        since = datetime.utcnow() - timedelta(days=days)
+        q = q.filter(Bet.placed_at >= since)
+
+    rows = q.order_by(Bet.placed_at.desc()).all()
 
     # Deduplicate legacy merged bets or multiple clicks across ALL users
     seen_signatures = set()
@@ -278,6 +279,30 @@ def get_training_report(
         )
 
     return PlainTextResponse("\n".join(str(l) for l in report_lines), status_code=200)
+
+@router.get("/ai-info")
+def get_ai_info(current_user: User = Depends(get_current_user)):
+    """
+    Returns metadata about the current AI models in use.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    import json
+    meta_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models", "training_meta.json")
+    if not os.path.exists(meta_path):
+        return {"model_name": "Ensemble V2 (XGBoost + RF)", "trained_at": "No disponible", "in_use_since": "No disponible"}
+        
+    try:
+        with open(meta_path, "r") as f:
+            data = json.load(f)
+            return {
+                "model_name": data.get("pipeline", "Ensemble V2 (XGBoost + RF)"),
+                "trained_at": data.get("completed_at", "No disponible"),
+                "in_use_since": data.get("completed_at", "No disponible")
+            }
+    except Exception as e:
+        return {"model_name": "Ensemble V2 (XGBoost + RF)", "trained_at": "Error", "in_use_since": "Error"}
 
 @router.post("/clean-duplicates")
 def trigger_duplicate_cleanup(

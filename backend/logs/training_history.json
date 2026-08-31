@@ -70,15 +70,15 @@
       "home_elo",
       "away_elo",
       "elo_diff",
+      "home_goals_for_avg10",
+      "home_goals_ag_avg10",
+      "away_goals_for_avg10",
+      "away_goals_ag_avg10",
       "home_xg_for_avg10",
+      "home_xg_ag_avg10",
       "away_xg_for_avg10",
+      "away_xg_ag_avg10",
       "xg_diff",
-      "home_possession_avg10",
-      "away_possession_avg10",
-      "possession_diff",
-      "home_shots_target_avg10",
-      "away_shots_target_avg10",
-      "shots_diff",
       "home_absences",
       "away_absences",
       "absence_severity",
@@ -98,11 +98,11 @@
       "admin_momentum_diff"
     ],
     "total_rows": 4490,
-    "completed_at": "2026-08-31T11:17:33.617298",
+    "completed_at": "2026-08-31T11:27:46.566586",
     "ensemble": true,
     "model_1x2": {
-      "cv_mean_accuracy": 0.8252,
-      "cv_mean_logloss": 0.1748,
+      "cv_mean_accuracy": 0.8007,
+      "cv_mean_logloss": 0.1993,
       "best_params": {
         "max_depth": 6,
         "learning_rate": 0.05,
@@ -113,8 +113,8 @@
       }
     },
     "model_ou25": {
-      "cv_mean_accuracy": 0.7954,
-      "cv_mean_logloss": 0.2046,
+      "cv_mean_accuracy": 0.7524,
+      "cv_mean_logloss": 0.2476,
       "best_params": {
         "max_depth": 6,
         "learning_rate": 0.05,

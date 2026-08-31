@@ -392,15 +392,15 @@ def _build_match_features(match: Match, db: Session | None = None) -> dict:
         "home_elo":          home_elo,
         "away_elo":          away_elo,
         "elo_diff":          home_elo - away_elo,
-        "home_xg_for_avg10": np.nan,
-        "away_xg_for_avg10": np.nan,
-        "xg_diff":           np.nan,
-        "home_possession_avg10":   np.nan,
-        "away_possession_avg10":   np.nan,
-        "possession_diff":         np.nan,
-        "home_shots_target_avg10": np.nan,
-        "away_shots_target_avg10": np.nan,
-        "shots_diff":              np.nan,
+        "home_goals_for_avg10": 1.45,
+        "home_goals_ag_avg10": 1.45,
+        "away_goals_for_avg10": 1.10,
+        "away_goals_ag_avg10": 1.45,
+        "home_xg_for_avg10": 1.45,
+        "home_xg_ag_avg10": 1.45,
+        "away_xg_for_avg10": 1.10,
+        "away_xg_ag_avg10": 1.45,
+        "xg_diff":           0.35,
         "home_absences":     0,
         "away_absences":     0,
         "absence_severity":  0,
@@ -409,29 +409,47 @@ def _build_match_features(match: Match, db: Session | None = None) -> dict:
     }
 
     if db is not None:
-        from db.models import MatchTeamStatistics
-        # Fetch the most recent MatchTeamStatistics for home team
-        home_stats = db.query(MatchTeamStatistics).filter(MatchTeamStatistics.team_id == match.home_team_id).order_by(MatchTeamStatistics.id.desc()).first()
-        away_stats = db.query(MatchTeamStatistics).filter(MatchTeamStatistics.team_id == match.away_team_id).order_by(MatchTeamStatistics.id.desc()).first()
-
-        if home_stats:
-            base_feats["home_xg_for_avg10"] = home_stats.xg if home_stats.xg is not None else np.nan
-            base_feats["home_possession_avg10"] = home_stats.possession_pct if home_stats.possession_pct is not None else np.nan
-            base_feats["home_shots_target_avg10"] = home_stats.shots_on_target if home_stats.shots_on_target is not None else np.nan
-
-        if away_stats:
-            base_feats["away_xg_for_avg10"] = away_stats.xg if away_stats.xg is not None else np.nan
-            base_feats["away_possession_avg10"] = away_stats.possession_pct if away_stats.possession_pct is not None else np.nan
-            base_feats["away_shots_target_avg10"] = away_stats.shots_on_target if away_stats.shots_on_target is not None else np.nan
-
-        if not np.isnan(base_feats["home_xg_for_avg10"]) and not np.isnan(base_feats["away_xg_for_avg10"]):
-            base_feats["xg_diff"] = base_feats["home_xg_for_avg10"] - base_feats["away_xg_for_avg10"]
+        def get_team_avg(team_id: int):
+            # Query last 10 finished matches for team_id
+            past_matches = db.query(Match).filter(
+                (Match.home_team_id == team_id) | (Match.away_team_id == team_id),
+                Match.status == "Finished",
+                Match.date < match.date  # Only matches before this one
+            ).order_by(Match.date.desc()).limit(10).all()
+            
+            if not past_matches:
+                return 1.45, 1.45, 1.45, 1.45
+                
+            gf, ga, xgf, xga = 0.0, 0.0, 0.0, 0.0
+            n = len(past_matches)
+            for m in past_matches:
+                if m.home_team_id == team_id:
+                    gf += m.home_goals or 0
+                    ga += m.away_goals or 0
+                    xgf += m.home_xg or m.home_goals or 0
+                    xga += m.away_xg or m.away_goals or 0
+                else:
+                    gf += m.away_goals or 0
+                    ga += m.home_goals or 0
+                    xgf += m.away_xg or m.away_goals or 0
+                    xga += m.home_xg or m.home_goals or 0
+            
+            return gf/n, ga/n, xgf/n, xga/n
         
-        if not np.isnan(base_feats["home_possession_avg10"]) and not np.isnan(base_feats["away_possession_avg10"]):
-            base_feats["possession_diff"] = base_feats["home_possession_avg10"] - base_feats["away_possession_avg10"]
-
-        if not np.isnan(base_feats["home_shots_target_avg10"]) and not np.isnan(base_feats["away_shots_target_avg10"]):
-            base_feats["shots_diff"] = base_feats["home_shots_target_avg10"] - base_feats["away_shots_target_avg10"]
+        h_gf, h_ga, h_xgf, h_xga = get_team_avg(match.home_team_id)
+        a_gf, a_ga, a_xgf, a_xga = get_team_avg(match.away_team_id)
+        
+        base_feats["home_goals_for_avg10"] = h_gf
+        base_feats["home_goals_ag_avg10"] = h_ga
+        base_feats["home_xg_for_avg10"] = h_xgf
+        base_feats["home_xg_ag_avg10"] = h_xga
+        
+        base_feats["away_goals_for_avg10"] = a_gf
+        base_feats["away_goals_ag_avg10"] = a_ga
+        base_feats["away_xg_for_avg10"] = a_xgf
+        base_feats["away_xg_ag_avg10"] = a_xga
+        
+        base_feats["xg_diff"] = h_xgf - a_xgf
     
     return base_feats, admin_feats
 

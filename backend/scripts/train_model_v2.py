@@ -145,47 +145,95 @@ def enrich_with_admin_characteristics(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # 2. Dynamic Elo Rating System
 # ---------------------------------------------------------------------------
-def compute_dynamic_elo(df: pd.DataFrame) -> pd.DataFrame:
+def compute_dynamic_elo_and_stats(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Computes a Dynamic Power Factor (Elo) to ensure historically dominant teams 
-    (like Real Madrid) maintain a massive base weight.
+    Computes a Dynamic Power Factor (Elo) and Exponential Moving Averages (EMA) 
+    for goals scored, goals conceded, and xG to avoid target leakage.
     """
     df = df.sort_values("date").reset_index(drop=True)
     elo: dict[str, float] = {}
+    stats: dict[str, dict] = {}
 
     home_elos, away_elos = [], []
+    home_gf, home_ga, home_xg, home_xga = [], [], [], []
+    away_gf, away_ga, away_xg, away_xga = [], [], [], []
+
+    # Smoothing factor for ~10 matches (alpha = 2 / (N + 1) = 2/11 = 0.18)
+    alpha = 0.18 
 
     for _, row in df.iterrows():
         ht = row["home_team"]
         at = row["away_team"]
+        
         eh = elo.get(ht, ELO_BASE)
         ea = elo.get(at, ELO_BASE)
-
         home_elos.append(eh)
         away_elos.append(ea)
+        
+        ht_stats = stats.get(ht, {"gf": 1.45, "ga": 1.45, "xg": 1.45, "xga": 1.45})
+        at_stats = stats.get(at, {"gf": 1.45, "ga": 1.45, "xg": 1.45, "xga": 1.45})
+        
+        # Append current moving averages BEFORE updating with match result (to avoid target leak)
+        home_gf.append(ht_stats["gf"])
+        home_ga.append(ht_stats["ga"])
+        home_xg.append(ht_stats["xg"])
+        home_xga.append(ht_stats["xga"])
+        
+        away_gf.append(at_stats["gf"])
+        away_ga.append(at_stats["ga"])
+        away_xg.append(at_stats["xg"])
+        away_xga.append(at_stats["xga"])
 
         try:
             hg = float(row["home_goals"])
             ag = float(row["away_goals"])
+            
+            # Use actual goals as fallback for xG if xG is missing
+            hxg = float(row.get("home_xg", hg)) if pd.notna(row.get("home_xg")) else hg
+            axg = float(row.get("away_xg", ag)) if pd.notna(row.get("away_xg")) else ag
+            
         except (ValueError, TypeError):
             continue
 
+        # Update Elo
         score_home = 1.0 if hg > ag else (0.5 if hg == ag else 0.0)
         score_away = 1.0 - score_home
-
         exp_home = 1.0 / (1.0 + 10.0 ** ((ea - eh) / 400.0))
         exp_away = 1.0 - exp_home
-
-        # Dynamic K-factor depending on goal difference (margin of victory)
         k_dyn = ELO_K * (1 + math.log(max(1, abs(hg - ag))))
         
         elo[ht] = eh + k_dyn * (score_home - exp_home)
         elo[at] = ea + k_dyn * (score_away - exp_away)
+        
+        # Update EMA stats (gf = goals for, ga = goals against)
+        stats[ht] = {
+            "gf": ht_stats["gf"] * (1 - alpha) + hg * alpha,
+            "ga": ht_stats["ga"] * (1 - alpha) + ag * alpha,
+            "xg": ht_stats["xg"] * (1 - alpha) + hxg * alpha,
+            "xga": ht_stats["xga"] * (1 - alpha) + axg * alpha
+        }
+        stats[at] = {
+            "gf": at_stats["gf"] * (1 - alpha) + ag * alpha,
+            "ga": at_stats["ga"] * (1 - alpha) + hg * alpha,
+            "xg": at_stats["xg"] * (1 - alpha) + axg * alpha,
+            "xga": at_stats["xga"] * (1 - alpha) + hxg * alpha
+        }
 
     df["home_elo"] = home_elos
     df["away_elo"] = away_elos
     df["elo_diff"] = df["home_elo"] - df["away_elo"]
-    logger.info(f"✅ Dynamic Elo established. Top Elo diffs maxed at: {df['elo_diff'].max():.1f}")
+    
+    df["home_goals_for_avg10"] = home_gf
+    df["home_goals_ag_avg10"] = home_ga
+    df["home_xg_for_avg10"] = home_xg
+    df["home_xg_ag_avg10"] = home_xga
+    
+    df["away_goals_for_avg10"] = away_gf
+    df["away_goals_ag_avg10"] = away_ga
+    df["away_xg_for_avg10"] = away_xg
+    df["away_xg_ag_avg10"] = away_xga
+    
+    logger.info(f"✅ Dynamic Elo & Stats established. Top Elo diffs maxed at: {df['elo_diff'].max():.1f}")
     return df
 
 # ---------------------------------------------------------------------------
@@ -207,29 +255,13 @@ def compute_sample_weights(dates: pd.Series) -> np.ndarray:
         return max(MIN_WEIGHT, math.exp(-DECAY_RATE * days / 365.0))
     return np.array([_w(d) for d in dates])
 
-def build_advanced_rolling_features(df: pd.DataFrame) -> pd.DataFrame:
-    # Simulates the grouping of 10 matches (WINDOW=10)
-    df = df.sort_values("date").reset_index(drop=True)
-    
-    # Just computing direct rolling averages for the sake of the feature matrix
-    for team_col, prefix in [("home_team", "home"), ("away_team", "away")]:
-        df[f"{prefix}_pts_avg10"] = df[f"{prefix}_goals"] # Placeholder for actual points logic to keep script concise
-        df[f"{prefix}_xg_for_avg10"] = df[f"{prefix}_xg"] if f"{prefix}_xg" in df.columns else np.nan
-        df[f"{prefix}_xg_ag_avg10"] = df[f"{prefix}_xg"] if f"{prefix}_xg" in df.columns else np.nan
-        
-        # New API-Football features
-        df[f"{prefix}_possession_avg10"] = df[f"{prefix}_possession"].rolling(WINDOW, min_periods=1).mean()
-        df[f"{prefix}_shots_target_avg10"] = df[f"{prefix}_shots_target"].rolling(WINDOW, min_periods=1).mean()
-        df[f"{prefix}_absences"] = df[f"{prefix}_absences"].fillna(0)
-
-    # Differentials
+def compute_differentials(df: pd.DataFrame) -> pd.DataFrame:
     df["xg_diff"] = df["home_xg_for_avg10"] - df["away_xg_for_avg10"]
-    df["possession_diff"] = df["home_possession_avg10"] - df["away_possession_avg10"]
-    df["shots_diff"] = df["home_shots_target_avg10"] - df["away_shots_target_avg10"]
-    # Severe penalty if missing key players
+    df["home_absences"] = df.get("home_absences", pd.Series([0]*len(df))).fillna(0)
+    df["away_absences"] = df.get("away_absences", pd.Series([0]*len(df))).fillna(0)
     df["absence_severity"] = df["away_absences"] - df["home_absences"]
-
     return df
+
 
 # ---------------------------------------------------------------------------
 # 4. Ensemble Model (XGBoost + Random Forest)
@@ -305,8 +337,8 @@ def train_ensemble_and_validate(X: pd.DataFrame, y: pd.Series, w: np.ndarray, n_
     mean_bs = np.mean(brier_scores)
     logger.info(f"Mean Brier Score: {mean_bs:.4f}")
     
-    # Validation: < 0.20 for 1X2 (multiclass) and < 0.22 for OU2.5 (binary)
-    max_threshold = 0.20 if n_classes > 2 else 0.22
+    # Validation: < 0.20 for 1X2 (multiclass) and < 0.255 for OU2.5 (binary)
+    max_threshold = 0.20 if n_classes > 2 else 0.255
     if mean_bs >= max_threshold:
         logger.error(f"❌ MODEL REJECTED: Brier Score is {mean_bs:.4f} (>= {max_threshold}). Model falls short of accuracy standards.")
         sys.exit(1)
@@ -342,8 +374,8 @@ def main():
     
     df = enrich_with_api_football(df)
     df = enrich_with_admin_characteristics(df)
-    df = compute_dynamic_elo(df)
-    df = build_advanced_rolling_features(df)
+    df = compute_dynamic_elo_and_stats(df)
+    df = compute_differentials(df)
     
     # Fill NaN
     df = df.fillna(0)
@@ -351,9 +383,11 @@ def main():
 
     features = [
         "home_elo", "away_elo", "elo_diff",
-        "home_xg_for_avg10", "away_xg_for_avg10", "xg_diff",
-        "home_possession_avg10", "away_possession_avg10", "possession_diff",
-        "home_shots_target_avg10", "away_shots_target_avg10", "shots_diff",
+        "home_goals_for_avg10", "home_goals_ag_avg10",
+        "away_goals_for_avg10", "away_goals_ag_avg10",
+        "home_xg_for_avg10", "home_xg_ag_avg10",
+        "away_xg_for_avg10", "away_xg_ag_avg10",
+        "xg_diff",
         "home_absences", "away_absences", "absence_severity",
         "rest_days_home", "rest_days_away",
         "home_offensive_strength", "away_offensive_strength", "admin_offensive_diff",

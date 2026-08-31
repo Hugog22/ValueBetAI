@@ -4,6 +4,7 @@ from db.session import engine, SessionLocal, Base
 from db.models import Team, Match
 from etl.understat_api import get_laliga_historical_data
 from etl.odds_api import get_laliga_odds, detect_super_boosts
+from etl.update_characteristics import update_team_characteristics
 from core.config import get_current_season
 
 logging.basicConfig(level=logging.INFO)
@@ -220,6 +221,12 @@ def run_pipeline():
         logger.info(f"Synced {sync_count} match results from Football-Data.org")
     except Exception as e:
         logger.error(f"Failed to sync Football-Data results: {e}")
+
+    logger.info("⚙️ Auto-updating Team Characteristics based on recent performance...")
+    try:
+        update_team_characteristics()
+    except Exception as e:
+        logger.error(f"Failed to update team characteristics: {e}")
 
     logger.info("Fetching current La Liga odds from Bet365...")
     try:
