@@ -11,10 +11,11 @@ export default function RegisterPage() {
     const [password, setPassword] = useState('');
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const { login } = useAuth();
     const router = useRouter();
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmitEvent = async (e: React.FormEvent, isPro: boolean) => {
         e.preventDefault();
         setError('');
 
@@ -22,6 +23,8 @@ export default function RegisterPage() {
             setError('Debes aceptar los Términos y Condiciones para continuar.');
             return;
         }
+
+        setIsSubmitting(true);
         try {
             const res = await fetch(`/api/proxy/auth/register`, {
                 method: 'POST',
@@ -34,11 +37,6 @@ export default function RegisterPage() {
                 throw new Error(errData.detail || 'Error al registrar usuario');
             }
 
-            // Login automatically after registration
-            const formData = new FormData();
-            formData.append('username', email);
-            formData.append('password', password);
-
             const loginRes = await fetch(`/api/auth/login`, {
                 method: 'POST',
                 headers: {
@@ -48,21 +46,22 @@ export default function RegisterPage() {
             });
 
             if (loginRes.ok) {
-                await login(false); // Don't redirect to dashboard yet
-                
-                // Trigger Stripe Checkout
-                const checkoutRes = await fetch(`/api/proxy/stripe/create-checkout-session`, {
-                    method: 'POST'
-                });
-                
-                if (checkoutRes.ok) {
-                    const checkoutData = await checkoutRes.json();
-                    window.location.href = checkoutData.url;
+                if (isPro) {
+                    await login(false); // Don't redirect to dashboard yet
+                    // Trigger Stripe Checkout
+                    const checkoutRes = await fetch(`/api/proxy/stripe/create-checkout-session`, {
+                        method: 'POST'
+                    });
+                    
+                    if (checkoutRes.ok) {
+                        const checkoutData = await checkoutRes.json();
+                        window.location.href = checkoutData.url;
+                    } else {
+                        // Fallback if Stripe fails
+                        router.push('/dashboard');
+                    }
                 } else {
-                    const errData = await checkoutRes.text();
-                    alert(`Error conectando con Stripe: ${errData}`);
-                    // Do not allow access to dashboard if payment failed
-                    router.push('/login');
+                    await login(true); // Login and redirect to dashboard
                 }
             } else {
                 router.push('/login');
@@ -101,7 +100,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="bg-white p-10 rounded-[2.5rem] border border-[#E5E7EB] shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
-                    <form className="space-y-6" onSubmit={handleSubmit}>
+                    <form className="space-y-6" onSubmit={(e) => handleSubmitEvent(e, true)}>
                         {error && (
                             <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest text-center" role="alert">
                                 {error}
@@ -162,18 +161,35 @@ export default function RegisterPage() {
                             </div>
                         </div>
 
-                        <div className="pt-4">
+                        <div className="pt-4 space-y-3">
                             <button
-                                type="submit"
-                                className="w-full flex justify-center items-center py-5 px-4 bg-[#064E3B] text-slate-900 text-xs uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#043327] shadow-xl shadow-[#064E3B]/20 transition-all active:scale-95 group"
+                                type="button"
+                                onClick={(e) => {
+                                    // Use a hidden input or state to track the choice, or just call handleSubmit with a parameter
+                                    handleSubmitEvent(e, true);
+                                }}
+                                disabled={isSubmitting}
+                                className="w-full flex justify-center items-center py-5 px-4 bg-[#064E3B] text-white text-xs uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#043327] shadow-xl shadow-[#064E3B]/20 transition-all active:scale-95 group disabled:opacity-70"
                             >
-                                Empezar 7 días gratis
-                                <svg className="w-4 h-4 ml-3 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-                                </svg>
+                                {isSubmitting ? 'Procesando...' : 'Empezar 7 días gratis (PRO)'}
+                                {!isSubmitting && (
+                                    <svg className="w-4 h-4 ml-3 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                )}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    handleSubmitEvent(e, false);
+                                }}
+                                disabled={isSubmitting}
+                                className="w-full flex justify-center items-center py-4 px-4 bg-transparent border-2 border-[#E5E7EB] text-[#64748B] text-[10px] uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#F8F9FA] hover:text-[#1A1C1E] transition-all active:scale-95 disabled:opacity-70"
+                            >
+                                Continuar con Plan Básico (4 análisis/mes)
                             </button>
                             <p className="text-center text-[#94A3B8] text-[10px] mt-3 font-medium">
-                                Después del período de prueba, 9,99€/mes. Cancela cuando quieras.
+                                El plan PRO cuesta 9,99€/mes tras la prueba. Cancela cuando quieras.
                             </p>
                         </div>
                     </form>
