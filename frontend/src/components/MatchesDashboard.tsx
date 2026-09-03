@@ -85,7 +85,37 @@ export default function MatchesDashboard({ initialMatches, initialParlay }: Prop
   const isPro = user?.subscription_status === 'active';
 
   const activeSport = 'laliga';
-  const activeMatches = initialMatches || [];
+  const [activeMatches, setActiveMatches] = useState<Match[]>(initialMatches || []);
+  
+  useEffect(() => {
+    setActiveMatches(initialMatches || []);
+  }, [initialMatches]);
+
+  const [isUnlocking, setIsUnlocking] = useState<number | null>(null);
+
+  const handleUnlock = async (matchId: number) => {
+    if (!token) {
+        window.location.href = '/register';
+        return;
+    }
+    setIsUnlocking(matchId);
+    try {
+      const res = await fetch(`${API}/matches/${matchId}/unlock`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+         window.location.reload();
+      } else {
+         const err = await res.json();
+         alert(err.detail || "Error al desbloquear");
+      }
+    } catch (e) {
+      alert("Error al desbloquear");
+    } finally {
+      setIsUnlocking(null);
+    }
+  };
 
   // Track which sports have been fetched (even if empty) to avoid repeated requests
   const fetchedSports = useRef<Set<SportKey>>(new Set<SportKey>());
@@ -181,10 +211,10 @@ export default function MatchesDashboard({ initialMatches, initialParlay }: Prop
 
       {/* ── FREE TIER BANNER ─────────────────────────────────────────────── */}
       {user && !isPro && (() => {
-        const unlockedCount = activeMatches.filter(m => !m.locked).length;
-        const lockedCount   = activeMatches.filter(m => m.locked).length;
-        const remaining     = Math.max(0, 4 - unlockedCount);
-        if (lockedCount === 0) return null; // nothing locked, don't show
+        const usedCount = user.free_analyses_used || 0;
+        const lockedCount = activeMatches.filter(m => m.locked).length;
+        const remaining = Math.max(0, 4 - usedCount);
+        if (lockedCount === 0 && usedCount === 0) return null; // nothing locked and none used, don't show
         return (
           <div className="mb-8 px-1">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-5 py-4 rounded-2xl bg-[#C8A252]/10 border border-[#C8A252]/25">
@@ -195,12 +225,12 @@ export default function MatchesDashboard({ initialMatches, initialParlay }: Prop
                 </svg>
                 <div>
                   <p className="text-sm font-bold text-white">
-                    Plan Free · {unlockedCount} de 4 análisis usados este mes
+                    Plan Free · {usedCount} de 4 análisis usados este mes
                   </p>
                   <p className="text-xs text-white/50 mt-0.5">
                     {remaining > 0
-                      ? `Te quedan ${remaining} análisis gratuitos. ${lockedCount} partidos bloqueados.`
-                      : `Has alcanzado el límite mensual. ${lockedCount} partidos bloqueados.`}
+                      ? `Te quedan ${remaining} token${remaining !== 1 ? 's' : ''} gratuitos para desbloquear partidos.`
+                      : `Has alcanzado el límite mensual.`}
                   </p>
                 </div>
               </div>
@@ -409,36 +439,9 @@ export default function MatchesDashboard({ initialMatches, initialParlay }: Prop
                 key={match.id}
                 className={'ll-card rounded-[2rem] overflow-hidden relative'}
               >
-                {/* ── LOCK OVERLAY (free tier) ─────────────────────────────── */}
-                {match.locked && (
-                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-[2rem] bg-[#0D1117]/80 backdrop-blur-sm border border-[#C8A252]/20">
-                    <div className="flex flex-col items-center gap-4 px-6 text-center">
-                      <div className="w-14 h-14 rounded-full bg-[#C8A252]/15 border border-[#C8A252]/30 flex items-center justify-center">
-                        <svg className="w-7 h-7 text-[#C8A252]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8"
-                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-white font-bold text-sm mb-1">Análisis bloqueado</p>
-                        <p className="text-white/50 text-xs leading-relaxed max-w-[180px]">
-                          Has consumido tus 4 análisis gratuitos este mes
-                        </p>
-                      </div>
-                      <Link
-                        href="/register"
-                        className="mt-1 px-5 py-2.5 rounded-full bg-[#C8A252] text-[#0D1117] text-xs font-black uppercase tracking-widest hover:bg-[#d4b06a] transition-all shadow-[0_0_20px_rgba(200,162,82,0.25)]"
-                      >
-                        Desbloquear con Pro →
-                      </Link>
-                      <p className="text-white/25 text-[10px]">Se renueva el 1 de cada mes</p>
-                    </div>
-                  </div>
-                )}
-
                 <BentoCard key={match.id} className={`flex flex-col h-full ${
                   '!bg-transparent !border-none'
-                } ${match.locked ? 'pointer-events-none select-none' : ''}`}>
+                }`}>
                   {/* LaLiga match header */}
                   {isLaLigaActive ? (
                     <div className="mb-4">
@@ -494,7 +497,38 @@ export default function MatchesDashboard({ initialMatches, initialParlay }: Prop
                     </div>
                   )}
 
-                  {/* LaLiga probability bar */}
+                  {match.locked ? (
+                    <div className="flex-1 flex flex-col items-center justify-center py-6 mt-4 border-t border-white/5 relative">
+                      <div className="w-12 h-12 rounded-full bg-[#C8A252]/10 border border-[#C8A252]/20 flex items-center justify-center mb-4">
+                        <svg className="w-5 h-5 text-[#C8A252]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                      <p className="text-white font-bold text-sm mb-1">Análisis bloqueado</p>
+                      
+                      {(() => {
+                        const rem = Math.max(0, 4 - (user?.free_analyses_used || 0));
+                        return rem > 0 ? (
+                          <>
+                            <p className="text-white/50 text-xs mb-4 text-center max-w-[200px]">Usa 1 de tus {rem} token{rem !== 1 ? 's' : ''} para ver el pronóstico de este partido.</p>
+                            <button onClick={() => handleUnlock(match.id)} disabled={isUnlocking === match.id} className="px-5 py-2.5 rounded-full bg-[#C8A252] text-[#0D1117] text-xs font-black uppercase tracking-widest hover:bg-[#d4b06a] transition-all shadow-[0_0_20px_rgba(200,162,82,0.25)] disabled:opacity-50">
+                                {isUnlocking === match.id ? 'Desbloqueando...' : 'Desbloquear Gratis'}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-white/50 text-xs mb-4 text-center max-w-[200px]">Has consumido tus 4 análisis gratuitos este mes.</p>
+                            <Link href="/register" className="px-5 py-2.5 rounded-full bg-[#C8A252] text-[#0D1117] text-xs font-black uppercase tracking-widest hover:bg-[#d4b06a] transition-all shadow-[0_0_20px_rgba(200,162,82,0.25)]">
+                                Desbloquear con Pro →
+                            </Link>
+                            <p className="text-white/25 text-[10px] mt-3">Se renueva el 1 de cada mes</p>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <>
+                      {/* LaLiga probability bar */}
                   {isLaLigaActive && (
                     <div className="relative h-1.5 bg-white/10 rounded-full overflow-hidden mb-3">
                       <div
@@ -560,6 +594,8 @@ export default function MatchesDashboard({ initialMatches, initialParlay }: Prop
                       </div>
                     ))}
                   </div>
+                    </>
+                  )}
                 </BentoCard>
               </div>
             ))}

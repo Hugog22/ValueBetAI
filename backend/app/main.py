@@ -209,23 +209,17 @@ def _apply_free_tier(matches: list, user, db) -> list:
     from core.subscription import reset_if_new_month
     reset_if_new_month(user, db)
 
-    already_used = user.free_analyses_used
+    unlocked_ids_str = user.unlocked_match_ids or ""
+    unlocked_ids = [s.strip() for s in unlocked_ids_str.split(",") if s.strip()]
     result = []
-    newly_unlocked = 0
 
-    for idx, match in enumerate(matches):
-        if already_used + newly_unlocked < FREE_MONTHLY_LIMIT:
+    for match in matches:
+        match_id_str = str(match.get("id"))
+        if match_id_str in unlocked_ids:
             match["locked"] = False
-            newly_unlocked += 1
             result.append(match)
         else:
             result.append(censor_match(match))
-
-    # Persist the updated counter only if new analyses were unlocked this call.
-    if newly_unlocked > 0 and (already_used + newly_unlocked) > already_used:
-        user.free_analyses_used = already_used + newly_unlocked
-        db.add(user)
-        db.commit()
 
     return result
 
@@ -326,7 +320,39 @@ def get_super_boosts():
 from db.models import User
 from routers.auth import get_current_user
 
-@app.get("/api/matches/{match_id}/all-markets")
+from core.subscription import FREE_MONTHLY_LIMIT
+
+@app.post("/api/matches/{match_id}/unlock")
+def unlock_match(
+    match_id: int,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if is_pro(user):
+        return {"success": True, "message": "Pro users have unlimited access"}
+    
+    from core.subscription import reset_if_new_month
+    reset_if_new_month(user, db)
+    
+    unlocked_ids_str = user.unlocked_match_ids or ""
+    unlocked_ids = [s.strip() for s in unlocked_ids_str.split(",") if s.strip()]
+    
+    if str(match_id) in unlocked_ids:
+        return {"success": True, "message": "Already unlocked"}
+        
+    if user.free_analyses_used >= FREE_MONTHLY_LIMIT:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Límite de análisis gratuitos alcanzado este mes")
+        
+    unlocked_ids.append(str(match_id))
+    user.unlocked_match_ids = ",".join(unlocked_ids)
+    user.free_analyses_used += 1
+    db.add(user)
+    db.commit()
+    
+    return {"success": True, "remaining": FREE_MONTHLY_LIMIT - user.free_analyses_used}
+
+@app.get("/api/matches/{match_id}/all_markets")
 def get_match_all_markets(match_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     from db.models import MarketOdds
     odds = db.query(MarketOdds).filter(MarketOdds.match_id == match_id).all()

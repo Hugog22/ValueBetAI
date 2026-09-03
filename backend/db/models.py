@@ -22,6 +22,7 @@ class User(Base):
     # Free tier usage tracking
     free_analyses_used = Column(Integer, default=0, nullable=False, server_default='0')
     free_analyses_reset_at = Column(DateTime, nullable=True)  # start of current billing month
+    unlocked_match_ids = Column(String, default="", server_default="") # comma-separated list of match IDs
 
     bets = relationship("Bet", back_populates="user")
 

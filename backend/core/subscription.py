@@ -57,6 +57,7 @@ def reset_if_new_month(user, db) -> None:
     if needs_reset:
         user.free_analyses_used = 0
         user.free_analyses_reset_at = current_month_start
+        user.unlocked_match_ids = ""
         db.add(user)
         db.commit()
         db.refresh(user)

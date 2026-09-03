@@ -8,6 +8,7 @@ interface User {
     email: string;
     subscription_status?: string | null;
     is_admin?: boolean;
+    free_analyses_used?: number;
 }
 
 interface AuthContextType {
