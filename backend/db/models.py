@@ -19,6 +19,10 @@ class User(Base):
     subscription_status = Column(String, nullable=True) # e.g., 'active', 'canceled', 'past_due'
     subscription_end_date = Column(DateTime, nullable=True)
 
+    # Free tier usage tracking
+    free_analyses_used = Column(Integer, default=0, nullable=False, server_default='0')
+    free_analyses_reset_at = Column(DateTime, nullable=True)  # start of current billing month
+
     bets = relationship("Bet", back_populates="user")
 
 class Team(Base):

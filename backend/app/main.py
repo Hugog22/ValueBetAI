@@ -17,14 +17,18 @@ import time
 from datetime import datetime
 from contextlib import asynccontextmanager
 
+from typing import Optional
+
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from db.session import get_db, engine, Base
 from db.models import Match
 from core.scheduler import start_scheduler, stop_scheduler
 from core.cache_service import get_cache, refresh_cache, is_cache_warm
+from core.subscription import is_pro, get_remaining_analyses, censor_match, FREE_MONTHLY_LIMIT
 
 # Routers
 from routers.bets import router as bets_router
@@ -132,24 +136,100 @@ def read_root():
 
 
 # ---------------------------------------------------------------------------
+# Optional-auth helper — resolves a User if a valid Bearer token is present,
+# returns None without raising if there is no token or the token is invalid.
+# This keeps public access working while allowing per-user free-tier logic.
+# ---------------------------------------------------------------------------
+
+_optional_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+
+def _get_optional_user(
+    token: Optional[str] = Depends(_optional_oauth2),
+    db: Session = Depends(get_db),
+) -> Optional[object]:
+    if not token:
+        return None
+    try:
+        from core.security import decode_access_token
+        from db.models import User
+        payload = decode_access_token(token)
+        if not payload:
+            return None
+        email = payload.get("sub")
+        if not email or email.startswith("reset:"):
+            return None
+        return db.query(User).filter(User.email == email).first()
+    except Exception:
+        return None
+
+
+def _apply_free_tier(matches: list, user, db) -> list:
+    """
+    For a free-tier user, mark matches beyond FREE_MONTHLY_LIMIT as locked
+    and strip their prediction data so clients cannot access it.
+
+    Security note: censoring is done SERVER-SIDE. The sensitive fields are
+    never included in the JSON response for locked matches.
+    """
+    if user is None or is_pro(user):
+        # Unauthenticated requests and Pro users see everything unlocked.
+        for m in matches:
+            m["locked"] = False
+        return matches
+
+    # Free user — compute how many they've already unlocked this month.
+    from core.subscription import reset_if_new_month
+    reset_if_new_month(user, db)
+
+    already_used = user.free_analyses_used
+    result = []
+    newly_unlocked = 0
+
+    for idx, match in enumerate(matches):
+        if already_used + newly_unlocked < FREE_MONTHLY_LIMIT:
+            match["locked"] = False
+            newly_unlocked += 1
+            result.append(match)
+        else:
+            result.append(censor_match(match))
+
+    # Persist the updated counter only if new analyses were unlocked this call.
+    if newly_unlocked > 0 and (already_used + newly_unlocked) > already_used:
+        user.free_analyses_used = already_used + newly_unlocked
+        db.add(user)
+        db.commit()
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Public data endpoints — READ-ONLY from RAM cache (< 10 ms)
 # ---------------------------------------------------------------------------
 
 @app.get("/api/matches/jornada")
-def get_jornada():
-    """Returns La Liga matches (default — backward compat)."""
+def get_jornada(
+    user=Depends(_get_optional_user),
+    db: Session = Depends(get_db),
+):
+    """Returns La Liga matches with free-tier gating for unauthenticated / free users."""
     cache = get_cache()
     jornada = cache.get("jornada", [])
     if not jornada and not is_cache_warm():
         return {"status": "warming_up", "data": [], "message": "Cache warming up, retry in a few seconds."}
-    return jornada
+    # Work on copies so we don't mutate the shared cache dict
+    matches = [dict(m) for m in jornada]
+    return _apply_free_tier(matches, user, db)
 
 
 VALID_SPORTS = {"laliga"}
 
 @app.get("/api/matches/{sport}/jornada")
-def get_sport_jornada(sport: str):
-    """Returns upcoming matches with AI predictions for the given sport."""
+def get_sport_jornada(
+    sport: str,
+    user=Depends(_get_optional_user),
+    db: Session = Depends(get_db),
+):
+    """Returns upcoming matches with AI predictions for the given sport, with free-tier gating."""
     if sport not in VALID_SPORTS:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail=f"Sport '{sport}' not supported. Valid: {sorted(VALID_SPORTS)}")
@@ -157,7 +237,8 @@ def get_sport_jornada(sport: str):
     jornada = cache.get("sports", {}).get(sport, {}).get("jornada", [])
     if not jornada and not is_cache_warm():
         return {"status": "warming_up", "data": [], "message": "Cache warming up, retry in a few seconds."}
-    return jornada
+    matches = [dict(m) for m in jornada]
+    return _apply_free_tier(matches, user, db)
 
 
 @app.get("/api/perfect_parlay")

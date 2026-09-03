@@ -446,7 +446,7 @@ export default function LandingPage() {
                 {[
                   'Acceso al dashboard de partidos',
                   'Vista previa de predicciones',
-                  '3 análisis completos al mes',
+                  '4 análisis completos al mes',
                   'Sin tarjeta de crédito',
                 ].map(f => (
                   <li key={f} className="flex items-start gap-3 text-sm text-white/60">
@@ -488,12 +488,12 @@ export default function LandingPage() {
 
               <ul className="space-y-3 mb-8">
                 {[
-                  'Todo lo incluido en Free',
                   'Predicciones ilimitadas en tiempo real',
                   'Análisis IA completo por partido',
                   'Alertas value bet instantáneas',
                   'Mercados 1X2 + Over/Under 2.5',
                   'Gestión de bankroll integrada',
+                  'Todos los partidos desbloqueados',
                   'Soporte prioritario',
                 ].map(f => (
                   <li key={f} className="flex items-start gap-3 text-sm text-white/80">
