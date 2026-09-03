@@ -46,6 +46,27 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     try:
         logger.info("🚀 Starting Value Betting API…")
+        
+        # Run Alembic migrations automatically
+        try:
+            from alembic.config import Config
+            from alembic import command
+            import os
+            # Build the path to alembic.ini based on main.py location
+            # main.py is in backend/app/, alembic.ini is in backend/
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            alembic_ini_path = os.path.join(base_dir, "alembic.ini")
+            
+            logger.info(f"🔄 Running Alembic migrations using {alembic_ini_path}...")
+            alembic_cfg = Config(alembic_ini_path)
+            # Make sure Alembic executes from the correct directory so it finds 'alembic/env.py'
+            alembic_cfg.set_main_option("script_location", os.path.join(base_dir, "alembic"))
+            command.upgrade(alembic_cfg, "head")
+            logger.info("✅ Alembic migrations completed successfully.")
+        except Exception as e:
+            logger.error(f"❌ Alembic migration failed: {e}")
+
+        # Fallback to create_all for completely new databases
         Base.metadata.create_all(bind=engine)
 
         # Warm the cache synchronously before the server starts accepting requests
