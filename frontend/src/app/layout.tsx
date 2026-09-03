@@ -18,8 +18,8 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "QUANTSTAKE.AI | Premium Betting Analytics",
-  description: "Institutional-grade value betting predictions powered by XGBoost.",
+  title: "QuantStake | Find Your Edge · Análisis cuantitativo de apuestas",
+  description: "QuantStake detecta value bets en tiempo real usando IA. Compara probabilidades reales con las cuotas del mercado y encuentra el edge antes de que desaparezca.",
 };
 
 import { AuthProvider } from "@/context/AuthContext";
@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} antialiased bg-[#F8FAFC] text-slate-900 selection:bg-[#C8A252]/30`}
+        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} antialiased bg-[#0D1117] text-white selection:bg-[#C8A252]/20`}
       >
         <AuthProvider>
           {children}
