@@ -192,11 +192,18 @@ def _apply_free_tier(matches: list, user, db) -> list:
     Security note: censoring is done SERVER-SIDE. The sensitive fields are
     never included in the JSON response for locked matches.
     """
-    if user is None or is_pro(user):
-        # Unauthenticated requests and Pro users see everything unlocked.
+    if user is not None and is_pro(user):
+        # Pro users see everything unlocked.
         for m in matches:
             m["locked"] = False
         return matches
+
+    if user is None:
+        # Unauthenticated requests see everything locked.
+        result = []
+        for match in matches:
+            result.append(censor_match(match))
+        return result
 
     # Free user — compute how many they've already unlocked this month.
     from core.subscription import reset_if_new_month

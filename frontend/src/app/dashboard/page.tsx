@@ -10,19 +10,26 @@
 
 import Navbar from '@/components/Navbar';
 import MatchesDashboard from '@/components/MatchesDashboard';
+import { cookies } from 'next/headers';
 
 const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
 const API = `${backendUrl}/api`;
 
 export const dynamic = 'force-dynamic';
 
-async function fetchJSON<T>(url: string, fallback: T): Promise<T> {
+async function fetchJSON<T>(url: string, fallback: T, token?: string): Promise<T> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
     
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const res = await fetch(url, {
       cache: 'no-store',
+      headers,
       signal: controller.signal
     });
     
@@ -36,11 +43,15 @@ async function fetchJSON<T>(url: string, fallback: T): Promise<T> {
   }
 }
 
+
 export default async function Home() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('auth_token')?.value;
+
   // Fetch LaLiga + all CombinAIas in parallel
   const [matches, allParlays] = await Promise.all([
-    fetchJSON<object[]>(`${API}/matches/jornada`, []),
-    fetchJSON<object[]>(`${API}/sports/all_parlays`, []),
+    fetchJSON<object[]>(`${API}/matches/jornada`, [], token),
+    fetchJSON<object[]>(`${API}/sports/all_parlays`, [], token),
   ]);
 
   const initialMatches = Array.isArray(matches)
