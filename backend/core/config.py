@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 
     # Email — Brevo (Sendinblue) API
     BREVO_API_KEY: str = ""
-    EMAILS_FROM_EMAIL: str = "valuebetai@outlook.es"
+    EMAILS_FROM_EMAIL: str = "quantstake@outlook.es"
     EMAILS_FROM_NAME: str = "Value Betting AI"
 
     # Sport key sent to The Odds API on every call.

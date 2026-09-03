@@ -1,7 +1,7 @@
 """
 scheduler.py
 -------------
-Background APScheduler para ValueBetAI — HuggingFace (16 GB RAM, always-on).
+Background APScheduler para QuantStake — HuggingFace (16 GB RAM, always-on).
 
 Schedule:
   - ETL diario:      04:00 AM Madrid — sincroniza partidos de La Liga (Understat).

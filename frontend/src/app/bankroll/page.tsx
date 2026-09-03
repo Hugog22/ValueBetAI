@@ -232,7 +232,7 @@ export default function BankrollPage() {
                                     <span className="text-[#1A1C1E] font-black text-xs leading-none">BET<br />AI</span>
                                 </div>
                                 <span className="text-xl font-editorial font-bold tracking-tight text-[#1A1C1E]">
-                                    ValueBet <span className="opacity-50">AI</span>
+                                    QuantStake <span className="opacity-50">AI</span>
                                 </span>
                             </Link>
                         </div>

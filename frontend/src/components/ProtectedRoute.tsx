@@ -56,7 +56,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
                     </div>
                     <h2 className="text-2xl font-editorial font-bold text-[#1A1C1E] mb-4">Suscripción Inactiva</h2>
                     <p className="text-[#64748B] mb-8 text-sm leading-relaxed">
-                        Parece que tu pago no se completó o tu suscripción ha expirado. Para acceder al radar de ValueBet AI necesitas una suscripción activa.
+                        Parece que tu pago no se completó o tu suscripción ha expirado. Para acceder al radar de QuantStake necesitas una suscripción activa.
                     </p>
                     <button
                         onClick={handleCheckout}

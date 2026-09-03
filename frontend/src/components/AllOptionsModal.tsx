@@ -8,7 +8,7 @@ interface PickData {
   bookmaker_odds?: number;
   bookmakerOdds?: number;
   label: string;
-  isValueBet?: boolean;
+  isQuantStake?: boolean;
   is_value?: boolean;
   probability?: number;
   bookmaker_implied_prob?: number;
@@ -177,7 +177,7 @@ export default function AllOptionsModal({
                 const odds = candidate.bookmaker_odds ?? candidate.bookmakerOdds ?? 1.0;
                 const bookieProb = (candidate.bookmaker_implied_prob ?? 0) * 100;
                 const aiProb = (candidate.probability ?? 0) * 100;
-                const isValue = candidate.isValueBet || candidate.is_value;
+                const isValue = candidate.isQuantStake || candidate.is_value;
                 
                 return (
                   <div 
@@ -224,7 +224,7 @@ export default function AllOptionsModal({
                         <div className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-1">
                           Prob. IA
                         </div>
-                        <div className={`font-bold ${candidate.isValueBet ? 'text-[#064E3B]' : 'text-[#1A1C1E]'}`}>
+                        <div className={`font-bold ${candidate.isQuantStake ? 'text-[#064E3B]' : 'text-[#1A1C1E]'}`}>
                           {aiProb.toFixed(1)}%
                         </div>
                       </div>

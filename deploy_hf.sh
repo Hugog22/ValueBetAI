@@ -11,7 +11,7 @@ echo "2) HTTPS con Token (Usa tu HF_TOKEN)"
 read -p "Opción [1 o 2]: " metodo
 
 if [ "$metodo" = "1" ]; then
-    REMOTE_URL="git@hf.co:spaces/hugog22/valuebet-api"
+    REMOTE_URL="git@hf.co:spaces/hugog22/quantstake-api"
     echo "Using SSH remote: $REMOTE_URL"
 elif [ "$metodo" = "2" ]; then
     read -sp "Introduce tu token de Hugging Face (HF_TOKEN): " token
@@ -20,7 +20,7 @@ elif [ "$metodo" = "2" ]; then
         echo "❌ Error: El token no puede estar vacío."
         exit 1
     fi
-    REMOTE_URL="https://hugog22:$token@huggingface.co/spaces/hugog22/valuebet-api"
+    REMOTE_URL="https://hugog22:$token@huggingface.co/spaces/hugog22/quantstake-api"
     echo "Using HTTPS remote with token."
 else
     echo "❌ Opción no válida."
@@ -30,7 +30,7 @@ fi
 # Definir directorios
 PROJECT_DIR="/Users/hugo/Documents/UPV/ANTIGRAVITY/ProyectoPrueba"
 BACKEND_DIR="$PROJECT_DIR/backend"
-TEMP_DIR="/tmp/valuebet_backend_deploy"
+TEMP_DIR="/tmp/quantstake_backend_deploy"
 
 # Limpieza inicial por si acaso
 rm -rf "$TEMP_DIR"
@@ -51,7 +51,7 @@ echo "⚙️ Inicializando repositorio git temporal..."
 git init
 git branch -M main
 git config user.name "Local Auto-Deploy"
-git config user.email "deploy@valuebet.ai"
+git config user.email "deploy@quantstake.ai"
 
 echo "📦 Configurando Git LFS para archivos .pkl..."
 git lfs install

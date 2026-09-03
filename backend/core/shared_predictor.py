@@ -5,6 +5,6 @@ Singleton accessor for the La Liga predictor.
 Lazy-loaded on first use.
 """
 
-from models.predictor import ValueBetPredictor
+from models.predictor import QuantStakePredictor
 
-predictor: ValueBetPredictor = ValueBetPredictor()
+predictor: QuantStakePredictor = QuantStakePredictor()

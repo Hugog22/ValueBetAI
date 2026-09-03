@@ -250,7 +250,7 @@ def _do_refresh() -> None:
 
                     # Auto-track the system's value bet recommendation
                     best_pick = result.get("bestPick")
-                    if best_pick and best_pick.get("isValueBet"):
+                    if best_pick and best_pick.get("isQuantStake"):
                         existing_sys_bet = db.query(Bet).filter(
                             Bet.user_id == None,
                             Bet.match_id == m.id,

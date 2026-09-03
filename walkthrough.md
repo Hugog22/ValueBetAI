@@ -1,6 +1,6 @@
 # Engine Rebuild Completed
 
-The predictive pipeline of `ValueBet AI` has been extensively rewritten to align with institutional-grade standards. 
+The predictive pipeline of `QuantStake` has been extensively rewritten to align with institutional-grade standards. 
 
 ## Key Changes
 1. **Data Enrichment & Ingestion**

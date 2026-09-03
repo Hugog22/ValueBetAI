@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
@@ -11,14 +12,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 md:px-8 h-20 flex justify-between items-center transition-all min-w-max md:min-w-0 gap-6 md:gap-0">
         {/* Logo and Nav links */}
         <div className="flex items-center gap-6 md:gap-10">
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="h-10 w-10 bg-[#FFD700] flex items-center justify-center rounded-lg shadow-sm">
-              <span className="text-[#1A1C1E] font-black text-xs leading-none">BET<br/>AI</span>
-            </div>
-            <span className="text-xl font-editorial font-bold tracking-tight text-[#1A1C1E]">
-              ValueBet <span className="opacity-50">AI</span>
-            </span>
-          </Link>
+          <Link href="/" className="flex items-center shrink-0"><Image src="/logo.png" alt="QuantStake Logo" width={160} height={40} className="h-8 w-auto object-contain" priority /></Link>
           <nav className="flex items-center gap-4 md:gap-8 text-xs md:text-sm font-semibold text-[#1A1C1E]/60 shrink-0">
             <Link href="/" className="text-[#1A1C1E] underline decoration-2 underline-offset-8 decoration-[#FFD700]">Inicio</Link>
             <Link href="#radar-de-valor" className="hover:text-[#1A1C1E] transition-colors">Análisis</Link>

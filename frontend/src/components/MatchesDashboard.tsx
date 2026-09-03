@@ -39,7 +39,7 @@ interface PickData {
   market: string; outcome: string;
   bookmaker_odds?: number; bookmakerOdds?: number;
   stake?: number; label: string;
-  isValueBet?: boolean; ev?: number; probability?: number;
+  isQuantStake?: boolean; ev?: number; probability?: number;
   risk?: Risk; bookmaker_implied_prob?: number;
 }
 
@@ -165,7 +165,7 @@ export default function MatchesDashboard({ initialMatches, initialParlay }: Prop
     return matchesRisk && matchesEV;
   });
 
-  const featuredMatch   = activeMatches.find(m => m.bestPick?.isValueBet) || activeMatches[0];
+  const featuredMatch   = activeMatches.find(m => m.bestPick?.isQuantStake) || activeMatches[0];
   const isLaLigaActive  = true;
 
   return (

@@ -31,9 +31,9 @@ export default function CookiesPolicy() {
             </section>
 
             <section>
-                <h2 className="text-2xl font-bold text-[#1A1C1E] mb-4">2. Qué tipo de información almacenamos en ValueBet AI</h2>
+                <h2 className="text-2xl font-bold text-[#1A1C1E] mb-4">2. Qué tipo de información almacenamos en QuantStake</h2>
                 <p>
-                    En ValueBet AI <strong>NO utilizamos cookies publicitarias, ni de rastreo ni de terceros</strong>. Nuestra plataforma tiene un enfoque estricto en la privacidad. 
+                    En QuantStake <strong>NO utilizamos cookies publicitarias, ni de rastreo ni de terceros</strong>. Nuestra plataforma tiene un enfoque estricto en la privacidad. 
                 </p>
                 <p>
                     Únicamente hacemos uso de <strong>tecnologías de almacenamiento estrictamente necesarias (técnicas)</strong> para el funcionamiento básico del servicio y la seguridad de su cuenta. Dado que son estrictamente necesarias, no requieren el consentimiento previo del usuario, pero cumplimos con nuestro deber legal de informarle al respecto.
@@ -79,7 +79,7 @@ export default function CookiesPolicy() {
                     Sin embargo, puede eliminar estos datos en cualquier momento:
                 </p>
                 <ul className="list-disc pl-6 space-y-2">
-                    <li>Al hacer clic en "Cerrar sesión" dentro de su panel de usuario de ValueBet AI, el sistema eliminará automáticamente su <code>auth_token</code>.</li>
+                    <li>Al hacer clic en "Cerrar sesión" dentro de su panel de usuario de QuantStake, el sistema eliminará automáticamente su <code>auth_token</code>.</li>
                     <li>Puede usar las herramientas de desarrollador o las opciones de privacidad de su navegador para borrar los datos del sitio y las cookies manualmente.</li>
                 </ul>
             </section>
@@ -87,14 +87,14 @@ export default function CookiesPolicy() {
             <section>
                 <h2 className="text-2xl font-bold text-[#1A1C1E] mb-4">5. Actualizaciones de esta política</h2>
                 <p>
-                    Si en el futuro ValueBet AI decide incorporar servicios de analítica (como Google Analytics) o cualquier otra tecnología de rastreo, esta política será actualizada y se solicitará previamente su consentimiento expreso mediante un sistema de gestión de cookies avanzado.
+                    Si en el futuro QuantStake decide incorporar servicios de analítica (como Google Analytics) o cualquier otra tecnología de rastreo, esta política será actualizada y se solicitará previamente su consentimiento expreso mediante un sistema de gestión de cookies avanzado.
                 </p>
             </section>
         </div>
 
         <div className="mt-16 pt-8 border-t border-[#E5E7EB] text-center">
             <p className="text-[#94A3B8] text-[9px] uppercase tracking-[0.4em] font-medium">
-                Sistemas de Inversión ValueBet AI &copy; 2026
+                Sistemas de Inversión QuantStake &copy; 2026
             </p>
         </div>
       </div>

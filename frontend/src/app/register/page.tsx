@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function RegisterPage() {
     const [email, setEmail] = useState('');
@@ -88,18 +89,13 @@ export default function RegisterPage() {
             <div className="max-w-md w-full z-10">
                 <div className="text-center mb-12">
                     <Link href="/" className="inline-flex flex-col items-center gap-3 group">
-                        <div className="h-14 w-14 bg-[#FFD700] flex items-center justify-center rounded-2xl shadow-xl shadow-[#FFD700]/20 group-hover:scale-110 transition-transform">
-                            <span className="text-[#1A1C1E] font-black text-xs leading-none">BET<br />AI</span>
-                        </div>
-                        <h1 className="text-3xl font-editorial font-bold text-[#1A1C1E] tracking-tight">
-                            ValueBet <span className="opacity-50">AI</span>
-                        </h1>
+                        <Image src="/logo.png" alt="QuantStake Logo" width={240} height={70} className="h-16 w-auto object-contain group-hover:scale-105 transition-transform" priority />
                     </Link>
                     <h2 className="mt-8 text-4xl font-editorial font-bold text-[#1A1C1E]">
                         Nueva <span className="italic font-light">Cuenta</span>
                     </h2>
-                    <div className="mt-4 inline-flex items-center gap-2 bg-[#064E3B] text-white px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-lg shadow-[#064E3B]/20">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00] animate-pulse"></div>
+                    <div className="mt-4 inline-flex items-center gap-2 bg-[#064E3B] text-slate-900 px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-lg shadow-[#064E3B]/20">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#1B365D] animate-pulse"></div>
                         7 días gratis — Cancela en cualquier momento
                     </div>
                 </div>
@@ -120,8 +116,8 @@ export default function RegisterPage() {
                                     name="email"
                                     type="email"
                                     required
-                                    className="appearance-none block w-full px-5 py-4 bg-[#F8F9FA] border border-[#E5E7EB] placeholder-[#94A3B8] text-[#1A1C1E] rounded-2xl focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B] transition-all font-medium"
-                                    placeholder="inversor@valuebet.ai"
+                                    className="appearance-none block w-full px-5 py-4 bg-[#F8F9FA] border border-[#E5E7EB] placeholder-[#94A3B8] text-[#1A1C1E] rounded-2xl focus:outline-none focus:border-slate-300 focus:ring-1 focus:ring-[#064E3B] transition-all font-medium"
+                                    placeholder="inversor@quantstake.ai"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                 />
@@ -133,7 +129,7 @@ export default function RegisterPage() {
                                     name="password"
                                     type="password"
                                     required
-                                    className="appearance-none block w-full px-5 py-4 bg-[#F8F9FA] border border-[#E5E7EB] placeholder-[#94A3B8] text-[#1A1C1E] rounded-2xl focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B] transition-all font-medium"
+                                    className="appearance-none block w-full px-5 py-4 bg-[#F8F9FA] border border-[#E5E7EB] placeholder-[#94A3B8] text-[#1A1C1E] rounded-2xl focus:outline-none focus:border-slate-300 focus:ring-1 focus:ring-[#064E3B] transition-all font-medium"
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
@@ -169,7 +165,7 @@ export default function RegisterPage() {
                         <div className="pt-4">
                             <button
                                 type="submit"
-                                className="w-full flex justify-center items-center py-5 px-4 bg-[#064E3B] text-white text-xs uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#043327] shadow-xl shadow-[#064E3B]/20 transition-all active:scale-95 group"
+                                className="w-full flex justify-center items-center py-5 px-4 bg-[#064E3B] text-slate-900 text-xs uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#043327] shadow-xl shadow-[#064E3B]/20 transition-all active:scale-95 group"
                             >
                                 Empezar 7 días gratis
                                 <svg className="w-4 h-4 ml-3 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,7 +187,7 @@ export default function RegisterPage() {
                 </div>
 
                 <p className="mt-12 text-center text-[#94A3B8] text-[9px] uppercase tracking-[0.4em] font-medium">
-                    Sistemas de Inversión ValueBet AI &copy; 2026
+                    Sistemas de Inversión QuantStake &copy; 2026
                 </p>
             </div>
         </div>

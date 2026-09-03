@@ -687,7 +687,7 @@ def _evaluate_match(match: Match, predictor, db: Session | None = None) -> dict:
             "fairOdds":               best["fair_odds"],
             "ev":                     best["ev"],
             "probability":            best["probability"],
-            "isValueBet":             best["is_value"],
+            "isQuantStake":             best["is_value"],
             "bookmaker_implied_prob": best["bookmaker_implied_prob"],
             "risk":                   best["risk"],
             "stake":                  best["stake"],

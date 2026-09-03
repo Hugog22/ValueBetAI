@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -52,12 +53,7 @@ export default function LoginPage() {
             <div className="max-w-md w-full z-10">
                 <div className="text-center mb-12">
                     <Link href="/" className="inline-flex flex-col items-center gap-3 group">
-                        <div className="h-14 w-14 bg-[#FFD700] flex items-center justify-center rounded-2xl shadow-xl shadow-[#FFD700]/20 group-hover:scale-110 transition-transform">
-                            <span className="text-[#1A1C1E] font-black text-xs leading-none">BET<br />AI</span>
-                        </div>
-                        <h1 className="text-3xl font-editorial font-bold text-[#1A1C1E] tracking-tight">
-                            ValueBet <span className="opacity-50">AI</span>
-                        </h1>
+                        <Image src="/logo.png" alt="QuantStake Logo" width={240} height={70} className="h-16 w-auto object-contain group-hover:scale-105 transition-transform" priority />
                     </Link>
                     <h2 className="mt-8 text-4xl font-editorial font-bold text-[#1A1C1E]">
                         Bienvenido de <span className="italic font-light">nuevo</span>
@@ -84,7 +80,7 @@ export default function LoginPage() {
                                     type="email"
                                     required
                                     className="appearance-none block w-full px-5 py-4 bg-[#F8F9FA] border border-[#E5E7EB] placeholder-[#94A3B8] text-[#1A1C1E] rounded-2xl focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B] transition-all font-medium"
-                                    placeholder="inversor@valuebet.ai"
+                                    placeholder="inversor@quantstake.ai"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                 />
@@ -129,7 +125,7 @@ export default function LoginPage() {
                 </div>
 
                 <p className="mt-12 text-center text-[#94A3B8] text-[9px] uppercase tracking-[0.4em] font-medium">
-                    Sistemas de Inversión ValueBet AI &copy; 2026
+                    Sistemas de Inversión QuantStake &copy; 2026
                 </p>
             </div>
         </div>

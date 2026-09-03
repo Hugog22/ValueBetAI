@@ -109,7 +109,7 @@ def _make_model() -> xgb.XGBClassifier:
     return xgb.XGBClassifier(use_label_encoder=False, random_state=42)
 
 
-class ValueBetPredictor:
+class QuantStakePredictor:
     """Loads and runs three market models (1X2, O/U 2.5, O/U Corners)."""
 
     def __init__(self):

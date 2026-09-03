@@ -18,7 +18,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "VALUEBET.AI | Premium Betting Analytics",
+  title: "QUANTSTAKE.AI | Premium Betting Analytics",
   description: "Institutional-grade value betting predictions powered by XGBoost.",
 };
 
@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} antialiased bg-[#051209] text-white selection:bg-[#C0FF00]/30`}
+        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} antialiased bg-[#F8FAFC] text-slate-900 selection:bg-[#C8A252]/30`}
       >
         <AuthProvider>
           {children}

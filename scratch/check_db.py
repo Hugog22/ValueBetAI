@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, text
 import os
 
-engine = create_engine("postgresql+psycopg2://postgres.hwfjlxfbabcavigutimz:ValueBet2026Premium@aws-0-eu-west-1.pooler.supabase.com:6543/postgres")
+engine = create_engine("postgresql+psycopg2://postgres.hwfjlxfbabcavigutimz:QuantStake2026Premium@aws-0-eu-west-1.pooler.supabase.com:6543/postgres")
 with engine.connect() as conn:
     print("world_cup_team_stats count:", conn.execute(text("SELECT count(*) FROM world_cup_team_stats")).scalar())
     
