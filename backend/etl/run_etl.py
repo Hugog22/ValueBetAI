@@ -5,7 +5,7 @@ from db.models import Team, Match
 from etl.understat_api import get_laliga_historical_data
 from etl.odds_api import get_laliga_odds, detect_super_boosts
 from etl.update_characteristics import update_team_characteristics
-from core.config import get_current_season
+from core.config import get_current_season, settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -141,6 +141,7 @@ def sync_football_data_results() -> int:
         logger.warning(f"⚠️ Failed to fetch Football-Data.org matches: {e}")
         return 0
 
+    from datetime import datetime
     db = SessionLocal()
     updated_count = 0
     try:
@@ -155,7 +156,7 @@ def sync_football_data_results() -> int:
                 'sevilla fc': 'sevilla',
                 'villarreal cf': 'villarreal',
                 'levante ud': 'levante',
-                'elche cf': 'elche cf',
+                'elche cf': 'elche',
                 'fc barcelona': 'barcelona',
                 'real madrid cf': 'real madrid',
                 'atletico madrid': 'atlético madrid',
@@ -166,37 +167,89 @@ def sync_football_data_results() -> int:
                 'celta de vigo': 'celta vigo',
                 'rc celta de vigo': 'celta vigo',
                 'valencia cf': 'valencia',
-                'ca osasuna': 'ca osasuna',
-                'málaga cf': 'málaga'
+                'ca osasuna': 'osasuna',
+                'málaga cf': 'málaga',
+                'cd leganés': 'leganés',
+                'real valladolid cf': 'real valladolid',
+                'girona fc': 'girona',
+                'rcd mallorca': 'mallorca',
+                'ud las palmas': 'las palmas',
+                'racing santander': 'racing de santander',
+                'real racing club de santander': 'racing de santander',
+                'racing de santander': 'racing de santander'
             }
             for k, v in replacements.items():
                 if k in name:
                     return v
             return name
 
-        teams = {t.id: normalize_name(t.name) for t in db.query(Team).all()}
+        db_teams = {normalize_name(t.name): t for t in db.query(Team).all()}
         db_matches = db.query(Match).all()
 
         for f in fd_matches:
-            if f.get("status") != "FINISHED":
+            fd_status = f.get("status")
+            if fd_status in ["SCHEDULED", "TIMED"]:
+                status = "Not Started"
+            elif fd_status in ["FINISHED", "AWARDED"]:
+                status = "Finished"
+            else:
                 continue
+
+            h_raw = f["homeTeam"]["name"]
+            a_raw = f["awayTeam"]["name"]
+            h_name = normalize_name(h_raw)
+            a_name = normalize_name(a_raw)
             
-            h_name = normalize_name(f["homeTeam"]["name"])
-            a_name = normalize_name(f["awayTeam"]["name"])
-            h_goals = f["score"]["fullTime"]["home"]
-            a_goals = f["score"]["fullTime"]["away"]
-            
-            for m in db_matches:
-                db_h = teams.get(m.home_team_id, "")
-                db_a = teams.get(m.away_team_id, "")
+            # Create teams if they don't exist
+            if h_name not in db_teams:
+                new_t = Team(name=h_raw.replace(' CF', '').replace(' FC', ''))
+                db.add(new_t)
+                db.flush()
+                db_teams[h_name] = new_t
+            if a_name not in db_teams:
+                new_t = Team(name=a_raw.replace(' CF', '').replace(' FC', ''))
+                db.add(new_t)
+                db.flush()
+                db_teams[a_name] = new_t
                 
-                if db_h and db_a and (db_h in h_name or h_name in db_h) and (db_a in a_name or a_name in db_a):
-                    if m.status != "Finished" or m.home_goals != h_goals or m.away_goals != a_goals:
-                        m.status = "Finished"
-                        m.home_goals = h_goals
-                        m.away_goals = a_goals
-                        updated_count += 1
-                        logger.info(f"✅ Synced finished match #{m.id}: {db_h} vs {db_a} ({h_goals}-{a_goals})")
+            h_team = db_teams[h_name]
+            a_team = db_teams[a_name]
+
+            h_goals = f["score"]["fullTime"].get("home") if f.get("score") and f["score"].get("fullTime") else None
+            a_goals = f["score"]["fullTime"].get("away") if f.get("score") and f["score"].get("fullTime") else None
+            
+            match_date = datetime.strptime(f["utcDate"], "%Y-%m-%dT%H:%M:%SZ")
+            
+            # Find existing match
+            existing = None
+            for m in db_matches:
+                if m.home_team_id == h_team.id and m.away_team_id == a_team.id:
+                    # Match by date within 3 days
+                    if abs((m.date - match_date).days) <= 3:
+                        existing = m
+                        break
+            
+            if existing:
+                if existing.status != status or existing.home_goals != h_goals or existing.away_goals != a_goals or existing.date != match_date:
+                    existing.status = status
+                    existing.home_goals = h_goals
+                    existing.away_goals = a_goals
+                    existing.date = match_date
+                    updated_count += 1
+                    logger.info(f"✅ Updated match #{existing.id}: {h_team.name} vs {a_team.name} ({h_goals}-{a_goals})")
+            else:
+                new_match = Match(
+                    date=match_date,
+                    home_team_id=h_team.id,
+                    away_team_id=a_team.id,
+                    home_goals=h_goals,
+                    away_goals=a_goals,
+                    status=status
+                )
+                db.add(new_match)
+                db_matches.append(new_match)
+                updated_count += 1
+                logger.info(f"➕ Inserted match: {h_team.name} vs {a_team.name} ({h_goals}-{a_goals})")
 
         db.commit()
     except Exception as e:

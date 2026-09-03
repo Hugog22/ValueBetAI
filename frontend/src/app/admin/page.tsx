@@ -77,7 +77,14 @@ export default function AdminDashboard() {
       <Navbar />
 
       <main className="flex-grow max-w-6xl w-full mx-auto p-4 md:p-8 pt-24">
-        <h1 className="text-4xl font-black uppercase text-orange-500 mb-2">Panel de Administración</h1>
+        <div className="flex items-center gap-4 mb-2">
+          <a href="/" className="text-gray-400 hover:text-orange-500 transition-colors p-2 -ml-2 rounded-lg hover:bg-gray-800" title="Volver atrás">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            </svg>
+          </a>
+          <h1 className="text-4xl font-black uppercase text-orange-500">Panel de Administración</h1>
+        </div>
         <p className="text-gray-400 mb-8 text-lg font-light">
           Ajusta manualmente el nivel de cada equipo de LaLiga. 
           <br/>

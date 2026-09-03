@@ -17,9 +17,12 @@ def update_team_characteristics():
         
         for team in teams:
             # Get last 10 matches
+            # Solo partidos de la temporada 26/27 (agosto 2026 en adelante)
+            from datetime import datetime
             matches = db.query(Match).filter(
                 (Match.home_team_id == team.id) | (Match.away_team_id == team.id),
-                Match.status == "Finished"
+                Match.status == "Finished",
+                Match.date >= datetime(2026, 8, 1)
             ).order_by(Match.date.desc()).limit(10).all()
             
             if not matches:
