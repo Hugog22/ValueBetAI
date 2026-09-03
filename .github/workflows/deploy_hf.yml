@@ -23,11 +23,11 @@ jobs:
           git init
           git branch -M main
           git config user.name "GitHub Auto-Deploy"
-          git config user.email "deploy@valuebet.ai"
+          git config user.email "deploy@quantstake.ai"
           git lfs install
           git lfs track "*.pkl"
           git add .
           git commit -m "Auto deploy desde GitHub: ${{ github.event.head_commit.message }}"
           
           # Subimos forzosamente la carpeta backend a la rama main de Hugging Face
-          git push -f https://hugog22:$HF_TOKEN@huggingface.co/spaces/hugog22/valuebet-api main
+          git push -f https://hugog22:$HF_TOKEN@huggingface.co/spaces/hugog22/quantstake-api main
